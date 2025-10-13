@@ -1,1 +1,1 @@
-# CSCE-Capstone-Project
+# Blueprint Botanica
