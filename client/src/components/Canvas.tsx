@@ -1,4 +1,11 @@
 "use client";
+import React from "react";
+import { FaRegCircle } from "react-icons/fa";
+import { MdOutlineRectangle } from "react-icons/md";
+import { FaDrawPolygon } from "react-icons/fa";
+import { MdOutlineDraw } from "react-icons/md";
+import { TbCircleXFilled } from "react-icons/tb";
+import { FaEdit } from "react-icons/fa";
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Shape, Position } from '../types/shapes';
@@ -12,6 +19,9 @@ const Canvas = () => {
   const [shapes, setShapes] = useState<Shape[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Edit mode toggle
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const toggleEditMode = () => setIsEditing((prev) => !prev);
 
   // Create shape at canvas center
   const createShape = useCallback((shapeType: 'rectangle' | 'circle' | 'line') => {
@@ -143,6 +153,19 @@ const Canvas = () => {
 
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-white">
+
+      {/* Edit Mode Toggle Button */}
+      {!isEditing && (
+      <div className="absolute top-4 left-4 z-50">
+        <button
+          onClick={toggleEditMode}
+          className={`px-4 py-3 rounded-xl text-black font-medium shadow-xl transition bg-gray-200 hover:bg-gray-300`}
+        >
+          <FaEdit size={25}/>
+        </button>
+      </div>
+      )}
+
       <div
         ref={canvasRef}
         data-canvas
@@ -173,35 +196,52 @@ const Canvas = () => {
           />
           
           {/* Example draggable element */}
+          {/*
           <div className="absolute top-10 left-10 w-32 h-20 bg-blue-100 border-2 border-blue-300 rounded-lg flex items-center justify-center text-blue-800 font-medium shadow-sm">
             Drag me!
           </div>
+          */}
         </div>
       </div>
-      
+
       {/* Shape Creation Controls */}
+      {isEditing && (
       <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 border">
-        <div className="flex gap-2">
-          <button
-            onClick={() => createShape('rectangle')}
-            className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
-          >
-            Add Rectangle
-          </button>
-          <button
-            onClick={() => createShape('circle')}
-            className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
-          >
-            Add Circle
-          </button>
-          <button
-            onClick={() => createShape('line')}
-            className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
-          >
-            Add Line
-          </button>
-        </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => createShape('rectangle')}
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+        >
+          <MdOutlineRectangle size={35}/>
+        </button>
+        <button
+          onClick={() => createShape('circle')}
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+        >
+          <FaRegCircle size={25}/>
+        </button>
+        <button
+          onClick={() => createShape('line')}
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+        >
+          <FaDrawPolygon size={25}/>
+        </button>
+        <button
+          onClick={() => createShape('line')}
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+        >
+          <MdOutlineDraw size={25}/>
+        </button>
+        <button
+          onClick={toggleEditMode}
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+        >
+          <TbCircleXFilled size={25}/>
+        </button>
       </div>
+      </div>
+      )}
+
       
       {/* Canvas Controls */}
       <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border">
@@ -226,3 +266,4 @@ const Canvas = () => {
 };
 
 export default Canvas;
+
