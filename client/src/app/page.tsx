@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <>
       <Canvas />
-      <SearchWindow />
+      <SearchWindow isOpen={false} />
     </>
   );
 }

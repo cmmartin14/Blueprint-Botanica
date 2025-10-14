@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { FaRegCircle } from "react-icons/fa";
+import { FaRegCircle, FaSearch } from "react-icons/fa";
 import { MdOutlineRectangle } from "react-icons/md";
 import { FaDrawPolygon } from "react-icons/fa";
 import { MdOutlineDraw } from "react-icons/md";
@@ -10,6 +10,8 @@ import { FaEdit } from "react-icons/fa";
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Shape, Position } from '../types/shapes';
 import ShapeRenderer from './ShapeRenderer';
+import SearchWindow from "./Searchwindow";
+
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -17,6 +19,8 @@ const Canvas = () => {
   const [dragStart, setDragStart] = useState<Position>({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [shapes, setShapes] = useState<Shape[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev); 
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Edit mode toggle
@@ -151,6 +155,7 @@ const Canvas = () => {
     backgroundPosition: `${pan.x % (gridSize * scale)}px ${pan.y % (gridSize * scale)}px`,
   };
 
+  
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-white">
 
@@ -165,6 +170,21 @@ const Canvas = () => {
         </button>
       </div>
       )}
+      <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <div className="absolute top-26 left-4 z-50 flex items-center gap-3">
+        <button
+          onClick={toggleSearchWindow}
+          className={`px-4 py-3 rounded-xl font-medium shadow-xl transition-colors bg-gray-200 hover:bg-gray-300 ${
+            isSearchOpen ? "bg-green-700 text-white" : "bg-white/90 text-green-800 hover:bg-gray-300"
+          }`}
+          aria-pressed={isSearchOpen}
+          aria-label={isSearchOpen ? "Hide search window" : "Show search window"}
+          type="button"
+        >
+          <FaSearch size={25} />
+        </button>
+      </div>
+      
 
       <div
         ref={canvasRef}
