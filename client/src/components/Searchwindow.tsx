@@ -31,7 +31,7 @@ const SearchWindow = ({ onClose, defaultFullscreen = false }: SearchWindowProps)
       className={`fixed z-40 rounded-2xl bg-white shadow-2xl border border-green-200 transition-all duration-300 ease-in-out ${
         isFullscreen
           ? "inset-4"
-          : "top-24 left-6 w-[400px] h-[520px]"
+          : "top-42 left-4 w-[400px] h-[520px]"
       }`}
     >
       <div className="flex items-center justify-between border-b border-green-200 px-4 py-3">
