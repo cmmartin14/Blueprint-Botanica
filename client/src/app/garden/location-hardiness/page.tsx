@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 interface ZoneInfo {
     temperature: string;
@@ -65,7 +66,7 @@ export default function HomePage() {
       }
     } catch (err) {
       console.error(err);
-      setError("Failed to fetch zone. Please try again later.");
+      setError("Failed to fetch zone. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -75,7 +76,7 @@ export default function HomePage() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-8 bg-black text-white">
-      <h1 className="text-2xl font-bold mb-6">Plant Hardiness ZIP Code Search</h1>
+      <h1 className="text-2xl font-bold mb-6">Plant Hardiness ZIP Code Search (Garden 1)</h1>
 
       <div className="flex gap-2 mb-4">
         <input
@@ -103,6 +104,13 @@ export default function HomePage() {
             <p>Tips: {zoneInfo.tips}</p>
         </div>
       )}
+      <div>
+        <Link href={`/garden/grid-1`} className="w-full text-center">
+          <button className="bg-white text-black px-4 py-2 rounded transition hover:bg-gray-500 hover:text-white disabled:opacity-50"> 
+            Go to Garden 1 
+          </button>
+        </Link>
+      </div>
     </main>
   );
 }

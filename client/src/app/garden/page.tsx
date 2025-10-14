@@ -5,12 +5,12 @@ import Link from "next/link";
 
 export default function HomePage() {
   const [buttons, setButtons] = useState<number[]>([]);
-  const maxButtons = 5;
+  const maxButtons = 1;
 
   
   const handleCreateButton = () => {
     if (buttons.length >= maxButtons) return;
-    const newLink = `/garden/grid-${buttons.length + 1}`; // example dynamic path
+    const newLink = `/garden/location-hardiness-${buttons.length + 1}`; // example dynamic path
     setButtons((prev) => [...prev, prev.length+1]);
   };
 
@@ -34,7 +34,7 @@ export default function HomePage() {
             key={num}
             className="flex flex-col items-center border rounded-lg p-3 shadow-sm bg-gray-50"
           >
-            <Link href={`/garden/grid-${num}`} className="w-full text-center">
+            <Link href={`/garden/location-hardiness`} className="w-full text-center">
               <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
                 Go to Garden {num}
               </button>
