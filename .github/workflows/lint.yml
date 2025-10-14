@@ -6,6 +6,9 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
 
     steps:
       - name: Checkout repository
@@ -17,8 +20,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        working-directory: ./client
         run: npm ci
 
-      - name: Run ESLint
+      - name: Linting
         run: npm run lint
