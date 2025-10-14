@@ -2,9 +2,20 @@ name: Main
 
 on:
   push:
-    branches: [ main ]
+    branches: 
+      - main
+      - CI-CD/Testing-Branch
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - CI-CD/Testing-Branch
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Select branch to run workflow on'
+        required: true
+        default: CI-CD/Testing-Branch
+
 
 jobs:
   build:
