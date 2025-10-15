@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 type SearchWindowProps = {
   isOpen: boolean;
   onClose?: () => void;
-  
   defaultFullscreen?: boolean;
 };
 
@@ -15,19 +14,17 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
   const [isVisible, setIsVisible] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(defaultFullscreen);
 
-  if (!isVisible) {
+  useEffect(() => {
+      if (!isOpen) setIsFullscreen(false);
+    }, [isOpen]);
+
+  if (!isVisible || !isOpen) {
     return null;
   }
-
-  useEffect(() => {
-    if (!isOpen) setIsFullscreen(false);
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const toggleFullscreen = () => setIsFullscreen((prev) => !prev);
-  const minimize = () => setIsFullscreen(false);
-
   const handleClose = () => {
     setIsVisible(false);
     onClose?.();
