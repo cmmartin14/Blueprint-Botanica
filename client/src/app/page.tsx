@@ -1,4 +1,4 @@
-import { Canvas, SearchWindow, VariableWindow } from "@/components";
+import { Canvas, SearchWindow, VariableWindow } from "@/types";
 
 export default function Home() {
   return (
