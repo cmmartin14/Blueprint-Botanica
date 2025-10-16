@@ -8,13 +8,15 @@ interface ShapeRendererProps {
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
 }
 
+const HANDLE_SIZE = 10;
+
 const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   shapes,
   scale,
   snapToShapes = true,
   onShapeUpdate,
 }) => {
-  // Handle shape dragging
+  // Handle dragging the entire shape
   const handleShapeMouseDown = (shapeId: string) => {
     return (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -55,7 +57,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
   };
 
-  // Handle endpoint dragging
+  // Handle endpoint dragging (for lines)
   const handleEndpointMouseDown = (
     shapeId: string,
     endpoint: "start" | "end"
@@ -92,9 +94,90 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
   };
 
+  // Handle resizing (rectangles / circles)
+  const handleResizeMouseDown = (
+    shapeId: string,
+    corner: "top-left" | "top-right" | "bottom-left" | "bottom-right"
+  ) => {
+    return (e: React.MouseEvent) => {
+      e.stopPropagation();
+
+      const shape = shapes.find((s) => s.id === shapeId);
+      if (!shape) return;
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const origStart = { ...shape.startPos };
+      const origEnd = { ...shape.endPos };
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const deltaX = (moveEvent.clientX - startX) / scale;
+        const deltaY = (moveEvent.clientY - startY) / scale;
+
+        let newStart = { ...origStart };
+        let newEnd = { ...origEnd };
+
+        switch (corner) {
+          case "top-left":
+            newStart = { x: origStart.x + deltaX, y: origStart.y + deltaY };
+            break;
+          case "top-right":
+            newStart = { x: origStart.x, y: origStart.y + deltaY };
+            newEnd = { x: origEnd.x + deltaX, y: origEnd.y };
+            break;
+          case "bottom-left":
+            newStart = { x: origStart.x + deltaX, y: origStart.y };
+            newEnd = { x: origEnd.x, y: origEnd.y + deltaY };
+            break;
+          case "bottom-right":
+            newEnd = { x: origEnd.x + deltaX, y: origEnd.y + deltaY };
+            break;
+        }
+
+        if (onShapeUpdate) {
+          onShapeUpdate(shapeId, {
+            startPos: newStart,
+            endPos: newEnd,
+          });
+        }
+      };
+
+      const handleMouseUp = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    };
+  };
+
+  const renderResizeHandle = (
+    shapeId: string,
+    x: number,
+    y: number,
+    corner: "top-left" | "top-right" | "bottom-left" | "bottom-right"
+  ) => (
+    <div
+      key={`${shapeId}-${corner}`}
+      style={{
+        position: "absolute",
+        left: `${x - HANDLE_SIZE / 2}px`,
+        top: `${y - HANDLE_SIZE / 2}px`,
+        width: `${HANDLE_SIZE}px`,
+        height: `${HANDLE_SIZE}px`,
+        backgroundColor: "white",
+        border: "1px solid black",
+        cursor: `${corner}-resize`,
+        zIndex: 20,
+      }}
+      onMouseDown={handleResizeMouseDown(shapeId, corner)}
+    />
+  );
+
   // Render shapes
   const renderShape = (shape: Shape) => {
-    const { startPos, endPos, color, strokeWidth } = shape;
+    const { startPos, endPos, color, strokeWidth, type } = shape;
     const width = Math.abs(endPos.x - startPos.x);
     const height = Math.abs(endPos.y - startPos.y);
     const left = Math.min(startPos.x, endPos.x);
@@ -110,100 +193,95 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       boxSizing: "border-box" as const,
     };
 
-    switch (shape.type) {
-      case "rectangle":
-        return (
-          <div
-            key={shape.id}
-            style={{
-              ...commonStyles,
-              width: `${width}px`,
-              height: `${height}px`,
-              backgroundColor: `${color}33`,
-            }}
-            onMouseDown={handleShapeMouseDown(shape.id)}
-          />
-        );
+    if (type === "rectangle" || type === "circle") {
+      const shapeElement = (
+        <div
+          key={shape.id}
+          style={{
+            ...commonStyles,
+            width: `${width}px`,
+            height: `${height}px`,
+            borderRadius: type === "circle" ? "50%" : "0%",
+            backgroundColor: `${color}33`,
+          }}
+          onMouseDown={handleShapeMouseDown(shape.id)}
+        />
+      );
 
-      case "circle":
-        const radius = Math.max(width, height) / 2;
-        return (
-          <div
-            key={shape.id}
-            style={{
-              ...commonStyles,
-              width: `${radius * 2}px`,
-              height: `${radius * 2}px`,
-              borderRadius: "50%",
-              backgroundColor: `${color}33`,
-            }}
-            onMouseDown={handleShapeMouseDown(shape.id)}
-          />
-        );
-
-      case "line":
-        const angle =
-          Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x) *
-          (180 / Math.PI);
-        const length = Math.sqrt(width ** 2 + height ** 2);
-        return (
-          <div key={shape.id}>
-            {/* Main line - draggable */}
-            <div
-              style={{
-                position: "absolute",
-                left: `${startPos.x}px`,
-                top: `${startPos.y}px`,
-                width: `${length}px`,
-                height: `${Math.max(strokeWidth, 8)}px`,
-                backgroundColor: color,
-                transformOrigin: "0 50%",
-                transform: `rotate(${angle}deg)`,
-                cursor: "move",
-                pointerEvents: "auto",
-              }}
-              onMouseDown={handleShapeMouseDown(shape.id)}
-            />
-            {/* Draggable start endpoint */}
-            <div
-              style={{
-                position: "absolute",
-                left: `${startPos.x - 6}px`,
-                top: `${startPos.y - 6}px`,
-                width: "12px",
-                height: "12px",
-                borderRadius: "50%",
-                backgroundColor: color,
-                border: "2px solid white",
-                cursor: "pointer",
-                pointerEvents: "auto",
-                zIndex: 10,
-              }}
-              onMouseDown={handleEndpointMouseDown(shape.id, "start")}
-            />
-            {/* Draggable end endpoint */}
-            <div
-              style={{
-                position: "absolute",
-                left: `${endPos.x - 6}px`,
-                top: `${endPos.y - 6}px`,
-                width: "12px",
-                height: "12px",
-                borderRadius: "50%",
-                backgroundColor: color,
-                border: "2px solid white",
-                cursor: "pointer",
-                pointerEvents: "auto",
-                zIndex: 10,
-              }}
-              onMouseDown={handleEndpointMouseDown(shape.id, "end")}
-            />
-          </div>
-        );
-
-      default:
-        return null;
+      return (
+        <div key={shape.id}>
+          {shapeElement}
+          {renderResizeHandle(shape.id, left, top, "top-left")}
+          {renderResizeHandle(shape.id, left + width, top, "top-right")}
+          {renderResizeHandle(shape.id, left, top + height, "bottom-left")}
+          {renderResizeHandle(shape.id, left + width, top + height, "bottom-right")}
+        </div>
+      );
     }
+
+    if (type === "line") {
+      const angle =
+        Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x) *
+        (180 / Math.PI);
+      const length = Math.sqrt(width ** 2 + height ** 2);
+
+      return (
+        <div key={shape.id}>
+          {/* Main line */}
+          <div
+            style={{
+              position: "absolute",
+              left: `${startPos.x}px`,
+              top: `${startPos.y}px`,
+              width: `${length}px`,
+              height: `${Math.max(strokeWidth, 8)}px`,
+              backgroundColor: color,
+              transformOrigin: "0 50%",
+              transform: `rotate(${angle}deg)`,
+              cursor: "move",
+              pointerEvents: "auto",
+            }}
+            onMouseDown={handleShapeMouseDown(shape.id)}
+          />
+          {/* Start endpoint */}
+          <div
+            style={{
+              position: "absolute",
+              left: `${startPos.x - 6}px`,
+              top: `${startPos.y - 6}px`,
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              backgroundColor: color,
+              border: "2px solid white",
+              cursor: "pointer",
+              pointerEvents: "auto",
+              zIndex: 10,
+            }}
+            onMouseDown={handleEndpointMouseDown(shape.id, "start")}
+          />
+          {/* End endpoint */}
+          <div
+            style={{
+              position: "absolute",
+              left: `${endPos.x - 6}px`,
+              top: `${endPos.y - 6}px`,
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              backgroundColor: color,
+              border: "2px solid white",
+              cursor: "pointer",
+              pointerEvents: "auto",
+              zIndex: 10,
+            }}
+            onMouseDown={handleEndpointMouseDown(shape.id, "end")}
+          />
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
