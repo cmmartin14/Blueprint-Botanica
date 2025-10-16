@@ -20,6 +20,14 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 }) => {
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
 
+  // --- Helper to convert mouse delta to local (rotated) delta
+  const getLocalDelta = (dx: number, dy: number, rotation: number) => {
+    const rad = (-rotation * Math.PI) / 180; // inverse rotation
+    const localDx = dx * Math.cos(rad) - dy * Math.sin(rad);
+    const localDy = dx * Math.sin(rad) + dy * Math.cos(rad);
+    return { localDx, localDy };
+  };
+
   // --- Shape dragging ---
   const handleShapeMouseDown = (shapeId: string) => {
     return (e: React.MouseEvent) => {
@@ -60,7 +68,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
   };
 
-  // --- Resize handles ---
+  // --- Rotated resizing ---
   const handleResizeMouseDown = (
     shapeId: string,
     direction:
@@ -80,48 +88,97 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const shape = shapes.find((s) => s.id === shapeId);
       if (!shape) return;
 
+      const rotation = shape.rotation || 0;
       const startX = e.clientX;
       const startY = e.clientY;
+
       const origStart = { ...shape.startPos };
       const origEnd = { ...shape.endPos };
+
+      const width = Math.abs(origEnd.x - origStart.x);
+      const height = Math.abs(origEnd.y - origStart.y);
+      const left = Math.min(origStart.x, origEnd.x);
+      const top = Math.min(origStart.y, origEnd.y);
+      const cx = left + width / 2;
+      const cy = top + height / 2;
 
       const handleMove = (moveEvent: MouseEvent) => {
         const dx = (moveEvent.clientX - startX) / scale;
         const dy = (moveEvent.clientY - startY) / scale;
 
+        // Convert mouse movement to shape-local coordinates
+        const { localDx, localDy } = getLocalDelta(dx, dy, rotation);
+
         let newStart = { ...origStart };
         let newEnd = { ...origEnd };
 
+        // Compute local bounding box
+        let localLeft = -width / 2;
+        let localRight = width / 2;
+        let localTop = -height / 2;
+        let localBottom = height / 2;
+
+        // Modify local bounds based on which handle is dragged
         switch (direction) {
           case "top-left":
-            newStart = { x: origStart.x + dx, y: origStart.y + dy };
+            localLeft += localDx;
+            localTop += localDy;
             break;
           case "top":
-            newStart = { x: origStart.x, y: origStart.y + dy };
+            localTop += localDy;
             break;
           case "top-right":
-            newStart = { x: origStart.x, y: origStart.y + dy };
-            newEnd = { x: origEnd.x + dx, y: origEnd.y };
+            localRight += localDx;
+            localTop += localDy;
             break;
           case "right":
-            newEnd = { x: origEnd.x + dx, y: origEnd.y };
+            localRight += localDx;
             break;
           case "bottom-right":
-            newEnd = { x: origEnd.x + dx, y: origEnd.y + dy };
+            localRight += localDx;
+            localBottom += localDy;
             break;
           case "bottom":
-            newEnd = { x: origEnd.x, y: origEnd.y + dy };
+            localBottom += localDy;
             break;
           case "bottom-left":
-            newStart = { x: origStart.x + dx, y: origStart.y };
-            newEnd = { x: origEnd.x, y: origEnd.y + dy };
+            localLeft += localDx;
+            localBottom += localDy;
             break;
           case "left":
-            newStart = { x: origStart.x + dx, y: origStart.y };
+            localLeft += localDx;
             break;
         }
 
-        onShapeUpdate?.(shapeId, { startPos: newStart, endPos: newEnd });
+        // Compute new corners in world coordinates
+        const corners = [
+          { x: localLeft, y: localTop },
+          { x: localRight, y: localBottom },
+        ];
+        const rad = (rotation * Math.PI) / 180;
+
+        const worldStart = {
+          x:
+            cx +
+            corners[0].x * Math.cos(rad) -
+            corners[0].y * Math.sin(rad),
+          y:
+            cy +
+            corners[0].x * Math.sin(rad) +
+            corners[0].y * Math.cos(rad),
+        };
+        const worldEnd = {
+          x:
+            cx +
+            corners[1].x * Math.cos(rad) -
+            corners[1].y * Math.sin(rad),
+          y:
+            cy +
+            corners[1].x * Math.sin(rad) +
+            corners[1].y * Math.cos(rad),
+        };
+
+        onShapeUpdate?.(shapeId, { startPos: worldStart, endPos: worldEnd });
       };
 
       const handleUp = () => {
@@ -166,7 +223,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         let delta = currentAngle - startAngle;
         let newRotation = originalRotation + delta;
 
-        // Snapping (Shift key)
         if (moveEvent.shiftKey) {
           newRotation = Math.round(newRotation / SNAP_ANGLE) * SNAP_ANGLE;
         }
@@ -184,7 +240,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
   };
 
-  // --- Rotated handle coordinates ---
+  // --- Rotated handle positions ---
   const getRotatedHandlePosition = (
     cx: number,
     cy: number,
@@ -201,7 +257,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
   };
 
-  // --- Render handles with rotation ---
+  // --- Render handles ---
   const renderHandles = (
     shapeId: string,
     left: number,
@@ -246,7 +302,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     });
   };
 
-  // --- Render each shape ---
+  // --- Render shapes ---
   const renderShape = (shape: Shape) => {
     const { startPos, endPos, color, strokeWidth, type } = shape;
     const rotation = shape.rotation || 0;
@@ -278,7 +334,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const handles = isSelected && (
         <>
           {renderHandles(shape.id, left, top, width, height, rotation)}
-          {/* Rotation handle above top center */}
           {(() => {
             const rotatePos = getRotatedHandlePosition(
               cx,
@@ -316,36 +371,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       );
     }
 
-    // --- Lines remain same ---
-    if (type === "line") {
-      const angle =
-        Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x) *
-        (180 / Math.PI);
-      const length = Math.sqrt(width ** 2 + height ** 2);
-      const isSelected = shape.id === selectedShapeId;
-
-      return (
-        <div key={shape.id}>
-          <div
-            style={{
-              position: "absolute",
-              left: `${startPos.x}px`,
-              top: `${startPos.y}px`,
-              width: `${length}px`,
-              height: `${Math.max(strokeWidth, 8)}px`,
-              backgroundColor: color,
-              transformOrigin: "0 50%",
-              transform: `rotate(${angle}deg)`,
-              cursor: "move",
-              pointerEvents: "auto",
-              boxShadow: isSelected ? "0 0 0 2px #0070f3" : "none",
-            }}
-            onMouseDown={handleShapeMouseDown(shape.id)}
-          />
-        </div>
-      );
-    }
-
     return null;
   };
 
@@ -360,3 +385,4 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 };
 
 export default ShapeRenderer;
+
