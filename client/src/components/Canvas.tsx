@@ -164,7 +164,7 @@ const Canvas = () => {
       <div className="absolute top-4 left-4 z-50">
         <button
           onClick={toggleEditMode}
-          className={`px-4 py-3 rounded-xl text-black font-medium shadow-xl transition bg-gray-200 hover:bg-gray-300`}
+          className={`px-4 py-3 rounded-xl text-green-800 font-medium shadow-xl transition bg-white hover:bg-gray-300`}
         >
           <FaEdit size={25}/>
         </button>
@@ -230,31 +230,31 @@ const Canvas = () => {
       <div className="flex gap-2">
         <button
           onClick={() => createShape('rectangle')}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
         >
           <MdOutlineRectangle size={35}/>
         </button>
         <button
           onClick={() => createShape('circle')}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
         >
           <FaRegCircle size={25}/>
         </button>
         <button
           onClick={() => createShape('line')}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
         >
           <FaDrawPolygon size={25}/>
         </button>
         <button
           onClick={() => createShape('line')}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
         >
           <MdOutlineDraw size={25}/>
         </button>
         <button
           onClick={toggleEditMode}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
         >
           <TbCircleXFilled size={25}/>
         </button>
