@@ -4,13 +4,14 @@ import { FaRegCircle, FaSearch } from "react-icons/fa";
 import { MdOutlineRectangle } from "react-icons/md";
 import { FaDrawPolygon } from "react-icons/fa";
 import { MdOutlineDraw } from "react-icons/md";
-import { TbCircleXFilled } from "react-icons/tb";
+import { TbCircleXFilled, TbHomeEdit } from "react-icons/tb";
 import { FaEdit } from "react-icons/fa";
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Shape, Position } from '../types/shapes';
 import ShapeRenderer from './ShapeRenderer';
 import SearchWindow from "./Searchwindow";
+import VariableWindow from "./VariableWindow";
 
 
 const Canvas = () => {
@@ -20,7 +21,9 @@ const Canvas = () => {
   const [scale, setScale] = useState(1);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isVariableOpen, setIsVariableOpen] = useState(false);
   const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev); 
+  const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev); 
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Edit mode toggle
@@ -182,6 +185,21 @@ const Canvas = () => {
           type="button"
         >
           <FaSearch size={25} />
+        </button>
+      </div>
+
+      <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+        <button
+          onClick={toggleVariableWindow}
+          className={`px-4 py-3 rounded-xl font-medium shadow-xl transition-colors bg-gray-200 hover:bg-gray-300 ${
+            isVariableOpen ? "bg-green-700 text-white" : "bg-white/90 text-green-800 hover:bg-gray-300"
+          }`}
+          aria-pressed={isVariableOpen}
+          aria-label={isVariableOpen ? "Hide search window" : "Show search window"}
+          type="button"
+        >
+          <TbHomeEdit size={25} />
         </button>
       </div>
       
