@@ -10,6 +10,7 @@ export interface BaseShape {
   endPos: Position;
   color: string;
   strokeWidth: number;
+  rotation?: number;
 }
 
 export interface Rectangle extends BaseShape {

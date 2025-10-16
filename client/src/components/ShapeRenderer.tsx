@@ -9,6 +9,8 @@ interface ShapeRendererProps {
 }
 
 const HANDLE_SIZE = 10;
+const ROTATE_HANDLE_OFFSET = 40;
+const SNAP_ANGLE = 15; // degrees
 
 const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   shapes,
@@ -29,72 +31,36 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
       const startX = e.clientX;
       const startY = e.clientY;
-      const originalStartPos = { ...shape.startPos };
-      const originalEndPos = { ...shape.endPos };
+      const originalStart = { ...shape.startPos };
+      const originalEnd = { ...shape.endPos };
 
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = (moveEvent.clientX - startX) / scale;
-        const deltaY = (moveEvent.clientY - startY) / scale;
+      const handleMove = (moveEvent: MouseEvent) => {
+        const dx = (moveEvent.clientX - startX) / scale;
+        const dy = (moveEvent.clientY - startY) / scale;
 
         onShapeUpdate?.(shapeId, {
           startPos: {
-            x: originalStartPos.x + deltaX,
-            y: originalStartPos.y + deltaY,
+            x: originalStart.x + dx,
+            y: originalStart.y + dy,
           },
           endPos: {
-            x: originalEndPos.x + deltaX,
-            y: originalEndPos.y + deltaY,
+            x: originalEnd.x + dx,
+            y: originalEnd.y + dy,
           },
         });
       };
 
-      const handleMouseUp = () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
+      const handleUp = () => {
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
       };
 
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("mouseup", handleUp);
     };
   };
 
-  // --- Endpoint dragging (lines) ---
-  const handleEndpointMouseDown = (
-    shapeId: string,
-    endpoint: "start" | "end"
-  ) => {
-    return (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setSelectedShapeId(shapeId);
-
-      const canvasElement = document.querySelector(
-        "[data-canvas]"
-      ) as HTMLElement;
-      if (!canvasElement) return;
-
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const rect = canvasElement.getBoundingClientRect();
-        const x = (moveEvent.clientX - rect.left) / scale;
-        const y = (moveEvent.clientY - rect.top) / scale;
-
-        const updates =
-          endpoint === "start"
-            ? { startPos: { x, y } }
-            : { endPos: { x, y } };
-        onShapeUpdate?.(shapeId, updates);
-      };
-
-      const handleMouseUp = () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    };
-  };
-
-  // --- Resize dragging ---
+  // --- Resize handles ---
   const handleResizeMouseDown = (
     shapeId: string,
     direction:
@@ -119,148 +85,244 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const origStart = { ...shape.startPos };
       const origEnd = { ...shape.endPos };
 
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = (moveEvent.clientX - startX) / scale;
-        const deltaY = (moveEvent.clientY - startY) / scale;
+      const handleMove = (moveEvent: MouseEvent) => {
+        const dx = (moveEvent.clientX - startX) / scale;
+        const dy = (moveEvent.clientY - startY) / scale;
 
         let newStart = { ...origStart };
         let newEnd = { ...origEnd };
 
         switch (direction) {
           case "top-left":
-            newStart = { x: origStart.x + deltaX, y: origStart.y + deltaY };
+            newStart = { x: origStart.x + dx, y: origStart.y + dy };
             break;
           case "top":
-            newStart = { x: origStart.x, y: origStart.y + deltaY };
+            newStart = { x: origStart.x, y: origStart.y + dy };
             break;
           case "top-right":
-            newStart = { x: origStart.x, y: origStart.y + deltaY };
-            newEnd = { x: origEnd.x + deltaX, y: origEnd.y };
+            newStart = { x: origStart.x, y: origStart.y + dy };
+            newEnd = { x: origEnd.x + dx, y: origEnd.y };
             break;
           case "right":
-            newEnd = { x: origEnd.x + deltaX, y: origEnd.y };
+            newEnd = { x: origEnd.x + dx, y: origEnd.y };
             break;
           case "bottom-right":
-            newEnd = { x: origEnd.x + deltaX, y: origEnd.y + deltaY };
+            newEnd = { x: origEnd.x + dx, y: origEnd.y + dy };
             break;
           case "bottom":
-            newEnd = { x: origEnd.x, y: origEnd.y + deltaY };
+            newEnd = { x: origEnd.x, y: origEnd.y + dy };
             break;
           case "bottom-left":
-            newStart = { x: origStart.x + deltaX, y: origStart.y };
-            newEnd = { x: origEnd.x, y: origEnd.y + deltaY };
+            newStart = { x: origStart.x + dx, y: origStart.y };
+            newEnd = { x: origEnd.x, y: origEnd.y + dy };
             break;
           case "left":
-            newStart = { x: origStart.x + deltaX, y: origStart.y };
+            newStart = { x: origStart.x + dx, y: origStart.y };
             break;
         }
 
-        onShapeUpdate?.(shapeId, {
-          startPos: newStart,
-          endPos: newEnd,
-        });
+        onShapeUpdate?.(shapeId, { startPos: newStart, endPos: newEnd });
       };
 
-      const handleMouseUp = () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
+      const handleUp = () => {
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
       };
 
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("mouseup", handleUp);
     };
   };
 
-  // --- Render a single resize handle ---
-  const renderResizeHandle = (
+  // --- Rotation handle ---
+  const handleRotateMouseDown = (shapeId: string) => {
+    return (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSelectedShapeId(shapeId);
+
+      const shape = shapes.find((s) => s.id === shapeId);
+      if (!shape) return;
+
+      const rectCenter = {
+        x: (shape.startPos.x + shape.endPos.x) / 2,
+        y: (shape.startPos.y + shape.endPos.y) / 2,
+      };
+      const originalRotation = shape.rotation || 0;
+
+      const startAngle =
+        Math.atan2(
+          e.clientY - rectCenter.y * scale,
+          e.clientX - rectCenter.x * scale
+        ) *
+        (180 / Math.PI);
+
+      const handleMove = (moveEvent: MouseEvent) => {
+        const currentAngle =
+          Math.atan2(
+            moveEvent.clientY - rectCenter.y * scale,
+            moveEvent.clientX - rectCenter.x * scale
+          ) *
+          (180 / Math.PI);
+        let delta = currentAngle - startAngle;
+        let newRotation = originalRotation + delta;
+
+        // Snapping (Shift key)
+        if (moveEvent.shiftKey) {
+          newRotation = Math.round(newRotation / SNAP_ANGLE) * SNAP_ANGLE;
+        }
+
+        onShapeUpdate?.(shapeId, { rotation: newRotation });
+      };
+
+      const handleUp = () => {
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
+      };
+
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("mouseup", handleUp);
+    };
+  };
+
+  // --- Rotated handle coordinates ---
+  const getRotatedHandlePosition = (
+    cx: number,
+    cy: number,
+    offsetX: number,
+    offsetY: number,
+    rotation: number
+  ) => {
+    const rad = (rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    return {
+      x: cx + offsetX * cos - offsetY * sin,
+      y: cy + offsetX * sin + offsetY * cos,
+    };
+  };
+
+  // --- Render handles with rotation ---
+  const renderHandles = (
     shapeId: string,
-    x: number,
-    y: number,
-    direction:
-      | "top-left"
-      | "top"
-      | "top-right"
-      | "right"
-      | "bottom-right"
-      | "bottom"
-      | "bottom-left"
-      | "left"
-  ) => (
-    <div
-      key={`${shapeId}-${direction}`}
-      style={{
-        position: "absolute",
-        left: `${x - HANDLE_SIZE / 2}px`,
-        top: `${y - HANDLE_SIZE / 2}px`,
-        width: `${HANDLE_SIZE}px`,
-        height: `${HANDLE_SIZE}px`,
-        backgroundColor: "white",
-        border: "1px solid black",
-        cursor: `${direction}-resize`,
-        zIndex: 20,
-      }}
-      onMouseDown={handleResizeMouseDown(shapeId, direction)}
-    />
-  );
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+    rotation: number
+  ) => {
+    const cx = left + width / 2;
+    const cy = top + height / 2;
+
+    const corners = [
+      ["top-left", -width / 2, -height / 2],
+      ["top", 0, -height / 2],
+      ["top-right", width / 2, -height / 2],
+      ["right", width / 2, 0],
+      ["bottom-right", width / 2, height / 2],
+      ["bottom", 0, height / 2],
+      ["bottom-left", -width / 2, height / 2],
+      ["left", -width / 2, 0],
+    ] as const;
+
+    return corners.map(([dir, ox, oy]) => {
+      const { x, y } = getRotatedHandlePosition(cx, cy, ox, oy, rotation);
+      return (
+        <div
+          key={`${shapeId}-${dir}`}
+          style={{
+            position: "absolute",
+            left: `${x - HANDLE_SIZE / 2}px`,
+            top: `${y - HANDLE_SIZE / 2}px`,
+            width: `${HANDLE_SIZE}px`,
+            height: `${HANDLE_SIZE}px`,
+            backgroundColor: "white",
+            border: "1px solid black",
+            cursor: `${dir}-resize`,
+            zIndex: 20,
+          }}
+          onMouseDown={handleResizeMouseDown(shapeId, dir)}
+        />
+      );
+    });
+  };
 
   // --- Render each shape ---
   const renderShape = (shape: Shape) => {
     const { startPos, endPos, color, strokeWidth, type } = shape;
+    const rotation = shape.rotation || 0;
     const width = Math.abs(endPos.x - startPos.x);
     const height = Math.abs(endPos.y - startPos.y);
     const left = Math.min(startPos.x, endPos.x);
     const top = Math.min(startPos.y, endPos.y);
     const isSelected = shape.id === selectedShapeId;
 
-    const commonStyles = {
-      position: "absolute" as const,
-      left: `${left}px`,
-      top: `${top}px`,
-      border: `${strokeWidth}px solid ${color}`,
-      cursor: "move",
-      pointerEvents: "auto" as const,
-      boxSizing: "border-box" as const,
-    };
-
     if (type === "rectangle" || type === "circle") {
-      const baseShape = (
-        <div
-          style={{
-            ...commonStyles,
-            width: `${width}px`,
-            height: `${height}px`,
-            borderRadius: type === "circle" ? "50%" : "0%",
-            backgroundColor: `${color}33`,
-            boxShadow: isSelected ? "0 0 0 2px #0070f3" : "none",
-          }}
-          onMouseDown={handleShapeMouseDown(shape.id)}
-        />
-      );
+      const cx = left + width / 2;
+      const cy = top + height / 2;
 
-      if (!isSelected) return baseShape;
+      const shapeStyle: React.CSSProperties = {
+        position: "absolute",
+        left: `${cx}px`,
+        top: `${cy}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+        transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+        border: `${strokeWidth}px solid ${color}`,
+        borderRadius: type === "circle" ? "50%" : "0%",
+        backgroundColor: `${color}33`,
+        cursor: "move",
+        boxShadow: isSelected ? "0 0 0 2px #0070f3" : "none",
+        boxSizing: "border-box",
+      };
+
+      const handles = isSelected && (
+        <>
+          {renderHandles(shape.id, left, top, width, height, rotation)}
+          {/* Rotation handle above top center */}
+          {(() => {
+            const rotatePos = getRotatedHandlePosition(
+              cx,
+              cy,
+              0,
+              -height / 2 - ROTATE_HANDLE_OFFSET,
+              rotation
+            );
+            return (
+              <div
+                key={`${shape.id}-rotate`}
+                style={{
+                  position: "absolute",
+                  left: `${rotatePos.x - HANDLE_SIZE / 2}px`,
+                  top: `${rotatePos.y - HANDLE_SIZE / 2}px`,
+                  width: `${HANDLE_SIZE}px`,
+                  height: `${HANDLE_SIZE}px`,
+                  backgroundColor: "#0070f3",
+                  borderRadius: "50%",
+                  cursor: "grab",
+                  zIndex: 25,
+                }}
+                onMouseDown={handleRotateMouseDown(shape.id)}
+              />
+            );
+          })()}
+        </>
+      );
 
       return (
         <div key={shape.id}>
-          {baseShape}
-          {/* Corner handles */}
-          {renderResizeHandle(shape.id, left, top, "top-left")}
-          {renderResizeHandle(shape.id, left + width, top, "top-right")}
-          {renderResizeHandle(shape.id, left, top + height, "bottom-left")}
-          {renderResizeHandle(shape.id, left + width, top + height, "bottom-right")}
-          {/* Edge handles */}
-          {renderResizeHandle(shape.id, left + width / 2, top, "top")}
-          {renderResizeHandle(shape.id, left + width / 2, top + height, "bottom")}
-          {renderResizeHandle(shape.id, left, top + height / 2, "left")}
-          {renderResizeHandle(shape.id, left + width, top + height / 2, "right")}
+          <div style={shapeStyle} onMouseDown={handleShapeMouseDown(shape.id)} />
+          {handles}
         </div>
       );
     }
 
+    // --- Lines remain same ---
     if (type === "line") {
       const angle =
         Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x) *
         (180 / Math.PI);
       const length = Math.sqrt(width ** 2 + height ** 2);
+      const isSelected = shape.id === selectedShapeId;
 
       return (
         <div key={shape.id}>
@@ -280,43 +342,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
           />
-          {/* Draggable endpoints */}
-          {isSelected && (
-            <>
-              <div
-                style={{
-                  position: "absolute",
-                  left: `${startPos.x - 6}px`,
-                  top: `${startPos.y - 6}px`,
-                  width: "12px",
-                  height: "12px",
-                  borderRadius: "50%",
-                  backgroundColor: color,
-                  border: "2px solid white",
-                  cursor: "pointer",
-                  pointerEvents: "auto",
-                  zIndex: 10,
-                }}
-                onMouseDown={handleEndpointMouseDown(shape.id, "start")}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  left: `${endPos.x - 6}px`,
-                  top: `${endPos.y - 6}px`,
-                  width: "12px",
-                  height: "12px",
-                  borderRadius: "50%",
-                  backgroundColor: color,
-                  border: "2px solid white",
-                  cursor: "pointer",
-                  pointerEvents: "auto",
-                  zIndex: 10,
-                }}
-                onMouseDown={handleEndpointMouseDown(shape.id, "end")}
-              />
-            </>
-          )}
         </div>
       );
     }
