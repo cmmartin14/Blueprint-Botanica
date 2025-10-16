@@ -148,6 +148,11 @@ const Canvas = () => {
     }px`,
   };
 
+  const clearCanvas = () => {
+    setFreehandPaths([]);
+    setShapes([]);
+  };
+
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-white">
       {/* Edit Mode Toggle Button */}
@@ -294,16 +299,11 @@ const Canvas = () => {
             Reset
           </button>
           <button
-            onClick={() => setShapes([])}
+            onClick={() => clearCanvas([])}
+            //FIXME
             className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs"
           >
-            Clear Shapes
-          </button>
-          <button
-            onClick={() => setFreehandPaths([])}
-            className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs"
-          >
-            Clear Drawing
+            Clear
           </button>
         </div>
       </div>
