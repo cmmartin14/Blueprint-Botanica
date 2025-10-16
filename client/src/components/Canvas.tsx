@@ -269,7 +269,7 @@ const Canvas = () => {
               <FaDrawPolygon size={25} />
             </button>
             <button
-              onClick={() => setIsFreehandMode((prev) => !prev)} // THIS BUTTON
+              onClick={() => setIsFreehandMode((prev) => !prev)}
               className={`px-3 py-2 text-sm rounded ${
                 isFreehandMode
                   ? "bg-green-200"

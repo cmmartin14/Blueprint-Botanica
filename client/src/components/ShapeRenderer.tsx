@@ -119,7 +119,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               ...commonStyles,
               width: `${width}px`,
               height: `${height}px`,
-              backgroundColor: `${color}33`, // ✅ semi-transparent fill
+              backgroundColor: `${color}33`,
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
           />
@@ -135,7 +135,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               width: `${radius * 2}px`,
               height: `${radius * 2}px`,
               borderRadius: "50%",
-              backgroundColor: `${color}33`, // ✅ semi-transparent fill
+              backgroundColor: `${color}33`,
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
           />
@@ -214,91 +214,3 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 };
 
 export default ShapeRenderer;
-
-/*import React from "react";
-import { Shape } from "../types/shapes";
-
-interface ShapeRendererProps {
-  shapes: Shape[];
-  scale: number;
-  onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
-}
-
-const ShapeRenderer: React.FC<ShapeRendererProps> = ({
-  shapes,
-  scale,
-  onShapeUpdate,
-}) => {
-  return (
-    <svg
-      className="absolute inset-0 w-full h-full"
-      style={{ pointerEvents: "none" }}
-    >
-      {shapes.map((shape) => {
-        const { id, type, startPos, endPos, color, strokeWidth } = shape;
-
-        switch (type) {
-          case "rectangle": {
-            const x = Math.min(startPos.x, endPos.x);
-            const y = Math.min(startPos.y, endPos.y);
-            const width = Math.abs(endPos.x - startPos.x);
-            const height = Math.abs(endPos.y - startPos.y);
-            return (
-              <rect
-                key={id}
-                x={x}
-                y={y}
-                width={width}
-                height={height}
-                fill={`${color}40`} // ✅ semi-transparent fill
-                stroke={color}
-                strokeWidth={strokeWidth / scale}
-              />
-            );
-          }
-
-          case "circle": {
-            const radius =
-              Math.sqrt(
-                Math.pow(endPos.x - startPos.x, 2) +
-                  Math.pow(endPos.y - startPos.y, 2)
-              ) / 2;
-            const cx = (startPos.x + endPos.x) / 2;
-            const cy = (startPos.y + endPos.y) / 2;
-            return (
-              <circle
-                key={id}
-                cx={cx}
-                cy={cy}
-                r={radius}
-                fill={`${color}40`} // ✅ semi-transparent fill
-                stroke={color}
-                strokeWidth={strokeWidth / scale}
-              />
-            );
-          }
-
-          case "line": {
-            return (
-              <line
-                key={id}
-                x1={startPos.x}
-                y1={startPos.y}
-                x2={endPos.x}
-                y2={endPos.y}
-                stroke={color}
-                strokeWidth={strokeWidth / scale}
-              />
-            );
-          }
-
-          default:
-            return null;
-        }
-      })}
-    </svg>
-  );
-};
-
-export default ShapeRenderer;
-*/
