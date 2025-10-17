@@ -4,7 +4,13 @@ Blueprint Botanica is a digital garden planning tool designed to help gardeners 
 
 ### Hosting Locally
 
-Currently, Blueprint Botanica is not hosted online and can only be ran locally. To test the current build, navigate to the client folder and use the command:
+Currently, Blueprint Botanica is not hosted online and can only be ran locally. To test the current build, navigate to the client folder:
+
+```sh
+$ cd client
+```
+
+ Type the command:
 ```sh
 $ npm run dev
 ```
