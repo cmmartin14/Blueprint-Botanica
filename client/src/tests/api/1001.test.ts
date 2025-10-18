@@ -18,7 +18,7 @@ describe("GET /api/zipcode/[zip]", () => {
 
     // Mock the API response
     mockFetch.mockResolvedValueOnce({
-      json: async () => ({ zone: "Zone 7" }),
+      json: async () => ({ zone: "8b" }),
     });
 
     const req = new Request(`https://example.com/api/zipcode/${fakeZip}`);
