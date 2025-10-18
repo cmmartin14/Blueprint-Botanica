@@ -33,13 +33,16 @@ jobs:
         run: npm run lint
 
       - name: Build for testing
-        run: npm run dev
+        run: npm run build
+
+      - name: Open server for playwright tests
+        run: npm start &
+
+      - name: Testing
+        run: npm run test
 
       - name: Type checking
         run: npm run type-check
-      
-      - name: Testing
-        run: npm run test
 
   build:
     runs-on: ubuntu-latest
