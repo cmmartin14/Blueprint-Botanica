@@ -8,7 +8,9 @@
     "type-check": "tsc --noEmit",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest"
+    "test:unit": "vitest run",
+    "test:e2e": "npx playwright test",
+    "test": "npm run test:unit && npm run test:e2e"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
