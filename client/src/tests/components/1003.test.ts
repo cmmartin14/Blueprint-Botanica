@@ -1,28 +1,12 @@
-// tests/navbar-home-link.test.ts
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import Navbar from "../src/components/Navbar"; // adjust path
-import { useRouter } from "next/navigation";
+import { test, expect } from '@playwright/test';
 
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(),
-}));
+test.describe('Navbar navigation', () => {
+  test('clicking Home navigates to the home page', async ({ page }) => {
+    await page.goto('http://localhost:3000/test-page');
 
-describe("Navbar Home link", () => {
-  const pushMock = vi.fn();
+    await page.getByRole('link', { name: /home/i }).click();
 
-  beforeEach(() => {
-    (useRouter as unknown as vi.Mock).mockReturnValue({ push: pushMock });
-    render(<Navbar />);
-  });
+    await expect(page).toHaveURL('http://localhost:3000/');
 
-  it("navigates to '/' when Home is clicked", async () => {
-    const user = userEvent.setup();
-    const homeLink = screen.getByRole("link", { name: /home/i });
-
-    await user.click(homeLink);
-
-    expect(pushMock).toHaveBeenCalledWith("/");
   });
 });

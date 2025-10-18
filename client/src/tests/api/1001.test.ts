@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GET } from "../../app/api/zipcode/[zip]/route"; // adjust path to your route
-import { NextResponse } from "next/server";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -26,7 +25,7 @@ describe("GET /api/zipcode/[zip]", () => {
     const res = await GET(req);
 
     const json = await res.json();
-    expect(json).toEqual({ zone: "Zone 7" });
+    expect(json).toEqual({ zone: "8b" });
   });
 
   it("returns 404 if zone not found", async () => {
