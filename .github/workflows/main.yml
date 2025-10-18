@@ -32,6 +32,9 @@ jobs:
       - name: Linting
         run: npm run lint
 
+      - name: Build for testing
+        run: npm run dev
+
       - name: Type checking
         run: npm run type-check
       
