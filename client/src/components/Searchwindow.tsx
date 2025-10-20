@@ -28,7 +28,7 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
       <div className="flex items-center justify-between border-b border-green-200 px-4 py-3">
           <h2 className="text-lg font-semibold text-green-900">Search</h2>
   
-
+        <div className="flex gap-2">
         <button
           type="button"
           onClick={toggleFullscreen}
@@ -57,6 +57,20 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
               </>
           )}
         </button>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-green-700 transition-colors hover:bg-green-100 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-green-300"
+            aria-label="Close search"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18" />
+              <path d="M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+        </div>
       </div>
 
 

@@ -6,6 +6,7 @@ import { Shape } from '../types/shapes';
 interface ShapeRendererProps {
   shapes: Shape[];
   scale: number;
+  pan: { x: number; y: number }; // Added pan prop
   snapToShapes?: boolean;
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
 }
@@ -15,6 +16,14 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   scale,
   onShapeUpdate,
 }) => {
+
+  // Grid snapping function
+  const snapToGrid = (x: number, y: number, gridSize: number = 20) => {
+    return {
+      x: Math.round(x / gridSize) * gridSize,
+      y: Math.round(y / gridSize) * gridSize,
+    };
+  };
 
   // ==== Shape dragging ====
   const handleShapeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
@@ -27,7 +36,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
     const originalStart = { ...shape.startPos };
     const originalEnd = { ...shape.endPos };
-    const originalPoints = shape.points ? [...shape.points] : undefined;
+    const originalPoints = shape.type === 'freehand' && shape.points ? [...shape.points] : undefined;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const dx = (moveEvent.clientX - startX) / scale;
@@ -39,10 +48,25 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             points: originalPoints.map(p => ({ x: p.x + dx, y: p.y + dy })),
           });
         } else {
-          onShapeUpdate(shapeId, {
-            startPos: { x: originalStart.x + dx, y: originalStart.y + dy },
-            endPos: { x: originalEnd.x + dx, y: originalEnd.y + dy },
-          });
+          // Snap entire shape movement to grid for lines
+          const newStart = { x: originalStart.x + dx, y: originalStart.y + dy };
+          const newEnd = { x: originalEnd.x + dx, y: originalEnd.y + dy };
+          
+          if (shape.type === 'line') {
+            const snappedStart = snapToGrid(newStart.x, newStart.y);
+            const offsetX = snappedStart.x - newStart.x;
+            const offsetY = snappedStart.y - newStart.y;
+            
+            onShapeUpdate(shapeId, {
+              startPos: snappedStart,
+              endPos: { x: newEnd.x + offsetX, y: newEnd.y + offsetY },
+            });
+          } else {
+            onShapeUpdate(shapeId, {
+              startPos: newStart,
+              endPos: newEnd,
+            });
+          }
         }
       }
     };
@@ -56,7 +80,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  // ==== Endpoint drag for lines ====
+  // ==== Endpoint drag for lines with grid snapping ====
   const handleEndpointMouseDown = (shapeId: string, endpoint: 'start' | 'end') => (e: React.MouseEvent) => {
     e.stopPropagation();
     const canvasElement = document.querySelector('[data-canvas]') as HTMLElement;
@@ -64,10 +88,28 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const rect = canvasElement.getBoundingClientRect();
-      const x = (moveEvent.clientX - rect.left) / scale;
-      const y = (moveEvent.clientY - rect.top) / scale;
+      
+      // Get the transformed canvas container
+      const transformedContainer = canvasElement.querySelector('[data-transformed]') as HTMLElement;
+      if (!transformedContainer) return;
+      
+      // Parse the transform to get pan values
+      const transform = transformedContainer.style.transform;
+      const translateMatch = transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
+      const scaleMatch = transform.match(/scale\(([^)]+)\)/);
+      
+      const panX = translateMatch ? parseFloat(translateMatch[1]) : 0;
+      const panY = translateMatch ? parseFloat(translateMatch[2]) : 0;
+      const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+      
+      // Calculate the correct position accounting for pan and scale
+      const rawX = (moveEvent.clientX - rect.left - panX) / currentScale;
+      const rawY = (moveEvent.clientY - rect.top - panY) / currentScale;
+      
+      // Snap to grid
+      const snapped = snapToGrid(rawX, rawY);
 
-      onShapeUpdate?.(shapeId, endpoint === 'start' ? { startPos: { x, y } } : { endPos: { x, y } });
+      onShapeUpdate?.(shapeId, endpoint === 'start' ? { startPos: snapped } : { endPos: snapped });
     };
 
     const handleMouseUp = () => {
@@ -81,7 +123,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   // ==== Render function ====
   const renderShape = (shape: Shape) => {
-    const { type, startPos, endPos, color, strokeWidth, points } = shape;
+    const { type, startPos, endPos, color, strokeWidth } = shape;
+    const points = 'points' in shape ? shape.points : undefined;
     const width = Math.abs(endPos.x - startPos.x);
     const height = Math.abs(endPos.y - startPos.y);
     const left = Math.min(startPos.x, endPos.x);
