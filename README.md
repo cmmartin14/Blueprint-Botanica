@@ -10,8 +10,9 @@ Currently, Blueprint Botanica is not hosted online and can only be ran locally. 
 $ cd client
 ```
 
- Type the command:
+ Run the commands:
 ```sh
+$ npm install
 $ npm run dev
 ```
 This hosts the current build on your [localhost](http://localhost:3000/)
