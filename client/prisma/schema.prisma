@@ -13,3 +13,11 @@ model users {
   email    String @unique @db.VarChar(100)
   password String @db.VarChar(100)
 }
+
+model zones {
+  id       Int     @id @default(autoincrement())
+  zone     String  @unique @db.VarChar(4)
+  temp_min Int
+  temp_max Int
+  notes    String?
+}
