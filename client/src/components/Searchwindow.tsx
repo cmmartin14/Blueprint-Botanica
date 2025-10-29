@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-
+import PlantSearch from '../components/PlantSearch';
 
 type SearchWindowProps = {
   isOpen: boolean;
@@ -18,7 +18,7 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
   if (!isOpen) return null;
 
   const toggleFullscreen = () => setIsFullscreen((prev) => !prev);
-  
+
   return (
     <div
       className={`fixed z-50 rounded-2xl bg-white shadow-2xl border border-green-200 transition-all duration-300 ease-in-out ${
@@ -59,10 +59,11 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
         </button>
       </div>
 
-
-      <div className="flex h-full flex-col justify-center px-6 py-8 text-center">
-        <h3 className="mt-3 text-2xl font-semibold text-green-900">Search is on the way</h3>
+      <div className={`${isFullscreen ? "h-[636px]" : "h-[467px]"} flex-1 overflow-auto transition-all duration-300 ease-in-out`}>
+        <PlantSearch />
       </div>
+      
+      
     </div>
   );
 };
