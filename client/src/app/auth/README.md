@@ -6,7 +6,7 @@ Ensure that you have all the required dependencies installed by navigating to th
 npm install 
 ```
 Ensure that your database is both running and that your .env file has the proper database url key.
-It should be formated as `DATABASE_URL="postgresql://USERNAME:PASSWORD@localhost:PORT/DATABASE?schema=public"` with your data replacing USERNAME, PASSWORD, PORT, and DATABASE.
+It should be formated as `DATABASE_URL="postgresql://USERNAME:PASSWORD@localhost:PORT/DATABASE_NAME?schema=public"` with your data replacing USERNAME, PASSWORD, PORT, and DATABASE.
 
 Then, navigate to the prisma folder, and run:
 
