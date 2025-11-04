@@ -158,14 +158,15 @@ const Navbar = () => {
               </button>
             </div>
             
-            <div className="flex items-center gap-2 font-medium mt-2.5" style={{ color: '#B7C398' }}>
+            <div className="flex items-center gap-2 font-medium" style={{ color: '#B7C398' }}>
               {city ? ` ${city} | ` : ""}
               {temp !== null ? formatTemperature(temp) : "Fetching..."}
   
               {/* Toggle button */}
               <button
                 onClick={() => setUnit(unit === "C" ? "F" : "C")}
-                className="ml-2 px-2 py-1 bg-green-700 text-green-50 rounded text-xs hover:bg-green-600 transition-colors"
+                className="ml-1 px-2 py-1 bg-[#E0E6C6] rounded-xl text-sm font-bold hover:bg-[#B7C398] transition-colors shadow-xl w-8 h-8"
+                style={{ color: '#003326' }}
               >
                 {unit === "C" ? "°F" : "°C"}
               </button>
