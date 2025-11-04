@@ -17,9 +17,15 @@ const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
   const [city, setCity] = useState<string | null>(null);
+  const [unit, setUnit] = useState<"C" | "F">("C");
 
   const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
   const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
+
+  const formatTemperature = (tempC: number) => {
+    if (unit === "C") return `${tempC.toFixed(0)}°C`;
+    return `${(tempC * 9/5 + 32).toFixed(0)}°F`;
+  };  
 
   // Convert full state name → 2-letter abbreviation
   const getStateAbbreviation = (stateName: string): string | null => {
@@ -152,10 +158,18 @@ const Navbar = () => {
               </button>
             </div>
             
-            <div className="font-medium mt-3" style={{ color: '#B7C398' }}>
-              {city ? ` ${city}` : ""}
-              {temp !== null ? ` | ${temp.toFixed(0)}°C` : "Fetching..."}
-            </div>          
+            <div className="flex items-center gap-2 font-medium mt-2.5" style={{ color: '#B7C398' }}>
+              {city ? ` ${city} | ` : ""}
+              {temp !== null ? formatTemperature(temp) : "Fetching..."}
+  
+              {/* Toggle button */}
+              <button
+                onClick={() => setUnit(unit === "C" ? "F" : "C")}
+                className="ml-2 px-2 py-1 bg-green-700 text-green-50 rounded text-xs hover:bg-green-600 transition-colors"
+              >
+                {unit === "C" ? "°F" : "°C"}
+              </button>
+            </div>  
           </div>
 
           <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
