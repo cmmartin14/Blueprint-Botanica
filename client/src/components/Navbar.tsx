@@ -16,12 +16,12 @@ const Navbar = () => {
   const [temp, setTemp] = useState<number | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
+  const [city, setCity] = useState<string | null>(null);
 
   const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
   const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
 
   useEffect(() => {
-    // format today’s date
     const now = new Date();
     setDate(
       now.toLocaleDateString(undefined, {
@@ -31,50 +31,62 @@ const Navbar = () => {
         year: "numeric",
       })
     );
-
-    /*
-    // fetch temperature for a location (example: Austin, TX)
-    fetch(
-      "https://api.open-meteo.com/v1/forecast?latitude=30.27&longitude=-97.74&current=temperature_2m"
-    )
-      .then((res) => res.json())
-      .then((data) => setTemp(data.current.temperature_2m))
-      .catch((err) => console.error("Weather fetch error:", err));
-    */
-    
-    // Try to get user's current location
+  
+    const fetchWeather = (latitude: number, longitude: number) => {
+      fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m`
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.current && data.current.temperature_2m !== undefined) {
+            setTemp(data.current.temperature_2m);
+          }
+        })
+        .catch((err) => console.error("Weather fetch error:", err));
+  
+      // Reverse-geocode coordinates to get city name
+      fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+      )
+        .then((res) => res.json())
+        .then((geoData) => {
+          if (geoData.address) {
+            setCity(
+              geoData.address.city ||
+                geoData.address.town ||
+                geoData.address.village ||
+                geoData.address.county ||
+                "Unknown location"
+            );
+          }
+        })
+        .catch((err) => console.error("Reverse geocoding error:", err));
+    };
+  
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-
-          // Fetch temperature for the user's current location
-          fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m`
-          )
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.current && data.current.temperature_2m !== undefined) {
-                setTemp(data.current.temperature_2m);
-              }
-            })
-            .catch((err) => console.error("Weather fetch error:", err));
+          fetchWeather(latitude, longitude);
+  
+          // auto-refresh weather every 10 minutes
+          const interval = setInterval(() => {
+            fetchWeather(latitude, longitude);
+          }, 600000);
+  
+          // clear interval when component unmounts
+          return () => clearInterval(interval);
         },
         (error) => {
           console.error("Geolocation error:", error);
-          // fallback: use a default location (e.g., Austin)
-          fetch(
-            "https://api.open-meteo.com/v1/forecast?latitude=30.27&longitude=-97.74&current=temperature_2m"
-          )
-            .then((res) => res.json())
-            .then((data) => setTemp(data.current.temperature_2m))
-            .catch((err) => console.error("Weather fetch error:", err));
+          // fallback: Austin, TX
+          fetchWeather(30.27, -97.74);
         }
       );
     } else {
       console.error("Geolocation not supported by this browser.");
     }
-  }, []);
+  }, []);  
 
   return (
     <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50">
@@ -113,11 +125,10 @@ const Navbar = () => {
               </button>
             </div>
             
-            <div className='font-medium mt-3'
-             style={{ color: '#B7C398' }}
-            >
-              {temp !== null && ` ${temp.toFixed(0)}°C`}
-            </div>           
+            <div className="font-medium mt-3" style={{ color: '#B7C398' }}>
+              {city ? ` ${city}` : ""}
+              {temp !== null ? ` | ${temp.toFixed(0)}°C` : "Fetching..."}
+            </div>          
           </div>
 
           <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
