@@ -3,16 +3,19 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
+import { GiOakLeaf } from "react-icons/gi";
+
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <nav className="bg-[#F4F0E0] shadow-lg sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ml-0">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
           <div className="flex-shrink-0">
-            <Link href="/" className="text-green-900 text-xl font-bold hover:text-green-600 transition-colors">
+            <Link href="/" className="text-green-900 text-xl font-bold hover:text-green-600 transition-colors flex flex-row">
+              <GiOakLeaf size={25} className='mr-2'/>
               Blueprint Botanica
             </Link>
           </div>
