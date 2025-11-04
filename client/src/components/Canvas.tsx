@@ -147,10 +147,10 @@ const Canvas = () => {
   const gridSize = 20;
   const safeScale = scale || 1;
   const gridStyle = {
-    backgroundColor: "#f9fafb", // soft gray to ensure it's visible
+    backgroundColor: "#6D8934", // soft gray to ensure it's visible
     backgroundImage: `
-      linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-      linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+      linear-gradient(to right, #9EAD73 1px, transparent 1px),
+      linear-gradient(to bottom, #9EAD73 1px, transparent 1px)
     `,
     backgroundSize: `${gridSize * safeScale}px ${gridSize * safeScale}px`,
     backgroundPosition: `${pan.x % (gridSize * safeScale)}px ${pan.y % (gridSize * safeScale)}px`,

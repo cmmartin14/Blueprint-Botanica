@@ -4,35 +4,59 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 import { GiOakLeaf } from "react-icons/gi";
+import { Color } from 'fabric';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <nav className="bg-[#F4F0E0] shadow-lg sticky top-0 z-50">
+    <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ml-0">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
-          <div className="flex-shrink-0">
-            <Link href="/" className="text-green-900 text-xl font-bold hover:text-green-600 transition-colors flex flex-row">
-              <GiOakLeaf size={25} className='mr-2'/>
-              Blueprint Botanica
-            </Link>
+          <div className="flex-shrink-0 flex flex-row">
+            <GiOakLeaf size={45} className='mr-2' style={{ color: '#B7C398' }}/>
+            <div>
+              <Link href="/" className=" text-xl font-bold hover:text-green-600 transition-colors flex flex-row"
+               style={{ color: '#B7C398' }}
+              >              
+                Blueprint Botanica
+              </Link>
+
+              <div className="text-green-800 text-sm font-medium ml-0.5"
+               style={{ color: '#B7C398' }}
+              >
+                {new Date().toLocaleDateString(undefined, {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Desktop Menu */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
-              <Link href="/" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <Link href="/" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+               style={{ color: '#B7C398' }}
+              >
                 Home
               </Link>
-              <Link href="/about" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <Link href="/about" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+               style={{ color: '#B7C398' }}
+              >
                 About
               </Link>
-              <Link href="/services" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <Link href="/services" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+               style={{ color: '#B7C398' }}
+              >
                 Services
               </Link>
-              <Link href="/contact" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <Link href="/contact" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+               style={{ color: '#B7C398' }}
+              >
                 Contact
               </Link>
             </div>
