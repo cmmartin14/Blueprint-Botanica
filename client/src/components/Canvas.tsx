@@ -168,14 +168,6 @@ const Canvas = () => {
           <FaSearch size={22} />
         </button>
 
-        <button
-          onClick={toggleVariableWindow}
-          className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
-          title="Variable / Zipcode"
-        >
-          <TbHomeEdit size={22} />
-        </button>
-
         {!isEditing && (
           <button
             onClick={toggleEditMode}

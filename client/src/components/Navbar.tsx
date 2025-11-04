@@ -1,13 +1,44 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+import SearchWindow from "./Searchwindow";
+import VariableWindow from "./VariableWindow";
+
 import { GiOakLeaf } from "react-icons/gi";
+import { TbHomeEdit, TbCircleXFilled } from "react-icons/tb";
 import { Color } from 'fabric';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [date, setDate] = useState("");
+  const [temp, setTemp] = useState<number | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isVariableOpen, setIsVariableOpen] = useState(false);
+
+  const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
+  const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
+
+  useEffect(() => {
+    // format today’s date
+    const now = new Date();
+    setDate(
+      now.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    );
+    // fetch temperature for a location (example: Austin, TX)
+    fetch(
+      "https://api.open-meteo.com/v1/forecast?latitude=30.27&longitude=-97.74&current=temperature_2m"
+    )
+      .then((res) => res.json())
+      .then((data) => setTemp(data.current.temperature_2m))
+      .catch((err) => console.error("Weather fetch error:", err));
+  }, []);
 
   return (
     <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50">
@@ -16,7 +47,7 @@ const Navbar = () => {
           {/* Logo/Brand */}
           <div className="flex-shrink-0 flex flex-row">
             <GiOakLeaf size={45} className='mr-2' style={{ color: '#B7C398' }}/>
-            <div>
+            <div className=''>
               <Link href="/" className=" text-xl font-bold hover:text-green-600 transition-colors flex flex-row"
                style={{ color: '#B7C398' }}
               >              
@@ -34,7 +65,27 @@ const Navbar = () => {
                 })}
               </div>
             </div>
+
+            <div className='flex flex-column ml-1.5 text-xs font-xs'>
+              <button
+                onClick={toggleVariableWindow}
+                className="p-3 rounded-xl"
+                title="Variable / Zipcode"
+                style={{ color: '#B7C398' }}
+              >
+                <TbHomeEdit size={27}/>
+              </button>
+            </div>
+            
+            <div className='font-medium mt-3'
+             style={{ color: '#B7C398' }}
+            >
+              {temp !== null && ` ${temp.toFixed(0)}°C`}
+            </div>           
           </div>
+
+          <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+          <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
 
           {/* Desktop Menu */}
           <div className="hidden md:block">
