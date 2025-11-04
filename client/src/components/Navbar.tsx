@@ -31,6 +31,8 @@ const Navbar = () => {
         year: "numeric",
       })
     );
+
+    /*
     // fetch temperature for a location (example: Austin, TX)
     fetch(
       "https://api.open-meteo.com/v1/forecast?latitude=30.27&longitude=-97.74&current=temperature_2m"
@@ -38,6 +40,40 @@ const Navbar = () => {
       .then((res) => res.json())
       .then((data) => setTemp(data.current.temperature_2m))
       .catch((err) => console.error("Weather fetch error:", err));
+    */
+    
+    // Try to get user's current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+
+          // Fetch temperature for the user's current location
+          fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m`
+          )
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.current && data.current.temperature_2m !== undefined) {
+                setTemp(data.current.temperature_2m);
+              }
+            })
+            .catch((err) => console.error("Weather fetch error:", err));
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          // fallback: use a default location (e.g., Austin)
+          fetch(
+            "https://api.open-meteo.com/v1/forecast?latitude=30.27&longitude=-97.74&current=temperature_2m"
+          )
+            .then((res) => res.json())
+            .then((data) => setTemp(data.current.temperature_2m))
+            .catch((err) => console.error("Weather fetch error:", err));
+        }
+      );
+    } else {
+      console.error("Geolocation not supported by this browser.");
+    }
   }, []);
 
   return (
