@@ -86,7 +86,7 @@ const VariableWindow = ({ isOpen, onClose }: VariableWindowProps) => {
     return (
         <div className="fixed top-36 right-4 w-[400px] h-[520px] rounded-2xl bg-white shadow-2xl border border-green-200 transition-all duration-300 ease-in-out z-50">
             <div className="flex items-center justify-between border-b border-green-200 px-4 py-3">
-                <h2 className="text-lg font-semibold text-green-900">Set Local Variables</h2>
+                <h2 className="text-lg font-semibold text-green-900">Set Location & Hardiness Zone</h2>
 
                     {onClose && (
                         <button
