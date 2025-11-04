@@ -21,6 +21,24 @@ const Navbar = () => {
   const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
   const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
 
+  // Convert full state name → 2-letter abbreviation
+  const getStateAbbreviation = (stateName: string): string | null => {
+    const states: Record<string, string> = {
+      "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
+      "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
+      "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+      "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+      "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS",
+      "Missouri": "MO", "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH",
+      "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY", "North Carolina": "NC",
+      "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA",
+      "Rhode Island": "RI", "South Carolina": "SC", "South Dakota": "SD", "Tennessee": "TN",
+      "Texas": "TX", "Utah": "UT", "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
+      "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
+    };
+    return states[stateName] || null;
+  };
+
   useEffect(() => {
     const now = new Date();
     setDate(
@@ -33,6 +51,7 @@ const Navbar = () => {
     );
   
     const fetchWeather = (latitude: number, longitude: number) => {
+      // Fetch weather from Open-Meteo
       fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m`
       )
@@ -44,19 +63,27 @@ const Navbar = () => {
         })
         .catch((err) => console.error("Weather fetch error:", err));
   
-      // Reverse-geocode coordinates to get city name
+      // Reverse-geocode coordinates to get city + state
       fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
       )
         .then((res) => res.json())
         .then((geoData) => {
           if (geoData.address) {
-            setCity(
+            const cityName =
               geoData.address.city ||
-                geoData.address.town ||
-                geoData.address.village ||
-                geoData.address.county ||
-                "Unknown location"
+              geoData.address.town ||
+              geoData.address.village ||
+              geoData.address.county ||
+              "Unknown location";
+  
+            const stateName = geoData.address.state || "";
+  
+            // Convert full state name to abbreviation if possible
+            const stateAbbr = getStateAbbreviation(stateName);
+  
+            setCity(
+              stateAbbr ? `${cityName}, ${stateAbbr}` : cityName
             );
           }
         })
@@ -69,24 +96,24 @@ const Navbar = () => {
           const { latitude, longitude } = position.coords;
           fetchWeather(latitude, longitude);
   
-          // auto-refresh weather every 10 minutes
+          // Auto-refresh every 10 minutes
           const interval = setInterval(() => {
             fetchWeather(latitude, longitude);
           }, 600000);
   
-          // clear interval when component unmounts
+          // Cleanup on unmount
           return () => clearInterval(interval);
         },
         (error) => {
           console.error("Geolocation error:", error);
-          // fallback: Austin, TX
+          // Fallback: Austin, TX
           fetchWeather(30.27, -97.74);
         }
       );
     } else {
       console.error("Geolocation not supported by this browser.");
     }
-  }, []);  
+  }, []);    
 
   return (
     <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50">
