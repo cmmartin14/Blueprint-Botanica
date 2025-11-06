@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
-import { FaEdit, FaSearch } from "react-icons/fa";
+import { FaEdit, FaSearch, FaLeaf } from "react-icons/fa";
 import { TbHomeEdit, TbCircleXFilled } from "react-icons/tb";
 import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
 import { FaRegCircle, FaDrawPolygon } from "react-icons/fa";
@@ -9,8 +9,13 @@ import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
+<<<<<<< HEAD
 import Calendar from "./Calendar";
 import { TbCalendar } from "react-icons/tb";
+=======
+import { useGardenBed } from './hooks/useGardenBed';
+import GardenBedCreator from './garden/GardenBedCreator';
+>>>>>>> dd6ff25e7e5012db89650cb11ce2a4a245c68ef8
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -24,7 +29,13 @@ const Canvas = () => {
   const [drawMode, setDrawMode] = useState<"none" | "freehand">("none");
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<Position[]>([]);
+<<<<<<< HEAD
   const [calendarOpen, setCalendarOpen] = useState(false);
+=======
+  const { createGardenBed } = useGardenBed();
+  const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
+
+>>>>>>> dd6ff25e7e5012db89650cb11ce2a4a245c68ef8
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -51,7 +62,7 @@ const Canvas = () => {
             type: "rectangle",
             startPos: { x: centerX - 50, y: centerY - 30 },
             endPos: { x: centerX + 50, y: centerY + 30 },
-            color: "#3b82f6",
+            color: "#ffffff",
             strokeWidth: 2,
           };
           break;
@@ -61,7 +72,7 @@ const Canvas = () => {
             type: "circle",
             startPos: { x: centerX - 40, y: centerY - 40 },
             endPos: { x: centerX + 40, y: centerY + 40 },
-            color: "#3b82f6",
+            color: "#ffffff",
             strokeWidth: 2,
           };
           break;
@@ -172,6 +183,24 @@ const Canvas = () => {
           <TbCalendar className="h-5 w-5" />
         </button>
 
+        <button
+          onClick={() => setShowGardenBedCreator(true)}
+          className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
+          title="Create Garden Bed"
+        >
+          <FaLeaf size={22} />
+        </button>
+
+        {showGardenBedCreator && (
+        <GardenBedCreator
+          onCreate={(name: string) => {
+            createGardenBed(name);
+            setShowGardenBedCreator(false);
+          }}
+          onCancel={() => setShowGardenBedCreator(false)}
+        />
+      )}
+
         {!isEditing && (
           <button
             onClick={toggleEditMode}
@@ -199,6 +228,7 @@ const Canvas = () => {
         onWheel={handleWheel}
       >
         <div
+          data-transformed
           className="absolute w-full h-full"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
@@ -208,13 +238,15 @@ const Canvas = () => {
           <ShapeRenderer
             shapes={shapes}
             scale={scale}
+            pan={pan}
+            unit="feet"
+            gridToUnit={1}
             onShapeUpdate={(shapeId, updates) => {
               setShapes((prev) =>
-                prev.map((shape) => (shape.id === shapeId ? { ...shape, ...updates } : shape))
+                prev.map((shape) => (shape.id === shapeId ? { ...shape, ...updates } as Shape : shape))
               );
             }}
           />
-          {/* Temporary line while drawing */}
           {drawMode === "freehand" && isDrawing && currentPath.length > 1 && (
             <svg className="absolute inset-0 pointer-events-none">
               <polyline
