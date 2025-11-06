@@ -9,13 +9,10 @@ import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
-<<<<<<< HEAD
 import Calendar from "./Calendar";
 import { TbCalendar } from "react-icons/tb";
-=======
 import { useGardenBed } from './hooks/useGardenBed';
 import GardenBedCreator from './garden/GardenBedCreator';
->>>>>>> dd6ff25e7e5012db89650cb11ce2a4a245c68ef8
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -29,13 +26,10 @@ const Canvas = () => {
   const [drawMode, setDrawMode] = useState<"none" | "freehand">("none");
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<Position[]>([]);
-<<<<<<< HEAD
-  const [calendarOpen, setCalendarOpen] = useState(false);
-=======
+  const [isCalendarOpen, setCalendarOpen] = useState(false);
   const { createGardenBed } = useGardenBed();
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
 
->>>>>>> dd6ff25e7e5012db89650cb11ce2a4a245c68ef8
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -214,7 +208,7 @@ const Canvas = () => {
 
       <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-      <Calendar isOpen={calendarOpen} onClose={() => setCalendarOpen(false)} />
+      <Calendar isOpen={isCalendarOpen} onClose={() => setCalendarOpen(false)} />
 
       {/* --- Canvas Area --- */}
       <div

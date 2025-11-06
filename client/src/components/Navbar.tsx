@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
-import CalendarWindow from "./CalendarWindow";
+import Calendar from "./Calendar";
 import { GiOakLeaf } from "react-icons/gi";
 import { TbHomeEdit } from "react-icons/tb";
 import { HiMenuAlt3, HiX } from "react-icons/hi";
@@ -387,7 +387,7 @@ const Navbar = () => {
        {/* ====== Popups ===== */}
        <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
        <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-       <CalendarWindow isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
+       <Calendar isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
      </div>
    </nav>
  );
