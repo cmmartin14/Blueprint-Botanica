@@ -160,13 +160,7 @@ const Canvas = () => {
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
       {/* --- Always visible toolbar --- */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
-        <button
-          onClick={toggleSearchWindow}
-          className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
-          title="Search"
-        >
-          <FaSearch size={22} />
-        </button>
+        
 
         {!isEditing && (
           <button
