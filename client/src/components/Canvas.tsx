@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
-import { FaEdit, FaSearch, FaLeaf } from "react-icons/fa";
-import { TbHomeEdit, TbCircleXFilled } from "react-icons/tb";
+import { FaEdit, FaLeaf } from "react-icons/fa";
+import { TbCircleXFilled } from "react-icons/tb";
 import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
 import { FaRegCircle, FaDrawPolygon } from "react-icons/fa";
 import ShapeRenderer from "./ShapeRenderer";
@@ -34,8 +34,8 @@ const Canvas = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // --- Toggles ---
-  const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
-  const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
+//const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);   CURRENTLY HANDLED BY NAVBAR
+//const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
   const toggleEditMode = () => setIsEditing((prev) => !prev);
 
   // --- Shape creation ---

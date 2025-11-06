@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import Image from 'next/image';
 
 interface Plant {
   id: number;
@@ -72,7 +73,7 @@ export default function PlantSearch() {
               className="flex items-center gap-3 border-b border-gray-100 pb-2 text-black"
             >
               {plant.image_url && (
-                <img
+                <Image
                   src={plant.image_url}
                   alt={plant.common_name || plant.scientific_name}
                   className="w-20 h-20 object-cover rounded"
