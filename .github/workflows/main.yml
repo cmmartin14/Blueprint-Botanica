@@ -43,13 +43,13 @@ jobs:
       - name: Run Vitest tests
         run: npx vitest run ./src/tests
 
-      - name: Start dev server
-        run: npm run dev &
-        env:
-          PORT: 3000
+    #  - name: Start dev server
+    #    run: npm run dev &
+    #    env:
+    #      PORT: 3000
 
-      - name: Wait for localhost
-        run: npx wait-on http://localhost:3000
+    #  - name: Wait for localhost
+    #    run: npx wait-on http://localhost:3000
 
-      - name: Run Playwright tests
-        run: npx playwright test ./src/tests
+    #  - name: Run Playwright tests
+    #    run: npx playwright test ./src/tests

@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import PlantSearch from '../components/PlantSearch';
+import Calendar from '../components/Calendar';
 
-type SearchWindowProps = {
+type CalendarWindowProps = {
   isOpen: boolean;
   onClose?: () => void;
   defaultFullscreen?: boolean;
 };
 
-const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWindowProps) => {
+const CalendarWindow = ({ isOpen, onClose, defaultFullscreen = false }: CalendarWindowProps) => {
   const [isFullscreen, setIsFullscreen] = useState(defaultFullscreen);
 
   useEffect(() => {
@@ -20,13 +20,13 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
   const toggleFullscreen = () => setIsFullscreen((prev) => !prev);
 
   return (
-    <div
+    <div //main box
       className={`fixed z-50 rounded-2xl bg-white shadow-2xl border border-green-200 transition-all duration-300 ease-in-out ${
-        isFullscreen ? "inset-24": "top-56 left-4 w-[400px] h-[520px]"
+        isFullscreen ? "inset-24": "top-56 right-4 w-[450px] h-[620px]"
       }`}
     >
       <div className="flex items-center justify-between border-b border-green-200 px-4 py-3">
-          <h2 className="text-lg font-semibold text-green-900">Search</h2>
+          <h2 className="text-lg font-semibold text-green-900">Calendar</h2>
   
         <div className="flex gap-2">
         <button
@@ -62,7 +62,7 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
             type="button"
             onClick={onClose}
             className="rounded-md p-1 text-green-700 transition-colors hover:bg-green-100 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-green-300"
-            aria-label="Close search"
+            aria-label="Close calendar"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 6L6 18" />
@@ -74,7 +74,7 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
       </div>
 
       <div className={`${isFullscreen ? "h-[636px]" : "h-[467px]"} flex-1 overflow-auto transition-all duration-300 ease-in-out`}>
-        <PlantSearch />
+        <Calendar />
       </div>
       
       
@@ -82,4 +82,4 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
   );
 };
 
-export default SearchWindow;
+export default CalendarWindow;
