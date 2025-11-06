@@ -9,6 +9,8 @@ import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
+import Calendar from "./Calendar";
+import { TbCalendar } from "react-icons/tb";
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -22,6 +24,7 @@ const Canvas = () => {
   const [drawMode, setDrawMode] = useState<"none" | "freehand">("none");
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<Position[]>([]);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -160,7 +163,14 @@ const Canvas = () => {
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
       {/* --- Always visible toolbar --- */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
-        
+        <button
+          onClick={() => setCalendarOpen((prev) => !prev)}
+          className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
+          title="Calendar"
+          aria-label="Toggle calendar"
+        >
+          <TbCalendar className="h-5 w-5" />
+        </button>
 
         {!isEditing && (
           <button
@@ -175,6 +185,7 @@ const Canvas = () => {
 
       <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
+      <Calendar isOpen={calendarOpen} onClose={() => setCalendarOpen(false)} />
 
       {/* --- Canvas Area --- */}
       <div
