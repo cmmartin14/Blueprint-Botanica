@@ -71,7 +71,7 @@ const Canvas = () => {
             type: "line",
             startPos: { x: centerX - 50, y: centerY },
             endPos: { x: centerX + 50, y: centerY },
-            color: "#3b82f6",
+            color: "#ffffff",
             strokeWidth: 2,
           };
           break;
