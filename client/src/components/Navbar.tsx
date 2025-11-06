@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
+import CalendarWindow from "./CalendarWindow";
 import { GiOakLeaf } from "react-icons/gi";
 import { TbHomeEdit } from "react-icons/tb";
 import { HiMenuAlt3, HiX } from "react-icons/hi";
@@ -25,6 +26,7 @@ const Navbar = () => {
  const [temp, setTemp] = useState<number | null>(null);
  const [isSearchOpen, setIsSearchOpen] = useState(false);
  const [isVariableOpen, setIsVariableOpen] = useState(false);
+ const [isCalendarOpen, setIsCalendarOpen] = useState(false);
  const [city, setCity] = useState<string | null>(null);
  const [unit, setUnit] = useState<"C" | "F">("C");
  const [weatherCondition, setWeatherCondition] = useState<string | null>(null);
@@ -35,6 +37,7 @@ const Navbar = () => {
  // ====== HANDLERS ======
  const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
  const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
+ const toggleCalendarWindow = () => setIsCalendarOpen ((prev) => !prev);
  const toggleEditMode = () => setIsEditing((prev) => !prev);
 
 
@@ -308,7 +311,7 @@ const Navbar = () => {
 
 
            <button
-             //onClick={toggleSearchWindow}
+             onClick={toggleCalendarWindow}
              className="p-3 rounded-xl text-[#B7C398]"
              title="Calendar"
            >
@@ -384,6 +387,7 @@ const Navbar = () => {
        {/* ====== Popups ===== */}
        <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
        <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
+       <CalendarWindow isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
      </div>
    </nav>
  );

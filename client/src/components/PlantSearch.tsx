@@ -50,8 +50,8 @@ export default function PlantSearch() {
     }
   };
 
-  return (
-    <div className="flex flex-col p-2 h-full">
+  return ( //inner list
+    <div className="flex flex-col p-2 h-full overflow-hidden"> 
       <div className="flex-none border-b">
         <input
           type="text"
@@ -62,7 +62,7 @@ export default function PlantSearch() {
         />
       </div>
 
-      <div className="flex-1 overflow-auto mt-2">
+      <div className="flex-1 overflow-y-auto mt-2">
         {loading && <div className="text-black mb-2">Loading...</div>}
 
         <ul>
