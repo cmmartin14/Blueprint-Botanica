@@ -7,6 +7,8 @@ interface ShapeRendererProps {
   shapes: Shape[];
   scale: number;
   pan: { x: number; y: number }; // Added pan prop
+  unit?: 'feet' | 'meters'; 
+  gridToUnit?: number; // (e.g., 20px = 1 foot)
   snapToShapes?: boolean;
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
 }
@@ -14,6 +16,9 @@ interface ShapeRendererProps {
 const ShapeRenderer: React.FC<ShapeRendererProps> = ({ 
   shapes, 
   scale,
+  pan,
+  unit = 'feet',
+  gridToUnit = 1, // 1 grid square = 1 foot
   onShapeUpdate,
 }) => {
 
@@ -24,6 +29,9 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       y: Math.round(y / gridSize) * gridSize,
     };
   };
+
+  // Convert feet to meters
+  const feetToMeters = (feet: number) => (feet * 0.3048).toFixed(2);
 
   // ==== Shape dragging ====
   const handleShapeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
@@ -174,13 +182,30 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       case 'line':
         const angle = Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x) * (180 / Math.PI);
         const length = Math.sqrt(width ** 2 + height ** 2);
+
+        // Calculate real-world dimensions
+        const gridSize = 20;
+        const gridUnits = length / gridSize;
+        const feetLength = (gridUnits * gridToUnit).toFixed(1);
+        const metersLength = feetToMeters(parseFloat(feetLength));
+        
+        const midX = (startPos.x + endPos.x) / 2;
+        const midY = (startPos.y + endPos.y) / 2;
+
+        // Calculate label offset perpendicular to the line
+        const offsetDistance = 20;
+        const perpAngle = (angle + 90) * (Math.PI / 180);
+        const labelX = midX + Math.cos(perpAngle) * offsetDistance;
+        const labelY = midY + Math.sin(perpAngle) * offsetDistance;
+
         return (
           <div key={shape.id}>
+            {/* Main line */}
             <div
               style={{
                 position: 'absolute',
-                left: startPos.x,
-                top: startPos.y,
+                left: `${startPos.x}px`,
+                top: `${startPos.y}px`,
                 width: `${length}px`,
                 height: `${Math.max(strokeWidth, 8)}px`,
                 backgroundColor: color,
@@ -191,31 +216,66 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               }}
               onMouseDown={handleShapeMouseDown(shape.id)}
             />
+            
+            {/* Dimension label - using absolute positioning in canvas space */}
             <div
               style={{
                 position: 'absolute',
-                left: startPos.x - 6,
-                top: startPos.y - 6,
-                width: 12,
-                height: 12,
+                left: `${labelX}px`,
+                top: `${labelY}px`,
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#1f2937',
+                border: '1px solid #d1d5db',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                pointerEvents: 'none',
+                whiteSpace: 'nowrap',
+                zIndex: 5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+              }}
+            >
+              <div>{feetLength} ft</div>
+              <div style={{ fontSize: '10px', color: '#6b7280' }}>{metersLength} m</div>
+            </div>
+
+            {/* Start endpoint */}
+            <div
+              style={{
+                position: 'absolute',
+                left: `${startPos.x - 6}px`,
+                top: `${startPos.y - 6}px`,
+                width: '12px',
+                height: '12px',
                 borderRadius: '50%',
-                backgroundColor: color,
+                backgroundColor: 'black',
                 border: '2px solid white',
                 pointerEvents: 'auto',
+                cursor: 'pointer',
+                zIndex: 10,
               }}
               onMouseDown={handleEndpointMouseDown(shape.id, 'start')}
             />
+            
+            {/* End endpoint */}
             <div
               style={{
                 position: 'absolute',
-                left: endPos.x - 6,
-                top: endPos.y - 6,
-                width: 12,
-                height: 12,
+                left: `${endPos.x - 6}px`,
+                top: `${endPos.y - 6}px`,
+                width: '12px',
+                height: '12px',
                 borderRadius: '50%',
-                backgroundColor: color,
+                backgroundColor: 'black',
                 border: '2px solid white',
                 pointerEvents: 'auto',
+                cursor: 'pointer',
+                zIndex: 10,
               }}
               onMouseDown={handleEndpointMouseDown(shape.id, 'end')}
             />

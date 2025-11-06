@@ -53,7 +53,7 @@ const Canvas = () => {
             type: "rectangle",
             startPos: { x: centerX - 50, y: centerY - 30 },
             endPos: { x: centerX + 50, y: centerY + 30 },
-            color: "#3b82f6",
+            color: "#ffffff",
             strokeWidth: 2,
           };
           break;
@@ -63,7 +63,7 @@ const Canvas = () => {
             type: "circle",
             startPos: { x: centerX - 40, y: centerY - 40 },
             endPos: { x: centerX + 40, y: centerY + 40 },
-            color: "#3b82f6",
+            color: "#ffffff",
             strokeWidth: 2,
           };
           break;
@@ -73,7 +73,7 @@ const Canvas = () => {
             type: "line",
             startPos: { x: centerX - 50, y: centerY },
             endPos: { x: centerX + 50, y: centerY },
-            color: "#3b82f6",
+            color: "#ffffff",
             strokeWidth: 2,
           };
           break;
@@ -222,13 +222,14 @@ const Canvas = () => {
             shapes={shapes}
             scale={scale}
             pan={pan}
+            unit="feet"
+            gridToUnit={1}
             onShapeUpdate={(shapeId, updates) => {
               setShapes((prev) =>
                 prev.map((shape) => (shape.id === shapeId ? { ...shape, ...updates } as Shape : shape))
               );
             }}
           />
-          {/* Temporary line while drawing */}
           {drawMode === "freehand" && isDrawing && currentPath.length > 1 && (
             <svg className="absolute inset-0 pointer-events-none">
               <polyline
