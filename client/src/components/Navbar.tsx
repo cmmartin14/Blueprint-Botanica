@@ -290,16 +290,18 @@ const Navbar = () => {
           {/* ====== Desktop Links ====== */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
-              {["Home", "About", "Services", "Contact"].map((page) => (
-                <Link
-                  key={page}
-                  href={`/${page.toLowerCase()}`}
-                  className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  style={{ color: "#B7C398" }}
-                >
-                  {page}
-                </Link>
-              ))}
+              <Link href="/" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Home
+              </Link>
+              <Link href="/handler/sign-up" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Login
+              </Link>
+              <Link href="/services" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Services
+              </Link>
+              <Link href="/contact" className="text-green-900 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Contact
+              </Link>
             </div>
           </div>
 
