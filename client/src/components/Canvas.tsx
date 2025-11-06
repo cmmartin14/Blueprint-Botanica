@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
-import { FaEdit, FaSearch } from "react-icons/fa";
+import { FaEdit, FaSearch, FaLeaf } from "react-icons/fa";
 import { TbHomeEdit, TbCircleXFilled } from "react-icons/tb";
 import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
 import { FaRegCircle, FaDrawPolygon } from "react-icons/fa";
@@ -9,6 +9,8 @@ import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
+import { useGardenBed } from './hooks/useGardenBed';
+import GardenBedCreator from './garden/GardenBedCreator';
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -22,6 +24,9 @@ const Canvas = () => {
   const [drawMode, setDrawMode] = useState<"none" | "freehand">("none");
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<Position[]>([]);
+  const { createGardenBed } = useGardenBed();
+  const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
+
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -162,6 +167,24 @@ const Canvas = () => {
       <div className="absolute top-4 left-4 flex gap-2 z-50">
         
 
+        <button
+          onClick={() => setShowGardenBedCreator(true)}
+          className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
+          title="Create Garden Bed"
+        >
+          <FaLeaf size={22} />
+        </button>
+
+        {showGardenBedCreator && (
+        <GardenBedCreator
+          onCreate={(name: string) => {
+            createGardenBed(name);
+            setShowGardenBedCreator(false);
+          }}
+          onCancel={() => setShowGardenBedCreator(false)}
+        />
+      )}
+
         {!isEditing && (
           <button
             onClick={toggleEditMode}
@@ -188,6 +211,7 @@ const Canvas = () => {
         onWheel={handleWheel}
       >
         <div
+          data-transformed
           className="absolute w-full h-full"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
@@ -197,9 +221,10 @@ const Canvas = () => {
           <ShapeRenderer
             shapes={shapes}
             scale={scale}
+            pan={pan}
             onShapeUpdate={(shapeId, updates) => {
               setShapes((prev) =>
-                prev.map((shape) => (shape.id === shapeId ? { ...shape, ...updates } : shape))
+                prev.map((shape) => (shape.id === shapeId ? { ...shape, ...updates } as Shape : shape))
               );
             }}
           />
