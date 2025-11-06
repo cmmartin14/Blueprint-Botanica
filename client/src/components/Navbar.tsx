@@ -337,20 +337,20 @@ const Navbar = () => {
            <button
              //onClick={toggleSearchWindow}
              className="p-3 rounded-xl text-[#B7C398]"
-             title="Save"
+             title="Saved Gardens"
            >
              <IoFolderOutline size={25} />
            </button>
 
-
+          <Link href="/handler/sign-up">
            <button
              //onClick={toggleSearchWindow}
              className="p-3 rounded-xl text-[#B7C398]"
-             title="Save"
+             title="Profile"
            >
              <FaRegUser size={25} />
            </button>
-
+          </Link>
 
          <button
            onClick={() => setIsMenuOpen(!isMenuOpen)}
