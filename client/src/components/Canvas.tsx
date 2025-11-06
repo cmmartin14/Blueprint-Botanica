@@ -25,6 +25,8 @@ const Canvas = () => {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  
+
   // --- Toggles ---
   const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
   const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);

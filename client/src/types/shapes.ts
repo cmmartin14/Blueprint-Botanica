@@ -10,6 +10,7 @@ export interface BaseShape {
   endPos: Position;
   color: string;
   strokeWidth: number;
+  isSeletected: boolean; //used for tracking which shape should display context buttons like delete
 }
 
 export interface Rectangle extends BaseShape {

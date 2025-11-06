@@ -2,9 +2,15 @@
 
 import React from 'react';
 import { Shape } from '../types/shapes';
+import { Bed } from '../types/beds'
+
+// --- Tracking Variables ---
+let selectedShapeID: number = -1
+
 
 interface ShapeRendererProps {
   shapes: Shape[];
+  beds: Bed[]; //Store a list of beds
   scale: number;
   snapToShapes?: boolean;
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
@@ -21,7 +27,11 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     e.stopPropagation();
     const shape = shapes.find(s => s.id === shapeId);
     if (!shape) return;
-
+    //If the shape that is clicked on isn't currently selected, select it
+    // if (shape.id != selectedShapeID) {
+    //   shape.isSeletected = true
+    // }
+    console.log(shape.id)
     const startX = e.clientX;
     const startY = e.clientY;
 
