@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { Shape } from '../types/shapes';
 
@@ -11,143 +13,133 @@ interface ShapeRendererProps {
 const ShapeRenderer: React.FC<ShapeRendererProps> = ({ 
   shapes, 
   scale,
-  snapToShapes = true,
   onShapeUpdate,
 }) => {
-  // Handle shape dragging
-  const handleShapeMouseDown = (shapeId: string) => {
-    return (e: React.MouseEvent) => {
-      e.stopPropagation();
-      
-      const shape = shapes.find(s => s.id === shapeId);
-      if (!shape) return;
-      
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const originalStartPos = { ...shape.startPos };
-      const originalEndPos = { ...shape.endPos };
-      
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = (moveEvent.clientX - startX) / scale;
-        const deltaY = (moveEvent.clientY - startY) / scale;
-        
-        if (onShapeUpdate) {
+
+  // ==== Shape dragging ====
+  const handleShapeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shape = shapes.find(s => s.id === shapeId);
+    if (!shape) return;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    const originalStart = { ...shape.startPos };
+    const originalEnd = { ...shape.endPos };
+    const originalPoints = shape.points ? [...shape.points] : undefined;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const dx = (moveEvent.clientX - startX) / scale;
+      const dy = (moveEvent.clientY - startY) / scale;
+
+      if (onShapeUpdate) {
+        if (shape.type === 'freehand' && originalPoints) {
           onShapeUpdate(shapeId, {
-            startPos: { 
-              x: originalStartPos.x + deltaX, 
-              y: originalStartPos.y + deltaY 
-            },
-            endPos: { 
-              x: originalEndPos.x + deltaX, 
-              y: originalEndPos.y + deltaY 
-            }
+            points: originalPoints.map(p => ({ x: p.x + dx, y: p.y + dy })),
+          });
+        } else {
+          onShapeUpdate(shapeId, {
+            startPos: { x: originalStart.x + dx, y: originalStart.y + dy },
+            endPos: { x: originalEnd.x + dx, y: originalEnd.y + dy },
           });
         }
-      };
-      
-      const handleMouseUp = () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-      
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      }
     };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
-  // Handle endpoint dragging - FIXED VERSION
-    const handleEndpointMouseDown = (shapeId: string, endpoint: 'start' | 'end') => {
-        return (e: React.MouseEvent) => {
-        e.stopPropagation();
-        
-        // Get canvas element reference at the start
-        const canvasElement = document.querySelector('[data-canvas]') as HTMLElement;
-        if (!canvasElement) return;
-        
-        const handleMouseMove = (moveEvent: MouseEvent) => {
-            // Use the canvas element's bounding rect, not e.currentTarget
-            const rect = canvasElement.getBoundingClientRect();
-            const x = (moveEvent.clientX - rect.left) / scale;
-            const y = (moveEvent.clientY - rect.top) / scale;
-            
-            if (onShapeUpdate) {
-            const updates = endpoint === 'start' 
-                ? { startPos: { x, y } }
-                : { endPos: { x, y } };
-            onShapeUpdate(shapeId, updates);
-            }
-        };
-        
-        const handleMouseUp = () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-        
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-        };
+  // ==== Endpoint drag for lines ====
+  const handleEndpointMouseDown = (shapeId: string, endpoint: 'start' | 'end') => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const canvasElement = document.querySelector('[data-canvas]') as HTMLElement;
+    if (!canvasElement) return;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const rect = canvasElement.getBoundingClientRect();
+      const x = (moveEvent.clientX - rect.left) / scale;
+      const y = (moveEvent.clientY - rect.top) / scale;
+
+      onShapeUpdate?.(shapeId, endpoint === 'start' ? { startPos: { x, y } } : { endPos: { x, y } });
     };
 
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // ==== Render function ====
   const renderShape = (shape: Shape) => {
-    const { startPos, endPos, color, strokeWidth } = shape;
+    const { type, startPos, endPos, color, strokeWidth, points } = shape;
     const width = Math.abs(endPos.x - startPos.x);
     const height = Math.abs(endPos.y - startPos.y);
     const left = Math.min(startPos.x, endPos.x);
     const top = Math.min(startPos.y, endPos.y);
 
-    const commonStyles = {
-      position: 'absolute' as const,
+    const commonStyle: React.CSSProperties = {
+      position: 'absolute',
       left: `${left}px`,
       top: `${top}px`,
-      border: `${strokeWidth}px solid ${color}`,
-      cursor: 'move', // Show move cursor
-      pointerEvents: 'auto' as const, // Enable pointer events
+      cursor: 'move',
+      pointerEvents: 'auto',
     };
 
-    switch (shape.type) {
+    switch (type) {
       case 'rectangle':
         return (
           <div
             key={shape.id}
             style={{
-              ...commonStyles,
-              width: `${width}px`,
-              height: `${height}px`,
+              ...commonStyle,
+              width,
+              height,
+              border: `${strokeWidth}px solid ${color}`,
               backgroundColor: 'transparent',
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
           />
         );
-      
+
       case 'circle':
         const radius = Math.max(width, height) / 2;
         return (
           <div
             key={shape.id}
             style={{
-              ...commonStyles,
-              width: `${radius * 2}px`,
-              height: `${radius * 2}px`,
+              ...commonStyle,
+              width: radius * 2,
+              height: radius * 2,
               borderRadius: '50%',
+              border: `${strokeWidth}px solid ${color}`,
               backgroundColor: 'transparent',
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
           />
         );
-      
+
       case 'line':
         const angle = Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x) * (180 / Math.PI);
         const length = Math.sqrt(width ** 2 + height ** 2);
         return (
           <div key={shape.id}>
-            {/* Main line - draggable */}
             <div
               style={{
                 position: 'absolute',
-                left: `${startPos.x}px`,
-                top: `${startPos.y}px`,
+                left: startPos.x,
+                top: startPos.y,
                 width: `${length}px`,
-                height: `${Math.max(strokeWidth, 8)}px`, // Minimum 8px for easier clicking
+                height: `${Math.max(strokeWidth, 8)}px`,
                 backgroundColor: color,
                 transformOrigin: '0 50%',
                 transform: `rotate(${angle}deg)`,
@@ -156,53 +148,85 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               }}
               onMouseDown={handleShapeMouseDown(shape.id)}
             />
-            {/* Draggable start endpoint */}
             <div
               style={{
                 position: 'absolute',
-                left: `${startPos.x - 6}px`,
-                top: `${startPos.y - 6}px`,
-                width: '12px',
-                height: '12px',
+                left: startPos.x - 6,
+                top: startPos.y - 6,
+                width: 12,
+                height: 12,
                 borderRadius: '50%',
                 backgroundColor: color,
                 border: '2px solid white',
-                cursor: 'pointer',
                 pointerEvents: 'auto',
-                zIndex: 10,
               }}
               onMouseDown={handleEndpointMouseDown(shape.id, 'start')}
             />
-            {/* Draggable end endpoint */}
             <div
               style={{
                 position: 'absolute',
-                left: `${endPos.x - 6}px`,
-                top: `${endPos.y - 6}px`,
-                width: '12px',
-                height: '12px',
+                left: endPos.x - 6,
+                top: endPos.y - 6,
+                width: 12,
+                height: 12,
                 borderRadius: '50%',
                 backgroundColor: color,
                 border: '2px solid white',
-                cursor: 'pointer',
                 pointerEvents: 'auto',
-                zIndex: 10,
               }}
               onMouseDown={handleEndpointMouseDown(shape.id, 'end')}
             />
           </div>
         );
-      
+
+      case 'freehand':
+        if (!points || points.length < 2) return null;
+        return (
+          <svg
+            key={shape.id}
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              overflow: 'visible',
+              pointerEvents: 'none',
+            }}
+          >
+            <polyline
+              points={points.map(p => `${p.x},${p.y}`).join(' ')}
+              fill="none"
+              stroke={color}
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              pointerEvents="auto"
+              style={{ cursor: 'move' }}
+              onMouseDown={handleShapeMouseDown(shape.id)}
+            />
+          </svg>
+        );
+
       default:
         return null;
     }
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div
+      style={{
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        top: 0,
+        left: 0,
+        pointerEvents: 'none',
+      }}
+    >
       {shapes.map(renderShape)}
     </div>
   );
 };
 
 export default ShapeRenderer;
+
+

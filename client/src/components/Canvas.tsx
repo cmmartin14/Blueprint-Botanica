@@ -1,18 +1,14 @@
 "use client";
-import React from "react";
-import { FaRegCircle, FaSearch } from "react-icons/fa";
-import { MdOutlineRectangle } from "react-icons/md";
-import { FaDrawPolygon } from "react-icons/fa";
-import { MdOutlineDraw } from "react-icons/md";
-import { TbCircleXFilled, TbHomeEdit } from "react-icons/tb";
-import { FaEdit } from "react-icons/fa";
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Shape, Position } from '../types/shapes';
-import ShapeRenderer from './ShapeRenderer';
+import React, { useCallback, useRef, useState } from "react";
+import { FaEdit, FaSearch } from "react-icons/fa";
+import { TbHomeEdit, TbCircleXFilled } from "react-icons/tb";
+import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
+import { FaRegCircle, FaDrawPolygon } from "react-icons/fa";
+import ShapeRenderer from "./ShapeRenderer";
+import { Shape, Position } from "../types/shapes";
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
-
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -22,266 +18,261 @@ const Canvas = () => {
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
-  const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev); 
-  const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev); 
+  const [isEditing, setIsEditing] = useState(false);
+  const [drawMode, setDrawMode] = useState<"none" | "freehand">("none");
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentPath, setCurrentPath] = useState<Position[]>([]);
+
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Edit mode toggle
-  const [isEditing, setIsEditing] = useState<boolean>(false);
+  // --- Toggles ---
+  const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
+  const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
   const toggleEditMode = () => setIsEditing((prev) => !prev);
 
-  // Create shape at canvas center
-  const createShape = useCallback((shapeType: 'rectangle' | 'circle' | 'line') => {
-    if (!canvasRef.current) return;
-    
-    const rect = canvasRef.current.getBoundingClientRect();
-    const centerX = (rect.width / 2 - pan.x) / scale;
-    const centerY = (rect.height / 2 - pan.y) / scale;
-    
-    let newShape: Shape;
-    
-    switch (shapeType) {
-      case 'rectangle':
-        newShape = {
-          id: Date.now().toString(),
-          type: 'rectangle',
-          startPos: { x: centerX - 50, y: centerY - 30 },
-          endPos: { x: centerX + 50, y: centerY + 30 },
-          color: '#3b82f6',
-          strokeWidth: 2,
-        };
-        break;
-      case 'circle':
-        newShape = {
-          id: Date.now().toString(),
-          type: 'circle',
-          startPos: { x: centerX - 40, y: centerY - 40 },
-          endPos: { x: centerX + 40, y: centerY + 40 },
-          color: '#3b82f6',
-          strokeWidth: 2,
-        };
-        break;
-      case 'line':
-        newShape = {
-          id: Date.now().toString(),
-          type: 'line',
-          startPos: { x: centerX - 50, y: centerY },
-          endPos: { x: centerX + 50, y: centerY },
-          color: '#3b82f6',
-          strokeWidth: 2,
-        };
-        break;
-    }
-    
-    setShapes(prev => [...prev, newShape]);
-  }, [pan, scale]);
+  // --- Shape creation ---
+  const createShape = useCallback(
+    (shapeType: "rectangle" | "circle" | "line") => {
+      if (!canvasRef.current) return;
 
-  // Add this after your screenToCanvas function
-  const snapPoint = useCallback((point: { x: number; y: number }, excludeShapeId?: string) => {
-    const SNAP_THRESHOLD = 10;
-    const GRID_SIZE = 20;
-    
-    // Shape snapping - check against existing shapes
-    for (const shape of shapes) {
-      if (shape.id === excludeShapeId) continue;
-      
-      // Check endpoints
-      const endpoints = [shape.startPos, shape.endPos];
-      for (const endpoint of endpoints) {
-        const distance = Math.sqrt(
-          Math.pow(point.x - endpoint.x, 2) + Math.pow(point.y - endpoint.y, 2)
-        );
-        if (distance < SNAP_THRESHOLD) {
-          return endpoint;
-        }
+      const rect = canvasRef.current.getBoundingClientRect();
+      const centerX = (rect.width / 2 - pan.x) / scale;
+      const centerY = (rect.height / 2 - pan.y) / scale;
+
+      let newShape: Shape;
+
+      switch (shapeType) {
+        case "rectangle":
+          newShape = {
+            id: Date.now().toString(),
+            type: "rectangle",
+            startPos: { x: centerX - 50, y: centerY - 30 },
+            endPos: { x: centerX + 50, y: centerY + 30 },
+            color: "#3b82f6",
+            strokeWidth: 2,
+          };
+          break;
+        case "circle":
+          newShape = {
+            id: Date.now().toString(),
+            type: "circle",
+            startPos: { x: centerX - 40, y: centerY - 40 },
+            endPos: { x: centerX + 40, y: centerY + 40 },
+            color: "#3b82f6",
+            strokeWidth: 2,
+          };
+          break;
+        case "line":
+          newShape = {
+            id: Date.now().toString(),
+            type: "line",
+            startPos: { x: centerX - 50, y: centerY },
+            endPos: { x: centerX + 50, y: centerY },
+            color: "#3b82f6",
+            strokeWidth: 2,
+          };
+          break;
+        default:
+          return;
       }
-    }
-    
-    // Grid snapping
-    const snappedToGrid = {
-      x: Math.round(point.x / GRID_SIZE) * GRID_SIZE,
-      y: Math.round(point.y / GRID_SIZE) * GRID_SIZE,
-    };
-    
-    const gridDistance = Math.sqrt(
-      Math.pow(point.x - snappedToGrid.x, 2) + 
-      Math.pow(point.y - snappedToGrid.y, 2)
-    );
-    
-    if (gridDistance <= SNAP_THRESHOLD) {
-      return snappedToGrid;
-    }
-    
-    return point;
-  }, [shapes]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isDragging) {
-      const newPan = {
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      };
-      setPan(newPan);
-    }
-  }, [isDragging, dragStart]);
+      setShapes((prev) => [...prev, newShape]);
+    },
+    [pan, scale]
+  );
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-  }, [pan]);
+  // --- Panning and zooming ---
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (isDragging) {
+        setPan({
+          x: e.clientX - dragStart.x,
+          y: e.clientY - dragStart.y,
+        });
+      }
+
+      if (drawMode === "freehand" && isDrawing && canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = (e.clientX - rect.left - pan.x) / scale;
+        const y = (e.clientY - rect.top - pan.y) / scale;
+        setCurrentPath((prev) => [...prev, { x, y }]);
+      }
+    },
+    [isDragging, dragStart, drawMode, isDrawing, pan, scale]
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (drawMode === "freehand") {
+        if (!canvasRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = (e.clientX - rect.left - pan.x) / scale;
+        const y = (e.clientY - rect.top - pan.y) / scale;
+        setCurrentPath([{ x, y }]);
+        setIsDrawing(true);
+        return;
+      }
+
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    },
+    [pan, scale, drawMode]
+  );
 
   const handleMouseUp = useCallback(() => {
-    if (isDragging) {
-      setIsDragging(false);
+    if (drawMode === "freehand" && isDrawing && currentPath.length > 1) {
+      const newShape: Shape = {
+        id: Date.now().toString(),
+        type: "freehand",
+        points: currentPath,
+        color: "#3b82f6",
+        strokeWidth: 2,
+        startPos: currentPath[0],
+        endPos: currentPath[currentPath.length - 1],
+      };
+      setShapes((prev) => [...prev, newShape]);
+      setIsDrawing(false);
+      setCurrentPath([]);
     }
-  }, [isDragging]);
+    setIsDragging(false);
+  }, [drawMode, isDrawing, currentPath]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.95 : 1.05;
-    setScale(prev => Math.min(Math.max(prev * delta, .75), 2)); 
+    setScale((prev) => Math.min(Math.max(prev * delta, 0.75), 2));
   }, []);
 
-  useEffect(() => {
-    const handleMouseUpGlobal = () => setIsDragging(false);
-    document.addEventListener('mouseup', handleMouseUpGlobal);
-    return () => document.removeEventListener('mouseup', handleMouseUpGlobal);
-  }, []);
-
+  // --- Grid style ---
   const gridSize = 20;
+  const safeScale = scale || 1;
   const gridStyle = {
+    backgroundColor: "#6D8934", // soft gray to ensure it's visible
     backgroundImage: `
-      linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-      linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+      linear-gradient(to right, #9EAD73 1px, transparent 1px),
+      linear-gradient(to bottom, #9EAD73 1px, transparent 1px)
     `,
-    backgroundSize: `${gridSize * scale}px ${gridSize * scale}px`,
-    backgroundPosition: `${pan.x % (gridSize * scale)}px ${pan.y % (gridSize * scale)}px`,
+    backgroundSize: `${gridSize * safeScale}px ${gridSize * safeScale}px`,
+    backgroundPosition: `${pan.x % (gridSize * safeScale)}px ${pan.y % (gridSize * safeScale)}px`,
   };
 
-  
   return (
-    <div className="fixed inset-0 top-16 overflow-hidden bg-white">
-
-      {/* Edit Mode Toggle Button */}
-      {!isEditing && (
-      <div className="absolute top-4 left-4 z-50">
-        <button
-          onClick={toggleEditMode}
-          className={`px-4 py-3 rounded-xl text-green-800 font-medium shadow-xl transition bg-white hover:bg-gray-300`}
-        >
-          <FaEdit size={25}/>
-        </button>
-      </div>
-      )}
-      <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-      <div className="absolute top-26 left-4 z-50 flex items-center gap-3">
+    <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
+      {/* --- Always visible toolbar --- */}
+      <div className="absolute top-4 left-4 flex gap-2 z-50">
         <button
           onClick={toggleSearchWindow}
-          className={`px-4 py-3 rounded-xl font-medium shadow-xl transition-colors bg-gray-200 hover:bg-gray-300 ${
-            isSearchOpen ? "bg-green-700 text-white" : "bg-white/90 text-green-800 hover:bg-gray-300"
-          }`}
-          aria-pressed={isSearchOpen}
-          aria-label={isSearchOpen ? "Hide search window" : "Show search window"}
-          type="button"
+          className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
+          title="Search"
         >
-          <FaSearch size={25} />
+          <FaSearch size={22} />
         </button>
+
+        {!isEditing && (
+          <button
+            onClick={toggleEditMode}
+            className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
+            title="Edit Mode"
+          >
+            <FaEdit size={22} />
+          </button>
+        )}
       </div>
 
+      <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-      <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
-        <button
-          onClick={toggleVariableWindow}
-          className={`px-4 py-3 rounded-xl font-medium shadow-xl transition-colors bg-gray-200 hover:bg-gray-300 ${
-            isVariableOpen ? "bg-green-700 text-white" : "bg-white/90 text-green-800 hover:bg-gray-300"
-          }`}
-          aria-pressed={isVariableOpen}
-          aria-label={isVariableOpen ? "Hide search window" : "Show search window"}
-          type="button"
-        >
-          <TbHomeEdit size={25} />
-        </button>
-      </div>
-      
 
+      {/* --- Canvas Area --- */}
       <div
         ref={canvasRef}
         data-canvas
-        className= 'w-full h-full'
+        className="w-full h-full relative"
         style={gridStyle}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
       >
-        {/* Canvas content container */}
         <div
-          className="relative w-full h-full"
+          className="absolute w-full h-full"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-            transformOrigin: '0 0',
+            transformOrigin: "0 0",
           }}
         >
-          {/* Render all shapes */}
-          <ShapeRenderer 
-            shapes={shapes} 
+          <ShapeRenderer
+            shapes={shapes}
             scale={scale}
             onShapeUpdate={(shapeId, updates) => {
-              setShapes(prev => prev.map(shape => 
-                shape.id === shapeId ? { ...shape, ...updates } : shape
-              ));
+              setShapes((prev) =>
+                prev.map((shape) => (shape.id === shapeId ? { ...shape, ...updates } : shape))
+              );
             }}
           />
-          
-          {/* Example draggable element */}
-          {/*
-          <div className="absolute top-10 left-10 w-32 h-20 bg-blue-100 border-2 border-blue-300 rounded-lg flex items-center justify-center text-blue-800 font-medium shadow-sm">
-            Drag me!
-          </div>
-          */}
+          {/* Temporary line while drawing */}
+          {drawMode === "freehand" && isDrawing && currentPath.length > 1 && (
+            <svg className="absolute inset-0 pointer-events-none">
+              <polyline
+                points={currentPath.map((p) => `${p.x},${p.y}`).join(" ")}
+                stroke="#3b82f6"
+                strokeWidth={2}
+                fill="none"
+              />
+            </svg>
+          )}
         </div>
       </div>
 
-      {/* Shape Creation Controls */}
+      {/* --- Shape Tools (only in edit mode) --- */}
       {isEditing && (
-      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 border">
-      <div className="flex gap-2">
-        <button
-          onClick={() => createShape('rectangle')}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
-        >
-          <MdOutlineRectangle size={35}/>
-        </button>
-        <button
-          onClick={() => createShape('circle')}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
-        >
-          <FaRegCircle size={25}/>
-        </button>
-        <button
-          onClick={() => createShape('line')}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
-        >
-          <FaDrawPolygon size={25}/>
-        </button>
-        <button
-          onClick={() => createShape('line')}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
-        >
-          <MdOutlineDraw size={25}/>
-        </button>
-        <button
-          onClick={toggleEditMode}
-          className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-green-800"
-        >
-          <TbCircleXFilled size={25}/>
-        </button>
-      </div>
-      </div>
+        <div className="absolute top-4 left-4 mt-16 bg-white rounded-lg shadow-lg p-3 border z-40">
+          <div className="flex gap-2">
+            <button
+              onClick={() => createShape("rectangle")}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Rectangle"
+            >
+              <MdOutlineRectangle size={30} />
+            </button>
+            <button
+              onClick={() => createShape("circle")}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Circle"
+            >
+              <FaRegCircle size={25} />
+            </button>
+            <button
+              onClick={() => createShape("line")}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Line"
+            >
+              <FaDrawPolygon size={25} />
+            </button>
+            <button
+              onClick={() =>
+                setDrawMode((prev) => (prev === "freehand" ? "none" : "freehand"))
+              }
+              className={`p-2 rounded ${
+                drawMode === "freehand"
+                  ? "bg-green-600 text-white"
+                  : "bg-gray-100 text-green-800 hover:bg-gray-200"
+              }`}
+              title="Freehand"
+            >
+              <MdOutlineDraw size={25} />
+            </button>
+            <button
+              onClick={toggleEditMode}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Exit Edit Mode"
+            >
+              <TbCircleXFilled size={25} />
+            </button>
+          </div>
+        </div>
       )}
 
-      
-      {/* Canvas Controls */}
+      {/* --- Bottom Right Controls --- */}
       <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border">
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <span>Zoom: {Math.round(scale * 100)}%</span>
@@ -304,4 +295,9 @@ const Canvas = () => {
 };
 
 export default Canvas;
+
+
+
+
+
 
