@@ -52,6 +52,8 @@ jobs:
           npm run dev &
           npx wait-on http://localhost:3000
         env:
+          NEXT_PUBLIC_STACK_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_STACK_PROJECT_ID }}
+          NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY: ${{ secrets.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY }}
           PORT: 3000
 
       - name: Run Playwright tests
