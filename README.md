@@ -15,6 +15,7 @@ $ cd client
 $ npm install
 $ npm run dev
 ```
+
 This hosts the current build on your [localhost](http://localhost:3000/)
 
 ## Locally hosting the Database using Prisma + PSQL
