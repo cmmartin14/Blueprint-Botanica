@@ -1,0 +1,120 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [active]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - navigation [ref=e7]:
+            - button "previous" [disabled] [ref=e8]:
+              - img "previous" [ref=e9]
+            - generic [ref=e11]:
+              - generic [ref=e12]: 1/
+              - text: "1"
+            - button "next" [disabled] [ref=e13]:
+              - img "next" [ref=e14]
+          - img
+        - generic [ref=e16]:
+          - link "Next.js 15.5.3 (outdated) Turbopack" [ref=e17] [cursor=pointer]:
+            - /url: https://nextjs.org/docs/messages/version-staleness
+            - img [ref=e18]
+            - generic "An outdated version detected (latest is 16.0.1), upgrade is highly recommended!" [ref=e20]: Next.js 15.5.3 (outdated)
+            - generic [ref=e21]: Turbopack
+          - img
+      - generic [ref=e22]:
+        - dialog "Runtime Error" [ref=e23]:
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - generic [ref=e28]:
+                - generic [ref=e30]: Runtime Error
+                - generic [ref=e31]:
+                  - button "Copy Error Info" [ref=e32] [cursor=pointer]:
+                    - img [ref=e33]
+                  - button "No related documentation found" [disabled] [ref=e35]:
+                    - img [ref=e36]
+                  - link "Learn more about enabling Node.js inspector for server code with Chrome DevTools" [ref=e38] [cursor=pointer]:
+                    - /url: https://nextjs.org/docs/app/building-your-application/configuring/debugging#server-side-code
+                    - img [ref=e39]
+              - paragraph [ref=e48]: Image with src "/test-basil.jpg" is missing required "width" property.
+            - generic [ref=e49]:
+              - generic [ref=e50]:
+                - paragraph [ref=e52]:
+                  - img [ref=e54]
+                  - generic [ref=e57]: src/components/PlantSearch.tsx (76:17) @ <unknown>
+                  - button "Open in editor" [ref=e58] [cursor=pointer]:
+                    - img [ref=e60]
+                - generic [ref=e63]:
+                  - generic [ref=e64]: 74 | >
+                  - generic [ref=e65]: "75 | {plant.image_url && ("
+                  - generic [ref=e66]: "> 76 | <Image"
+                  - generic [ref=e67]: "| ^"
+                  - generic [ref=e68]: "77 | src={plant.image_url}"
+                  - generic [ref=e69]: "78 | alt={plant.common_name || plant.scientific_name}"
+                  - generic [ref=e70]: 79 | className="w-20 h-20 object-cover rounded"
+              - generic [ref=e71]:
+                - generic [ref=e72]:
+                  - paragraph [ref=e73]:
+                    - text: Call Stack
+                    - generic [ref=e74]: "19"
+                  - button "Show 13 ignore-listed frame(s)" [ref=e75] [cursor=pointer]:
+                    - text: Show 13 ignore-listed frame(s)
+                    - img [ref=e76]
+                - generic [ref=e78]:
+                  - generic [ref=e79]:
+                    - text: <unknown>
+                    - button "Open <unknown> in editor" [ref=e80] [cursor=pointer]:
+                      - img [ref=e81]
+                  - text: src/components/PlantSearch.tsx (76:17)
+                - generic [ref=e83]:
+                  - generic [ref=e84]: Array.map
+                  - text: <anonymous>
+                - generic [ref=e85]:
+                  - generic [ref=e86]:
+                    - text: PlantSearch
+                    - button "Open PlantSearch in editor" [ref=e87] [cursor=pointer]:
+                      - img [ref=e88]
+                  - text: src/components/PlantSearch.tsx (70:20)
+                - generic [ref=e90]:
+                  - generic [ref=e91]:
+                    - text: SearchWindow
+                    - button "Open SearchWindow in editor" [ref=e92] [cursor=pointer]:
+                      - img [ref=e93]
+                  - text: src/components/Searchwindow.tsx (78:9)
+                - generic [ref=e95]:
+                  - generic [ref=e96]:
+                    - text: Navbar
+                    - button "Open Navbar in editor" [ref=e97] [cursor=pointer]:
+                      - img [ref=e98]
+                  - text: src/components/Navbar.tsx (387:8)
+                - generic [ref=e100]:
+                  - generic [ref=e101]:
+                    - text: RootLayout
+                    - button "Open RootLayout in editor" [ref=e102] [cursor=pointer]:
+                      - img [ref=e103]
+                  - text: src/app/layout.tsx (33:9)
+          - generic [ref=e105]:
+            - generic [ref=e106]: "1"
+            - generic [ref=e107]: "2"
+        - contentinfo [ref=e108]:
+          - region "Error feedback" [ref=e109]:
+            - paragraph [ref=e110]:
+              - link "Was this helpful?" [ref=e111] [cursor=pointer]:
+                - /url: https://nextjs.org/telemetry#error-feedback
+            - button "Mark as helpful" [ref=e112] [cursor=pointer]:
+              - img [ref=e113]
+            - button "Mark as not helpful" [ref=e116] [cursor=pointer]:
+              - img [ref=e117]
+    - generic [ref=e123] [cursor=pointer]:
+      - button "Open Next.js Dev Tools" [ref=e124]:
+        - img [ref=e125]
+      - generic [ref=e128]:
+        - button "Open issues overlay" [ref=e129]:
+          - generic [ref=e130]:
+            - generic [ref=e131]: "0"
+            - generic [ref=e132]: "1"
+          - generic [ref=e133]: Issue
+        - button "Collapse issues badge" [ref=e134]:
+          - img [ref=e135]
+  - 'heading "Application error: a client-side exception has occurred while loading localhost (see the browser console for more information)." [level=2] [ref=e139]'
+```

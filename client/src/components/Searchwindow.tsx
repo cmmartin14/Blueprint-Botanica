@@ -21,6 +21,7 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
 
   return (
     <div
+      data-testid="search-window"
       className={`fixed z-50 rounded-2xl bg-white shadow-2xl border border-green-200 transition-all duration-300 ease-in-out ${
         isFullscreen ? "inset-24": "top-56 left-4 w-[400px] h-[520px]"
       }`}

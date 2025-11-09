@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const API_KEY = process.env.OPENWEATHER_API_KEY;
-
 export async function GET(req: NextRequest) {
   try {
+    const API_KEY = process.env.OPENWEATHER_API_KEY;
     if (!API_KEY) return NextResponse.json({ error: "Missing OPENWEATHER_API_KEY" }, { status: 500 });
 
     const { searchParams } = new URL(req.url);

@@ -73,7 +73,7 @@ export default function PlantSearch() {
               className="flex items-center gap-3 border-b border-gray-100 pb-2 text-black"
             >
               {plant.image_url && (
-                <Image
+                <img
                   src={plant.image_url}
                   alt={plant.common_name || plant.scientific_name}
                   className="w-20 h-20 object-cover rounded"
