@@ -7,6 +7,7 @@ import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
 import { FaRegCircle, FaDrawPolygon } from "react-icons/fa";
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
+import { Bed } from "../types/beds"
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
 
@@ -82,7 +83,20 @@ const Canvas = () => {
     },
     [pan, scale]
   );
+  // --- Bed creation ---
+  const createBed = useCallback((shapeType: "rectangle" | "circle" | "line") => {
+    //Step 1: Create a new Shape
+    createShape(shapeType)
+    //Step 2: Create a new bed, adding the shape to the bed's list of shapes
+    const newBed: Bed = {
+      id: Date.now().toString(),
+      shapeIDs: shapes[shapes]
+    }
+  }
+   
 
+    //Sept 2: Handle individual shapes.
+  );
   // --- Panning and zooming ---
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {

@@ -1,14 +1,12 @@
 import { Shape } from "./shapes"
 
 export class Bed {
-  bedIDs: number[];  // Array to hold shape IDs, so that 
+  id: string //Shape IDs are stored as strings, so I'll store them as strings for beds too
+  shapeIDs: string[];  // Array to hold shape IDs 
 
-  constructor(id: number) {
+  constructor(shapeID: string, id: string) {
     // Initialize the array and add the provided ID
-    this.bedIDs = [id];
-  }
-
-  addShape(id: number) {
-    this.bedIDs.push(id);
+    this.id = id
+    this.shapeIDs = [shapeID];//put the first created shape in the shapeID list
   }
 }
