@@ -21,9 +21,9 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
 
   return (
     <div
-      data-testid="search-window"
+      id="search-window"
       className={`fixed z-50 rounded-2xl bg-white shadow-2xl border border-green-200 transition-all duration-300 ease-in-out ${
-        isFullscreen ? "inset-24": "top-56 left-4 w-[400px] h-[520px]"
+        isFullscreen ? "inset-24": "top-45 left-4 w-[400px] h-[520px]"
       }`}
     >
       <div className="flex items-center justify-between border-b border-green-200 px-4 py-3">
@@ -74,7 +74,7 @@ const SearchWindow = ({ isOpen, onClose, defaultFullscreen = false }: SearchWind
         </div>
       </div>
 
-      <div className={`${isFullscreen ? "h-[636px]" : "h-[467px]"} flex-1 overflow-auto transition-all duration-300 ease-in-out`}>
+      <div className={`${isFullscreen ? "h-[490px]" : "h-[467px]"} flex-1 overflow-auto transition-all duration-300 ease-in-out`}>
         <PlantSearch />
       </div>
       

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import Image from 'next/image';
+import Link from "next/link";
 
 interface Plant {
   id: number;
@@ -51,6 +51,20 @@ export default function PlantSearch() {
     }
   };
 
+const myList = document.getElementById('list') as HTMLUListElement;
+
+if (myList) {
+  myList.addEventListener('click', (event: MouseEvent) => {
+    const target = event.target as HTMLElement; // Cast to HTMLElement
+
+    // Check if the clicked element is an <li>
+    if (target.tagName === 'LI') {
+      console.log('List item clicked via delegation:', target.textContent);
+      // Add your functionality here based on the specific <li> clicked
+    }
+  });
+}
+
   return ( //inner list
     <div className="flex flex-col p-2 h-full overflow-hidden"> 
       <div className="flex-none border-b">
@@ -66,9 +80,10 @@ export default function PlantSearch() {
       <div className="flex-1 overflow-y-auto mt-2">
         {loading && <div className="text-black mb-2">Loading...</div>}
 
-        <ul>
+        <ul id="list">
           {results.map((plant) => (
             <li
+              id="result"
               key={plant.id}
               className="flex items-center gap-3 border-b border-gray-100 pb-2 text-black"
             >
