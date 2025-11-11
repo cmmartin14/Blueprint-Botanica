@@ -227,7 +227,7 @@ const Navbar = () => {
 
  // ====== RENDER ======
  return (
-   <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50">
+   <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50 relative">
      <div className="flex justify-between items-center h-16 max-w-full px-4 sm:px-6 lg:px-8 mx-auto">
        {/* ====== Left: Logo, Variable, Weather ===== */}
        <div className="flex items-center gap-3">
