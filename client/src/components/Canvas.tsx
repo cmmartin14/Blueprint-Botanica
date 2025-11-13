@@ -17,6 +17,7 @@ const Canvas = () => {
   const [dragStart, setDragStart] = useState<Position>({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [shapes, setShapes] = useState<Shape[]>([]);
+  const [beds, setBeds] = useState<Bed[]>([])//the list of all beds in the garden
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -86,12 +87,12 @@ const Canvas = () => {
   // --- Bed creation ---
   const createBed = useCallback((shapeType: "rectangle" | "circle" | "line") => {
     //Step 1: Create a new Shape
+    console.log("Is this thing on?")
     createShape(shapeType)
     //Step 2: Create a new bed, adding the shape to the bed's list of shapes
-    const newBed: Bed = {
-      id: Date.now().toString(),
-      shapeIDs: shapes[shapes]
-    }
+    const newBed = new Bed(shapes[0].id, Date.now().toString())
+    setBeds((prev) => [...prev, newBed]);
+    console.log()
   }
    
 
@@ -244,7 +245,7 @@ const Canvas = () => {
         <div className="absolute top-4 left-4 mt-16 bg-white rounded-lg shadow-lg p-3 border z-40">
           <div className="flex gap-2">
             <button
-              onClick={() => createShape("rectangle")}
+              onClick={() => createBed("rectangle")}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Rectangle"
             >
