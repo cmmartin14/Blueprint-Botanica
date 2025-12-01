@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import { FaEdit, FaSearch } from "react-icons/fa";
 import { TbHomeEdit, TbCircleXFilled } from "react-icons/tb";
 import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
@@ -23,6 +23,7 @@ const Canvas = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [drawMode, setDrawMode] = useState<"none" | "freehand">("none");
   const [isDrawing, setIsDrawing] = useState(false);
+  const [shouldCreateBed, setShouldCreateBed] = useState(false);
   const [currentPath, setCurrentPath] = useState<Position[]>([]);
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -87,17 +88,27 @@ const Canvas = () => {
   // --- Bed creation ---
   const createBed = useCallback((shapeType: "rectangle" | "circle" | "line") => {
     //Step 1: Create a new Shape
-    console.log("Is this thing on?")
     createShape(shapeType)
-    //Step 2: Create a new bed, adding the shape to the bed's list of shapes
-    const newBed = new Bed(shapes[0].id, Date.now().toString())
-    setBeds((prev) => [...prev, newBed]);
-    console.log()
+    //Step 2: set a variable to indicate to the useEffect that we want to add the shape to the bed's list of shapes
+    setShouldCreateBed(true);
   }
    
 
-    //Sept 2: Handle individual shapes.
   );
+  /********************************
+   * This useEffect updates the list of shapes within the bed object immediately after the bed is created 
+   *********************************/ 
+  useEffect(() => {
+      if (shapes.length === 0 || shouldCreateBed === false) return; // skip first render
+      // make a bed from the most recently added shape
+      const newBed = new Bed(shapes[shapes.length - 1].id, Date.now().toString());
+      setBeds((prev) => [...prev, newBed]);
+      setShouldCreateBed(false)
+      //console.log(`Created bed for shape ${shapes[shapes.length - 1].id}`);
+      //console.log(beds.length)
+    }, [shapes]);
+
+
   // --- Panning and zooming ---
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
