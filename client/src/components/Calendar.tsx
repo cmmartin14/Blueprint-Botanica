@@ -134,7 +134,9 @@ export default function CalendarWindow({ isOpen, onClose, defaultFullscreen = fa
   }, [weather, selectedYmd]);
 
   return (
-    <div className={`fixed z-50 rounded-2xl bg-white shadow-2xl border border-green-200 transition-all duration-300 ease-in-out ${
+    <div 
+      data-testid="calendar-window"
+      className={`fixed z-50 rounded-2xl bg-white shadow-2xl border border-green-200 transition-all duration-300 ease-in-out ${
       isFullscreen ? "inset-24" : "top-24 left-6 w-[880px] h-[560px]"
     } ${isOpen ? "" : "hidden"}`}>
       {/* Header */}

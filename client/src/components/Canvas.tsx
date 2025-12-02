@@ -169,6 +169,7 @@ const Canvas = () => {
       {/* --- Always visible toolbar --- */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
         <button
+          data-testid = "calendar"
           onClick={() => setCalendarOpen((prev) => !prev)}
           className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
           title="Calendar"
@@ -178,6 +179,7 @@ const Canvas = () => {
         </button>
 
         <button
+          data-testid = "garden-bed"
           onClick={() => setShowGardenBedCreator(true)}
           className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
           title="Create Garden Bed"
@@ -197,6 +199,7 @@ const Canvas = () => {
 
         {!isEditing && (
           <button
+            data-testid = "edit-button"
             onClick={toggleEditMode}
             className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
             title="Edit Mode"
@@ -256,7 +259,7 @@ const Canvas = () => {
 
       {/* --- Shape Tools (only in edit mode) --- */}
       {isEditing && (
-        <div className="absolute top-4 left-4 mt-16 bg-white rounded-lg shadow-lg p-3 border z-40">
+        <div data-testid="edit-window" className="absolute top-4 left-4 mt-16 bg-white rounded-lg shadow-lg p-3 border z-40">
           <div className="flex gap-2">
             <button
               onClick={() => createShape("rectangle")}
