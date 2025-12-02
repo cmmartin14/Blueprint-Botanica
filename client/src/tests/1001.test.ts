@@ -6,7 +6,6 @@ import { PrismaClient } from "@prisma/client";
 
 /* ---------------- ZIPCODE TESTS ---------------- */
 
-// Mock global fetch for the zipcode API
 const mockFetch = vi.fn();
 
 beforeEach(() => {
@@ -61,7 +60,6 @@ describe("GET /api/zipcode/[zip]", () => {
 
 /* ---------------- ZONES TESTS ---------------- */
 
-// ✅ Mock PrismaClient
 vi.mock("@prisma/client", () => {
   const mockFindMany = vi.fn();
   const mockDisconnect = vi.fn();
