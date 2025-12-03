@@ -2,17 +2,15 @@
 
 import React, { useCallback, useRef, useState } from "react";
 import { FaEdit, FaLeaf } from "react-icons/fa";
-import { TbCircleXFilled } from "react-icons/tb";
-import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
+import { TbCircleXFilled, TbCalendar } from "react-icons/tb";
 import { FaRegCircle, FaDrawPolygon } from "react-icons/fa";
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
 import Calendar from "./Calendar";
-import { TbCalendar } from "react-icons/tb";
-import { useGardenBed } from './hooks/useGardenBed';
-import GardenBedCreator from './garden/GardenBedCreator';
+import { useGardenBed } from "./hooks/useGardenBed";
+import GardenBedCreator from "./garden/GardenBedCreator";
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -23,24 +21,17 @@ const Canvas = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [drawMode, setDrawMode] = useState<"none" | "freehand">("none");
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentPath, setCurrentPath] = useState<Position[]>([]);
   const [isCalendarOpen, setCalendarOpen] = useState(false);
   const { createGardenBed } = useGardenBed();
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
 
-
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // --- Toggles ---
-//const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);   CURRENTLY HANDLED BY NAVBAR
-//const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
   const toggleEditMode = () => setIsEditing((prev) => !prev);
 
-  // --- Shape creation ---
+  // --- Shape creation (rectangle removed, freehand removed) ---
   const createShape = useCallback(
-    (shapeType: "rectangle" | "circle" | "line") => {
+    (shapeType: "circle" | "line") => {
       if (!canvasRef.current) return;
 
       const rect = canvasRef.current.getBoundingClientRect();
@@ -50,16 +41,6 @@ const Canvas = () => {
       let newShape: Shape;
 
       switch (shapeType) {
-        case "rectangle":
-          newShape = {
-            id: Date.now().toString(),
-            type: "rectangle",
-            startPos: { x: centerX - 50, y: centerY - 30 },
-            endPos: { x: centerX + 50, y: centerY + 30 },
-            color: "#ffffff",
-            strokeWidth: 2,
-          };
-          break;
         case "circle":
           newShape = {
             id: Date.now().toString(),
@@ -70,6 +51,7 @@ const Canvas = () => {
             strokeWidth: 2,
           };
           break;
+
         case "line":
           newShape = {
             id: Date.now().toString(),
@@ -80,6 +62,7 @@ const Canvas = () => {
             strokeWidth: 2,
           };
           break;
+
         default:
           return;
       }
@@ -98,52 +81,21 @@ const Canvas = () => {
           y: e.clientY - dragStart.y,
         });
       }
-
-      if (drawMode === "freehand" && isDrawing && canvasRef.current) {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = (e.clientX - rect.left - pan.x) / scale;
-        const y = (e.clientY - rect.top - pan.y) / scale;
-        setCurrentPath((prev) => [...prev, { x, y }]);
-      }
     },
-    [isDragging, dragStart, drawMode, isDrawing, pan, scale]
+    [isDragging, dragStart]
   );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      if (drawMode === "freehand") {
-        if (!canvasRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = (e.clientX - rect.left - pan.x) / scale;
-        const y = (e.clientY - rect.top - pan.y) / scale;
-        setCurrentPath([{ x, y }]);
-        setIsDrawing(true);
-        return;
-      }
-
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     },
-    [pan, scale, drawMode]
+    [pan]
   );
 
   const handleMouseUp = useCallback(() => {
-    if (drawMode === "freehand" && isDrawing && currentPath.length > 1) {
-      const newShape: Shape = {
-        id: Date.now().toString(),
-        type: "freehand",
-        points: currentPath,
-        color: "#3b82f6",
-        strokeWidth: 2,
-        startPos: currentPath[0],
-        endPos: currentPath[currentPath.length - 1],
-      };
-      setShapes((prev) => [...prev, newShape]);
-      setIsDrawing(false);
-      setCurrentPath([]);
-    }
     setIsDragging(false);
-  }, [drawMode, isDrawing, currentPath]);
+  }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -155,13 +107,15 @@ const Canvas = () => {
   const gridSize = 20;
   const safeScale = scale || 1;
   const gridStyle = {
-    backgroundColor: "#6D8934", // soft gray to ensure it's visible
+    backgroundColor: "#6D8934",
     backgroundImage: `
       linear-gradient(to right, #9EAD73 1px, transparent 1px),
       linear-gradient(to bottom, #9EAD73 1px, transparent 1px)
     `,
     backgroundSize: `${gridSize * safeScale}px ${gridSize * safeScale}px`,
-    backgroundPosition: `${pan.x % (gridSize * safeScale)}px ${pan.y % (gridSize * safeScale)}px`,
+    backgroundPosition: `${pan.x % (gridSize * safeScale)}px ${
+      pan.y % (gridSize * safeScale)
+    }px`,
   };
 
   return (
@@ -169,7 +123,7 @@ const Canvas = () => {
       {/* --- Always visible toolbar --- */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
         <button
-          data-testid = "calendar"
+          data-testid="calendar"
           onClick={() => setCalendarOpen((prev) => !prev)}
           className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
           title="Calendar"
@@ -179,7 +133,7 @@ const Canvas = () => {
         </button>
 
         <button
-          data-testid = "garden-bed"
+          data-testid="garden-bed"
           onClick={() => setShowGardenBedCreator(true)}
           className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
           title="Create Garden Bed"
@@ -188,18 +142,18 @@ const Canvas = () => {
         </button>
 
         {showGardenBedCreator && (
-        <GardenBedCreator
-          onCreate={(name: string) => {
-            createGardenBed(name);
-            setShowGardenBedCreator(false);
-          }}
-          onCancel={() => setShowGardenBedCreator(false)}
-        />
-      )}
+          <GardenBedCreator
+            onCreate={(name: string) => {
+              createGardenBed(name);
+              setShowGardenBedCreator(false);
+            }}
+            onCancel={() => setShowGardenBedCreator(false)}
+          />
+        )}
 
         {!isEditing && (
           <button
-            data-testid = "edit-button"
+            data-testid="edit-button"
             onClick={toggleEditMode}
             className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
             title="Edit Mode"
@@ -209,8 +163,14 @@ const Canvas = () => {
         )}
       </div>
 
-      <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-      <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
+      <SearchWindow
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
+      <VariableWindow
+        isOpen={isVariableOpen}
+        onClose={() => setIsVariableOpen(false)}
+      />
       <Calendar isOpen={isCalendarOpen} onClose={() => setCalendarOpen(false)} />
 
       {/* --- Canvas Area --- */}
@@ -240,34 +200,24 @@ const Canvas = () => {
             gridToUnit={1}
             onShapeUpdate={(shapeId, updates) => {
               setShapes((prev) =>
-                prev.map((shape) => (shape.id === shapeId ? { ...shape, ...updates } as Shape : shape))
+                prev.map((shape) =>
+                  shape.id === shapeId
+                    ? ({ ...shape, ...updates } as Shape)
+                    : shape
+                )
               );
             }}
           />
-          {drawMode === "freehand" && isDrawing && currentPath.length > 1 && (
-            <svg className="absolute inset-0 pointer-events-none">
-              <polyline
-                points={currentPath.map((p) => `${p.x},${p.y}`).join(" ")}
-                stroke="#3b82f6"
-                strokeWidth={2}
-                fill="none"
-              />
-            </svg>
-          )}
         </div>
       </div>
 
       {/* --- Shape Tools (only in edit mode) --- */}
       {isEditing && (
-        <div data-testid="edit-window" className="absolute top-4 left-4 mt-16 bg-white rounded-lg shadow-lg p-3 border z-40">
+        <div
+          data-testid="edit-window"
+          className="absolute top-4 left-4 mt-16 bg-white rounded-lg shadow-lg p-3 border z-40"
+        >
           <div className="flex gap-2">
-            <button
-              onClick={() => createShape("rectangle")}
-              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
-              title="Rectangle"
-            >
-              <MdOutlineRectangle size={30} />
-            </button>
             <button
               onClick={() => createShape("circle")}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -275,6 +225,7 @@ const Canvas = () => {
             >
               <FaRegCircle size={25} />
             </button>
+
             <button
               onClick={() => createShape("line")}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -282,19 +233,7 @@ const Canvas = () => {
             >
               <FaDrawPolygon size={25} />
             </button>
-            <button
-              onClick={() =>
-                setDrawMode((prev) => (prev === "freehand" ? "none" : "freehand"))
-              }
-              className={`p-2 rounded ${
-                drawMode === "freehand"
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-100 text-green-800 hover:bg-gray-200"
-              }`}
-              title="Freehand"
-            >
-              <MdOutlineDraw size={25} />
-            </button>
+
             <button
               onClick={toggleEditMode}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -329,6 +268,7 @@ const Canvas = () => {
 };
 
 export default Canvas;
+
 
 
 
