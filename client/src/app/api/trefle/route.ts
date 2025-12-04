@@ -1,31 +1,43 @@
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const query = searchParams.get("q") || "";
-  const token = process.env.TREFLE_TOKEN;
+const TREFLE_TOKEN = process.env.TREFLE_TOKEN;
 
-  if (!token) {
-    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("q");
+  const id = searchParams.get("id");
+
+  if (!TREFLE_TOKEN) {
+    console.error("Missing Trefle API token");
+    return NextResponse.json({ error: "Missing Trefle API token" }, { status: 500 });
   }
 
   try {
-    const res = await fetch(
-      `https://trefle.io/api/v1/plants/search?q=${encodeURIComponent(query)}&token=${token}`
-    );
+    let apiUrl = "";
 
-    if (!res.ok) {
-      // Read body as text only once
-      const errorText = await res.text();
-      console.error("Trefle returned non-OK:", res.status, errorText);
-      return NextResponse.json({ error: "Trefle API error" }, { status: 500 });
+    if (id) {
+      if (isNaN(Number(id))) {
+        return NextResponse.json({ error: "Invalid plant ID" }, { status: 400 });
+      }
+      apiUrl = `https://trefle.io/api/v1/plants/${id}?token=${TREFLE_TOKEN}`;
+    } else if (query) {
+      apiUrl = `https://trefle.io/api/v1/plants/search?token=${TREFLE_TOKEN}&q=${encodeURIComponent(query)}`;
+    } else {
+      return NextResponse.json({ data: [] });
+    }
+    
+    const resp = await fetch(apiUrl);
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error("Trefle API returned error:", text);
+      return NextResponse.json({ error: `Trefle API returned ${resp.status}` }, { status: resp.status });
     }
 
-    // Read body as JSON once
-    const data = await res.json();
+    const data = await resp.json();
     return NextResponse.json(data);
-  } catch (error) {
-    console.error("Trefle fetch error:", error);
-    return NextResponse.json({ error: "Server fetch failed" }, { status: 500 });
+  } catch (err) {
+    console.error("Error fetching Trefle API:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
