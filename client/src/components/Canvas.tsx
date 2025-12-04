@@ -263,7 +263,7 @@ const Canvas = () => {
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Undo"
             >
-              <FaUndoAlt />
+              <FaUndoAlt size={25}/>
             </button>
 
             {/* Redo */}
@@ -278,7 +278,7 @@ const Canvas = () => {
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Redo"
             >
-              <FaRedoAlt />
+              <FaRedoAlt size={25}/>
             </button>
 
             {/* Exit Edit Mode */}
