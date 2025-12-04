@@ -281,7 +281,11 @@ const Canvas = () => {
 
             {/* Clear Canvas */}
             <button
-              onClick={() => pushHistory([])}
+              onClick={() => {
+                if (window.confirm("Are you sure you want to clear the entire canvas?")) {
+                  pushHistory([]);
+                }
+              }}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Clear Canvas"
             >
@@ -304,7 +308,3 @@ const Canvas = () => {
 };
 
 export default Canvas;
-
-
-
-
