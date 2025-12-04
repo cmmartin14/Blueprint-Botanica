@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useCallback, useRef, useState, useEffect } from "react";
-import { FaEdit, FaLeaf, FaRegCircle, FaDrawPolygon } from "react-icons/fa";
+import { FaEdit, FaLeaf, FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt } from "react-icons/fa";
 import { TbCircleXFilled, TbCalendar } from "react-icons/tb";
 import { MdOutlineRectangle } from "react-icons/md";
-import { FaUndoAlt } from "react-icons/fa";
-import { FaRedoAlt } from "react-icons/fa";
 
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
@@ -263,7 +261,7 @@ const Canvas = () => {
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Undo"
             >
-              <FaUndoAlt size={25}/>
+              <FaUndoAlt size={25} />
             </button>
 
             {/* Redo */}
@@ -278,7 +276,16 @@ const Canvas = () => {
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Redo"
             >
-              <FaRedoAlt size={25}/>
+              <FaRedoAlt size={25} />
+            </button>
+
+            {/* Clear Canvas */}
+            <button
+              onClick={() => pushHistory([])}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Clear Canvas"
+            >
+              <FaTrashAlt size={25} />
             </button>
 
             {/* Exit Edit Mode */}
@@ -297,6 +304,7 @@ const Canvas = () => {
 };
 
 export default Canvas;
+
 
 
 
