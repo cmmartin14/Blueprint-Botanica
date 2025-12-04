@@ -25,13 +25,23 @@ const Canvas = () => {
   const [isCalendarOpen, setCalendarOpen] = useState(false);
   const { createGardenBed } = useGardenBed();
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
-
-  // New: track selected shape
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+
+  // Undo/redo state
+  const [history, setHistory] = useState<Shape[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const toggleEditMode = () => setIsEditing((prev) => !prev);
+
+  // Push new state to history
+  const pushHistory = useCallback((newShapes: Shape[]) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    setHistory([...newHistory, newShapes]);
+    setHistoryIndex(newHistory.length);
+    setShapes(newShapes);
+  }, [history, historyIndex]);
 
   const createShape = useCallback(
     (shapeType: "circle" | "line") => {
@@ -69,9 +79,9 @@ const Canvas = () => {
           return;
       }
 
-      setShapes((prev) => [...prev, newShape]);
+      pushHistory([...shapes, newShape]);
     },
-    [pan, scale]
+    [pan, scale, shapes, pushHistory]
   );
 
   const handleMouseMove = useCallback(
@@ -118,17 +128,33 @@ const Canvas = () => {
     }px`,
   };
 
-  // New: delete selected shape on backspace
+  // Delete selected shape and handle undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Backspace" && selectedShapeId) {
-        setShapes((prev) => prev.filter(shape => shape.id !== selectedShapeId));
+        pushHistory(shapes.filter(shape => shape.id !== selectedShapeId));
         setSelectedShapeId(null);
+      }
+      // Undo: Ctrl+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        if (historyIndex > 0) {
+          const newIndex = historyIndex - 1;
+          setShapes(history[newIndex]);
+          setHistoryIndex(newIndex);
+        }
+      }
+      // Redo: Ctrl+Y
+      if ((e.ctrlKey || e.metaKey) && e.key === "y") {
+        if (historyIndex < history.length - 1) {
+          const newIndex = historyIndex + 1;
+          setShapes(history[newIndex]);
+          setHistoryIndex(newIndex);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedShapeId]);
+  }, [selectedShapeId, shapes, history, historyIndex, pushHistory]);
 
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
@@ -204,11 +230,10 @@ const Canvas = () => {
             unit="feet"
             gridToUnit={1}
             onShapeUpdate={(shapeId, updates) => {
-              setShapes((prev) =>
-                prev.map((shape) =>
-                  shape.id === shapeId ? ({ ...shape, ...updates } as Shape) : shape
-                )
+              const newShapes = shapes.map((shape) =>
+                shape.id === shapeId ? ({ ...shape, ...updates } as Shape) : shape
               );
+              pushHistory(newShapes);
             }}
             onShapeSelect={(shapeId) => setSelectedShapeId(shapeId)}
           />
@@ -253,4 +278,5 @@ const Canvas = () => {
 };
 
 export default Canvas;
+
 
