@@ -3,7 +3,7 @@
 import React, { useCallback, useRef, useState, useEffect } from "react";
 import { FaEdit, FaLeaf, FaRegCircle, FaDrawPolygon } from "react-icons/fa";
 import { TbCircleXFilled, TbCalendar } from "react-icons/tb";
-import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
+import { MdOutlineRectangle } from "react-icons/md";
 
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
@@ -26,18 +26,10 @@ const Canvas = () => {
   const { createGardenBed } = useGardenBed();
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
 
-  const canvasRef = useRef<HTMLDivElement>(null);
+  // New: track selected shape
+  const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
 
-  // --- Backspace delete functionality ---
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Backspace") {
-        setShapes((prev) => prev.slice(0, prev.length - 1));
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   const toggleEditMode = () => setIsEditing((prev) => !prev);
 
@@ -126,6 +118,18 @@ const Canvas = () => {
     }px`,
   };
 
+  // New: delete selected shape on backspace
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Backspace" && selectedShapeId) {
+        setShapes((prev) => prev.filter(shape => shape.id !== selectedShapeId));
+        setSelectedShapeId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedShapeId]);
+
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
       {/* Toolbar */}
@@ -206,6 +210,7 @@ const Canvas = () => {
                 )
               );
             }}
+            onShapeSelect={(shapeId) => setSelectedShapeId(shapeId)}
           />
         </div>
       </div>
@@ -248,3 +253,4 @@ const Canvas = () => {
 };
 
 export default Canvas;
+
