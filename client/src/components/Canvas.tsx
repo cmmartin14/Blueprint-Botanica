@@ -144,15 +144,6 @@ const Canvas = () => {
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
       {/* Toolbar */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
-        <button
-          data-testid="calendar"
-          onClick={() => setCalendarOpen((prev) => !prev)}
-          className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
-          title="Calendar"
-          aria-label="Toggle calendar"
-        >
-          <TbCalendar className="h-5 w-5" />
-        </button>
 
         <button
           data-testid="garden-bed"
