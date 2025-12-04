@@ -145,14 +145,7 @@ const Canvas = () => {
       {/* Toolbar */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
 
-        <button
-          data-testid="garden-bed"
-          onClick={() => setShowGardenBedCreator(true)}
-          className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
-          title="Create Garden Bed"
-        >
-          <FaLeaf size={22} />
-        </button>
+
 
         {showGardenBedCreator && (
           <GardenBedCreator
