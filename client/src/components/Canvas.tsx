@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
-import { FaEdit, FaLeaf } from "react-icons/fa";
+import { FaEdit, FaLeaf, FaRegCircle, FaDrawPolygon } from "react-icons/fa";
 import { TbCircleXFilled, TbCalendar } from "react-icons/tb";
-import { FaRegCircle, FaDrawPolygon } from "react-icons/fa";
+import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
+
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
 import SearchWindow from "./Searchwindow";
@@ -29,11 +30,9 @@ const Canvas = () => {
 
   const toggleEditMode = () => setIsEditing((prev) => !prev);
 
-  // --- Shape creation (rectangle removed, freehand removed) ---
   const createShape = useCallback(
     (shapeType: "circle" | "line") => {
       if (!canvasRef.current) return;
-
       const rect = canvasRef.current.getBoundingClientRect();
       const centerX = (rect.width / 2 - pan.x) / scale;
       const centerY = (rect.height / 2 - pan.y) / scale;
@@ -72,7 +71,6 @@ const Canvas = () => {
     [pan, scale]
   );
 
-  // --- Panning and zooming ---
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (isDragging) {
@@ -103,7 +101,6 @@ const Canvas = () => {
     setScale((prev) => Math.min(Math.max(prev * delta, 0.75), 2));
   }, []);
 
-  // --- Grid style ---
   const gridSize = 20;
   const safeScale = scale || 1;
   const gridStyle = {
@@ -120,7 +117,7 @@ const Canvas = () => {
 
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
-      {/* --- Always visible toolbar --- */}
+      {/* Toolbar */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
         <button
           data-testid="calendar"
@@ -163,17 +160,10 @@ const Canvas = () => {
         )}
       </div>
 
-      <SearchWindow
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-      />
-      <VariableWindow
-        isOpen={isVariableOpen}
-        onClose={() => setIsVariableOpen(false)}
-      />
+      <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
       <Calendar isOpen={isCalendarOpen} onClose={() => setCalendarOpen(false)} />
 
-      {/* --- Canvas Area --- */}
       <div
         ref={canvasRef}
         data-canvas
@@ -201,9 +191,7 @@ const Canvas = () => {
             onShapeUpdate={(shapeId, updates) => {
               setShapes((prev) =>
                 prev.map((shape) =>
-                  shape.id === shapeId
-                    ? ({ ...shape, ...updates } as Shape)
-                    : shape
+                  shape.id === shapeId ? ({ ...shape, ...updates } as Shape) : shape
                 )
               );
             }}
@@ -211,7 +199,7 @@ const Canvas = () => {
         </div>
       </div>
 
-      {/* --- Shape Tools (only in edit mode) --- */}
+      {/* Shape Tools */}
       {isEditing && (
         <div
           data-testid="edit-window"
@@ -244,30 +232,12 @@ const Canvas = () => {
           </div>
         </div>
       )}
-
-      {/* --- Bottom Right Controls --- */}
-      <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span>Zoom: {Math.round(scale * 100)}%</span>
-          <button
-            onClick={() => setScale(1)}
-            className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
-          >
-            Reset
-          </button>
-          <button
-            onClick={() => setShapes([])}
-            className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
 
 export default Canvas;
+
 
 
 

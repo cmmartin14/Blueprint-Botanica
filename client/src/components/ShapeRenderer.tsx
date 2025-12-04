@@ -229,7 +229,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               width: radius * 2,
               height: radius * 2,
               borderRadius: "50%",
-              border: `${strokeWidth ?? 2}px solid ${color}`,
+              border: `${strokeWidth ?? 2, 7}px solid ${color}`,
               backgroundColor: "transparent",
               left: centerX - radius,
               top: centerY - radius,
