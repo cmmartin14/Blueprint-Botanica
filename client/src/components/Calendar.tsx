@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import Image from 'next/image';
 
 type Props = {
   isOpen: boolean;
@@ -286,7 +285,7 @@ export default function CalendarWindow({ isOpen, onClose, defaultFullscreen = fa
                 <div className="rounded-xl border border-green-200 p-3">
                   <div className="text-xs text-green-700">Forecast for {selectedYmd}</div>
                   <div className="mt-1 flex items-center gap-3">
-                    <Image src={`https://openweathermap.org/img/wn/${selectedForecast.icon}@2x.png`} alt="" className="h-10 w-10"/>
+                    <img src={`https://openweathermap.org/img/wn/${selectedForecast.icon}@2x.png`} alt="" className="h-10 w-10"/>
                     <div>
                       <div className="text-sm font-medium text-green-900 capitalize">{selectedForecast.description}</div>
                       <div className="text-sm text-green-800">{Math.round(selectedForecast.temp.min)}° / {Math.round(selectedForecast.temp.max)}°</div>
@@ -298,7 +297,7 @@ export default function CalendarWindow({ isOpen, onClose, defaultFullscreen = fa
                   <div className="text-xs text-green-700">Current</div>
                   {weather.current ? (
                     <div className="mt-1 flex items-center gap-3">
-                      <Image src={`https://openweathermap.org/img/wn/${weather.current.icon}@2x.png`} alt="" className="h-10 w-10"/>
+                      <img src={`https://openweathermap.org/img/wn/${weather.current.icon}@2x.png`} alt="" className="h-10 w-10"/>
                       <div>
                         <div className="text-sm font-medium text-green-900 capitalize">{weather.current.description}</div>
                         <div className="text-sm text-green-800">{Math.round(weather.current.temp)}°</div>
@@ -316,7 +315,7 @@ export default function CalendarWindow({ isOpen, onClose, defaultFullscreen = fa
                   {weather.daily.map((d) => (
                     <li key={d.date} className="flex items-center justify-between p-2">
                       <button onClick={() => setSelectedDate(new Date(d.date))} className="flex items-center gap-3">
-                        <Image src={`https://openweathermap.org/img/wn/${d.icon}.png`} alt="" className="h-6 w-6"/>
+                        <img src={`https://openweathermap.org/img/wn/${d.icon}.png`} alt="" className="h-6 w-6"/>
                         <span className="text-sm text-green-900">{d.date}</span>
                       </button>
                       <span className="text-sm text-green-800">{Math.round(d.temp.min)}° / {Math.round(d.temp.max)}°</span>

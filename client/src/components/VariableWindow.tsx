@@ -12,7 +12,7 @@ type VariableWindowProps = {
 const VariableWindow = ({ isOpen, onClose }: VariableWindowProps) => {
   const [showZoneSelector, setShowZoneSelector] = useState(false);
 
-  if (!isOpen) return null;
+if (!isOpen) return null;
 
   return (
     <div
