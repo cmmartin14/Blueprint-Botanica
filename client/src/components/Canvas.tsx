@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import { FaEdit, FaLeaf, FaRegCircle, FaDrawPolygon } from "react-icons/fa";
 import { TbCircleXFilled, TbCalendar } from "react-icons/tb";
 import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
@@ -27,6 +27,17 @@ const Canvas = () => {
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // --- Backspace delete functionality ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Backspace") {
+        setShapes((prev) => prev.slice(0, prev.length - 1));
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const toggleEditMode = () => setIsEditing((prev) => !prev);
 
@@ -237,11 +248,3 @@ const Canvas = () => {
 };
 
 export default Canvas;
-
-
-
-
-
-
-
-
