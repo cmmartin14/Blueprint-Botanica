@@ -61,7 +61,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         const newEnd = { x: originalEnd.x + dx, y: originalEnd.y + dy };
 
         if (shape.type === 'line') {
-          // snap lines as a whole
           const snappedStart = snapToGrid(newStart.x, newStart.y);
           const offsetX = snappedStart.x - newStart.x;
           const offsetY = snappedStart.y - newStart.y;
@@ -150,7 +149,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     const panY = translateMatch ? parseFloat(translateMatch[2]) : 0;
     const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
 
-    // Center is based on the circle's startPos (which we treat as center)
     const centerX = shape.startPos.x;
     const centerY = shape.startPos.y;
 
@@ -162,14 +160,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const dy = rawY - centerY;
       const newRadius = Math.sqrt(dx * dx + dy * dy);
 
-      // Snap radius to grid by snapping a point on the circumference horizontally then computing radius
       const snapped = snapToGrid(centerX + newRadius, centerY);
       const radiusSnapped = Math.abs(snapped.x - centerX);
 
       onShapeUpdate?.(shapeId, {
         endPos: {
           x: centerX + radiusSnapped,
-          y: centerY + radiusSnapped, // keep circle symmetric
+          y: centerY + radiusSnapped,
         }
       });
     };
@@ -194,7 +191,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     const left = Math.min(startPos.x, endPos.x);
     const top = Math.min(startPos.y, endPos.y);
 
-    // Common absolute positioned style
     const commonStyle: React.CSSProperties = {
       position: "absolute",
       left,
@@ -211,17 +207,16 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const centerX = startPos.x;
       const centerY = startPos.y;
 
-      // Grid units -> real world units
       const gridSize = 20;
       const gridUnits = radius / gridSize;
       const feet = (gridUnits * gridToUnit).toFixed(1);
       const meters = feetToMeters(parseFloat(feet));
 
-      // Label position (right side of circle)
-      const labelX = centerX + radius + 20;
-      const labelY = centerY;
+      // 🆕 Move label ABOVE the circle
+      const labelX = centerX;
+      const labelY = centerY - radius - 20;
 
-      // Resize handle (right side)
+      // Resize handle stays on the right
       const handleX = centerX + radius;
       const handleY = centerY;
 
@@ -234,7 +229,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               width: radius * 2,
               height: radius * 2,
               borderRadius: "50%",
-              border: `${strokeWidth ?? 2, 7}px solid ${color}`,  // ← THICKNESS MATCHES LINE TOOL
+              border: `${strokeWidth ?? 2}px solid ${color}`,
               backgroundColor: "transparent",
               left: centerX - radius,
               top: centerY - radius,
@@ -242,7 +237,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             onMouseDown={handleShapeMouseDown(shape.id)}
           />
 
-          {/* Dimension label */}
+          {/* Dimension label — moved ABOVE */}
           <div
             style={{
               position: "absolute",
@@ -457,6 +452,3 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 };
 
 export default ShapeRenderer;
-
-
-
