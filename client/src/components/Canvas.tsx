@@ -155,16 +155,7 @@ const Canvas = () => {
           />
         )}
 
-        {!editMode && (
-          <button
-            data-testid="edit-button"
-            onClick={() => setEditMode(true)}
-            className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
-            title="Edit Mode"
-          >
-            <FaEdit size={22} />
-          </button>
-        )}
+
       </div>
 
       <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
