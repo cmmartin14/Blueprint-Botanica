@@ -15,6 +15,7 @@ import { IoNotifications } from "react-icons/io5";
 import { RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { FaRegUser } from "react-icons/fa";
+import { useCanvasStore } from "../stores/canvasStore";
 
 const Navbar = () => {
   // ====== STATE ======
@@ -28,13 +29,15 @@ const Navbar = () => {
   const [unit, setUnit] = useState<"C" | "F">("C");
   const [weatherCondition, setWeatherCondition] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+
+  // ====== Canvas store (edit mode) ======
+  const { editMode, setEditMode } = useCanvasStore();
+  const toggleEdit = () => setEditMode(!editMode);
 
   // ====== HANDLERS ======
   const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
   const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
   const toggleCalendarWindow = () => setIsCalendarOpen((prev) => !prev);
-  const toggleEditMode = () => setIsEditing((prev) => !prev);
 
   const formatTemperature = (tempC: number) => {
     if (unit === "C") return `${tempC.toFixed(0)}°C`;
@@ -281,14 +284,15 @@ const Navbar = () => {
         {/* ====== Right: Icons + Menu ===== */}
         <div className="relative flex items-center">
           {/* Desktop icons */}
-          <div className="hidden md:flex items-center">
+          <div className="hidden md:flex items-center">           
             <button
-              onClick={toggleEditMode}
-              className="ml-6 p-3 rounded-xl text-[#B7C398]"
+              data-testid="edit-button"
+              onClick={toggleEdit}
+              className="p-3 rounded-xl text-[#B7C398]"
               title="Edit Mode"
             >
               <FaEdit size={25} />
-            </button>
+            </button>                
 
             <button
               onClick={toggleSearchWindow}
@@ -342,7 +346,7 @@ const Navbar = () => {
           {isMenuOpen && (
             <div className="absolute right-0 top-14 w-52 bg-[#003326] rounded-xl shadow-lg border border-[#B7C398]/40 overflow-hidden z-50 md:hidden">
               {[
-                { name: "Edit Mode", action: toggleEditMode, icon: <FaEdit size={20} /> },
+                { name: "Edit Mode", action: toggleEdit, icon: <FaEdit size={20} /> },
                 { name: "Search", action: toggleSearchWindow, icon: <FaSearch size={20} /> },
                 { name: "Calendar", action: toggleCalendarWindow, icon: <FaCalendarAlt size={20} /> },
                 { name: "Notifications", action: () => {}, icon: <IoNotifications size={20} /> },
@@ -377,4 +381,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-

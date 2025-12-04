@@ -12,6 +12,7 @@ import VariableWindow from "./VariableWindow";
 import Calendar from "./Calendar";
 import { useGardenBed } from "./hooks/useGardenBed";
 import GardenBedCreator from "./garden/GardenBedCreator";
+import { useCanvasStore } from "../stores/canvasStore";
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -21,7 +22,6 @@ const Canvas = () => {
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [isCalendarOpen, setCalendarOpen] = useState(false);
   const { createGardenBed } = useGardenBed();
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
@@ -33,7 +33,8 @@ const Canvas = () => {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const toggleEditMode = () => setIsEditing((prev) => !prev);
+  // Use store for edit mode
+  const { editMode, setEditMode } = useCanvasStore();
 
   // Push new state to history
   const pushHistory = useCallback((newShapes: Shape[]) => {
@@ -128,7 +129,7 @@ const Canvas = () => {
     }px`,
   };
 
-  // Delete selected shape
+  // Delete selected shape (backspace)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Backspace" && selectedShapeId) {
@@ -144,9 +145,6 @@ const Canvas = () => {
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
       {/* Toolbar */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
-
-
-
         {showGardenBedCreator && (
           <GardenBedCreator
             onCreate={(name: string) => {
@@ -157,10 +155,10 @@ const Canvas = () => {
           />
         )}
 
-        {!isEditing && (
+        {!editMode && (
           <button
             data-testid="edit-button"
-            onClick={toggleEditMode}
+            onClick={() => setEditMode(true)}
             className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
             title="Edit Mode"
           >
@@ -209,7 +207,7 @@ const Canvas = () => {
       </div>
 
       {/* Shape Tools */}
-      {isEditing && (
+      {editMode && (
         <div
           data-testid="edit-window"
           className="absolute top-4 left-4 mt-16 bg-white rounded-lg shadow-lg p-3 border z-40"
@@ -278,7 +276,7 @@ const Canvas = () => {
 
             {/* Exit Edit Mode */}
             <button
-              onClick={toggleEditMode}
+              onClick={() => setEditMode(false)}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Exit Edit Mode"
             >
@@ -292,3 +290,4 @@ const Canvas = () => {
 };
 
 export default Canvas;
+
