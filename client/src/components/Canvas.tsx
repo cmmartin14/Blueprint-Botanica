@@ -4,6 +4,8 @@ import React, { useCallback, useRef, useState, useEffect } from "react";
 import { FaEdit, FaLeaf, FaRegCircle, FaDrawPolygon } from "react-icons/fa";
 import { TbCircleXFilled, TbCalendar } from "react-icons/tb";
 import { MdOutlineRectangle } from "react-icons/md";
+import { FaUndoAlt } from "react-icons/fa";
+import { FaRedoAlt } from "react-icons/fa";
 
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
@@ -128,33 +130,17 @@ const Canvas = () => {
     }px`,
   };
 
-  // Delete selected shape and handle undo/redo
+  // Delete selected shape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Backspace" && selectedShapeId) {
         pushHistory(shapes.filter(shape => shape.id !== selectedShapeId));
         setSelectedShapeId(null);
       }
-      // Undo: Ctrl+Z
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
-        if (historyIndex > 0) {
-          const newIndex = historyIndex - 1;
-          setShapes(history[newIndex]);
-          setHistoryIndex(newIndex);
-        }
-      }
-      // Redo: Ctrl+Y
-      if ((e.ctrlKey || e.metaKey) && e.key === "y") {
-        if (historyIndex < history.length - 1) {
-          const newIndex = historyIndex + 1;
-          setShapes(history[newIndex]);
-          setHistoryIndex(newIndex);
-        }
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedShapeId, shapes, history, historyIndex, pushHistory]);
+  }, [selectedShapeId, shapes, pushHistory]);
 
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
@@ -247,6 +233,7 @@ const Canvas = () => {
           className="absolute top-4 left-4 mt-16 bg-white rounded-lg shadow-lg p-3 border z-40"
         >
           <div className="flex gap-2">
+            {/* Circle */}
             <button
               onClick={() => createShape("circle")}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -255,6 +242,7 @@ const Canvas = () => {
               <FaRegCircle size={25} />
             </button>
 
+            {/* Line */}
             <button
               onClick={() => createShape("line")}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -263,6 +251,37 @@ const Canvas = () => {
               <FaDrawPolygon size={25} />
             </button>
 
+            {/* Undo */}
+            <button
+              onClick={() => {
+                if (historyIndex > 0) {
+                  const newIndex = historyIndex - 1;
+                  setShapes(history[newIndex]);
+                  setHistoryIndex(newIndex);
+                }
+              }}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Undo"
+            >
+              <FaUndoAlt />
+            </button>
+
+            {/* Redo */}
+            <button
+              onClick={() => {
+                if (historyIndex < history.length - 1) {
+                  const newIndex = historyIndex + 1;
+                  setShapes(history[newIndex]);
+                  setHistoryIndex(newIndex);
+                }
+              }}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Redo"
+            >
+              <FaRedoAlt />
+            </button>
+
+            {/* Exit Edit Mode */}
             <button
               onClick={toggleEditMode}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -278,5 +297,6 @@ const Canvas = () => {
 };
 
 export default Canvas;
+
 
 
