@@ -28,6 +28,7 @@ const Canvas = () => {
   const { createGardenBed } = useGardenBed();
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+  const[shouldCreateBed, setShouldCreateBed] = useState(false); //indicates whether we are in the process of creating a bed
 
   // Undo/redo state
   const [history, setHistory] = useState<Shape[][]>([]);
@@ -87,7 +88,7 @@ const Canvas = () => {
     [pan, scale, shapes, pushHistory]
   );
   // --- Bed creation ---
-  const createBed = useCallback((shapeType: "rectangle" | "circle" | "line") => {
+  const createBed = useCallback((shapeType: "circle" | "line") => {
     //Step 1: Create a new Shape
     createShape(shapeType)
     //Step 2: set a variable to indicate to the useEffect that we want to add the shape to the bed's list of shapes
@@ -100,13 +101,12 @@ const Canvas = () => {
    * This useEffect updates the list of shapes within the bed object immediately after the bed is created 
    *********************************/ 
   useEffect(() => {
-      if (shapes.length === 0 || shouldCreateBed === false) return; // skip first render
+      if (shapes.length === 0 || !shouldCreateBed) return; // skip first render, and don't bother if we're not making a new bed
       // make a bed from the most recently added shape
       const newBed = new Bed(shapes[shapes.length - 1].id, Date.now().toString());
+      console.log("new bed id ", newBed.id);
       setBeds((prev) => [...prev, newBed]);
       setShouldCreateBed(false)
-      //console.log(`Created bed for shape ${shapes[shapes.length - 1].id}`);
-      //console.log(beds.length)
     }, [shapes]);
 
 
@@ -231,7 +231,7 @@ const Canvas = () => {
           <div className="flex gap-2">
             {/* Circle */}
             <button
-              onClick={() => createShape("circle")}
+              onClick={() => createBed("circle")}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Circle"
             >
@@ -240,7 +240,7 @@ const Canvas = () => {
 
             {/* Line */}
             <button
-              onClick={() => createShape("line")}
+              onClick={() => createBed("line")}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Line"
             >
