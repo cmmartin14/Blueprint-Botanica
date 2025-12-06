@@ -295,6 +295,7 @@ const Navbar = () => {
             </button>                
 
             <button
+              data-testid="search-button"
               onClick={toggleSearchWindow}
               className="p-3 rounded-xl text-[#B7C398]"
               title="Search"
@@ -303,6 +304,7 @@ const Navbar = () => {
             </button>
 
             <button
+              data-testid="calendar-button"
               onClick={toggleCalendarWindow}
               className="p-3 rounded-xl text-[#B7C398]"
               title="Calendar"
@@ -372,9 +374,9 @@ const Navbar = () => {
         </div>
 
         {/* ====== Popups ===== */}
-        <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-        <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-        <Calendar isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
+        <SearchWindow data-testid="search-window" isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+        <VariableWindow data-testid="variable-window" isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
+        <Calendar data-testid="calendar-window" isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
       </div>
     </nav>
   );

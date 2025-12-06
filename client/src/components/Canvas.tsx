@@ -160,7 +160,7 @@ const Canvas = () => {
 
       <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-      <Calendar isOpen={isCalendarOpen} onClose={() => setCalendarOpen(false)} />
+      <Calendar data-testid="calendar-window" isOpen={isCalendarOpen} onClose={() => setCalendarOpen(false)} />
 
       <div
         ref={canvasRef}
