@@ -1,11 +1,9 @@
-import { Canvas, SearchWindow, VariableWindow } from "@/types";
-
+import Canvas from "@/components/Canvas";
 export default function Home() {
   return (
     <>
       <Canvas />
-      <SearchWindow isOpen={false} />
-      <VariableWindow isOpen={false} />
+      
     </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FiMapPin, FiChevronLeft, FiX } from "react-icons/fi";
+import { FiMapPin, FiChevronLeft } from "react-icons/fi";
 import ZoneSelector from "./ZoneSelector";
 
 type VariableWindowProps = {
@@ -12,7 +12,7 @@ type VariableWindowProps = {
 const VariableWindow = ({ isOpen, onClose }: VariableWindowProps) => {
   const [showZoneSelector, setShowZoneSelector] = useState(false);
 
-  if (!isOpen) return null;
+if (!isOpen) return null;
 
   return (
     <div

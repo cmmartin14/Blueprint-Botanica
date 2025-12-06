@@ -1,15 +1,19 @@
 "use client";
 
 import React, { useCallback, useRef, useState, useEffect } from "react";
-import { FaEdit, FaSearch } from "react-icons/fa";
-import { TbHomeEdit, TbCircleXFilled } from "react-icons/tb";
-import { MdOutlineDraw, MdOutlineRectangle } from "react-icons/md";
-import { FaRegCircle, FaDrawPolygon } from "react-icons/fa";
+import { FaEdit, FaLeaf, FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt } from "react-icons/fa";
+import { TbCircleXFilled, TbCalendar } from "react-icons/tb";
+import { MdOutlineRectangle } from "react-icons/md";
+
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
 import { Bed } from "../types/beds"
 import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
+import Calendar from "./Calendar";
+import { useGardenBed } from "./hooks/useGardenBed";
+import GardenBedCreator from "./garden/GardenBedCreator";
+import { useCanvasStore } from "../stores/canvasStore";
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -20,26 +24,31 @@ const Canvas = () => {
   const [beds, setBeds] = useState<Bed[]>([])//the list of all beds in the garden
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [drawMode, setDrawMode] = useState<"none" | "freehand">("none");
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [shouldCreateBed, setShouldCreateBed] = useState(false);
-  const [currentPath, setCurrentPath] = useState<Position[]>([]);
+  const [isCalendarOpen, setCalendarOpen] = useState(false);
+  const { createGardenBed } = useGardenBed();
+  const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
+  const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+
+  // Undo/redo state
+  const [history, setHistory] = useState<Shape[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  
+  // Use store for edit mode
+  const { editMode, setEditMode } = useCanvasStore();
 
-  // --- Toggles ---
-  const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
-  const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
-  const toggleEditMode = () => setIsEditing((prev) => !prev);
+  // Push new state to history
+  const pushHistory = useCallback((newShapes: Shape[]) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    setHistory([...newHistory, newShapes]);
+    setHistoryIndex(newHistory.length);
+    setShapes(newShapes);
+  }, [history, historyIndex]);
 
-  // --- Shape creation ---
   const createShape = useCallback(
-    (shapeType: "rectangle" | "circle" | "line") => {
+    (shapeType: "circle" | "line") => {
       if (!canvasRef.current) return;
-
       const rect = canvasRef.current.getBoundingClientRect();
       const centerX = (rect.width / 2 - pan.x) / scale;
       const centerY = (rect.height / 2 - pan.y) / scale;
@@ -47,43 +56,35 @@ const Canvas = () => {
       let newShape: Shape;
 
       switch (shapeType) {
-        case "rectangle":
-          newShape = {
-            id: Date.now().toString(),
-            type: "rectangle",
-            startPos: { x: centerX - 50, y: centerY - 30 },
-            endPos: { x: centerX + 50, y: centerY + 30 },
-            color: "#3b82f6",
-            strokeWidth: 2,
-          };
-          break;
         case "circle":
           newShape = {
             id: Date.now().toString(),
             type: "circle",
             startPos: { x: centerX - 40, y: centerY - 40 },
             endPos: { x: centerX + 40, y: centerY + 40 },
-            color: "#3b82f6",
+            color: "#ffffff",
             strokeWidth: 2,
           };
           break;
+
         case "line":
           newShape = {
             id: Date.now().toString(),
             type: "line",
             startPos: { x: centerX - 50, y: centerY },
             endPos: { x: centerX + 50, y: centerY },
-            color: "#3b82f6",
+            color: "#ffffff",
             strokeWidth: 2,
           };
           break;
+
         default:
           return;
       }
 
-      setShapes((prev) => [...prev, newShape]);
+      pushHistory([...shapes, newShape]);
     },
-    [pan, scale]
+    [pan, scale, shapes, pushHistory]
   );
   // --- Bed creation ---
   const createBed = useCallback((shapeType: "rectangle" | "circle" | "line") => {
@@ -109,7 +110,6 @@ const Canvas = () => {
     }, [shapes]);
 
 
-  // --- Panning and zooming ---
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (isDragging) {
@@ -118,52 +118,21 @@ const Canvas = () => {
           y: e.clientY - dragStart.y,
         });
       }
-
-      if (drawMode === "freehand" && isDrawing && canvasRef.current) {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = (e.clientX - rect.left - pan.x) / scale;
-        const y = (e.clientY - rect.top - pan.y) / scale;
-        setCurrentPath((prev) => [...prev, { x, y }]);
-      }
     },
-    [isDragging, dragStart, drawMode, isDrawing, pan, scale]
+    [isDragging, dragStart]
   );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      if (drawMode === "freehand") {
-        if (!canvasRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = (e.clientX - rect.left - pan.x) / scale;
-        const y = (e.clientY - rect.top - pan.y) / scale;
-        setCurrentPath([{ x, y }]);
-        setIsDrawing(true);
-        return;
-      }
-
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     },
-    [pan, scale, drawMode]
+    [pan]
   );
 
   const handleMouseUp = useCallback(() => {
-    if (drawMode === "freehand" && isDrawing && currentPath.length > 1) {
-      const newShape: Shape = {
-        id: Date.now().toString(),
-        type: "freehand",
-        points: currentPath,
-        color: "#3b82f6",
-        strokeWidth: 2,
-        startPos: currentPath[0],
-        endPos: currentPath[currentPath.length - 1],
-      };
-      setShapes((prev) => [...prev, newShape]);
-      setIsDrawing(false);
-      setCurrentPath([]);
-    }
     setIsDragging(false);
-  }, [drawMode, isDrawing, currentPath]);
+  }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -171,46 +140,53 @@ const Canvas = () => {
     setScale((prev) => Math.min(Math.max(prev * delta, 0.75), 2));
   }, []);
 
-  // --- Grid style ---
   const gridSize = 20;
   const safeScale = scale || 1;
   const gridStyle = {
-    backgroundColor: "#6D8934", // soft gray to ensure it's visible
+    backgroundColor: "#6D8934",
     backgroundImage: `
       linear-gradient(to right, #9EAD73 1px, transparent 1px),
       linear-gradient(to bottom, #9EAD73 1px, transparent 1px)
     `,
     backgroundSize: `${gridSize * safeScale}px ${gridSize * safeScale}px`,
-    backgroundPosition: `${pan.x % (gridSize * safeScale)}px ${pan.y % (gridSize * safeScale)}px`,
+    backgroundPosition: `${pan.x % (gridSize * safeScale)}px ${
+      pan.y % (gridSize * safeScale)
+    }px`,
   };
+
+  // Delete selected shape (backspace)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Backspace" && selectedShapeId) {
+        pushHistory(shapes.filter(shape => shape.id !== selectedShapeId));
+        setSelectedShapeId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedShapeId, shapes, pushHistory]);
 
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
-      {/* --- Always visible toolbar --- */}
+      {/* Toolbar */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
-        <button
-          onClick={toggleSearchWindow}
-          className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
-          title="Search"
-        >
-          <FaSearch size={22} />
-        </button>
-
-        {!isEditing && (
-          <button
-            onClick={toggleEditMode}
-            className="p-3 bg-white hover:bg-gray-200 rounded-xl shadow text-green-800"
-            title="Edit Mode"
-          >
-            <FaEdit size={22} />
-          </button>
+        {showGardenBedCreator && (
+          <GardenBedCreator
+            onCreate={(name: string) => {
+              createGardenBed(name);
+              setShowGardenBedCreator(false);
+            }}
+            onCancel={() => setShowGardenBedCreator(false)}
+          />
         )}
+
+
       </div>
 
       <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
+      <Calendar data-testid="calendar-window" isOpen={isCalendarOpen} onClose={() => setCalendarOpen(false)} />
 
-      {/* --- Canvas Area --- */}
       <div
         ref={canvasRef}
         data-canvas
@@ -222,6 +198,7 @@ const Canvas = () => {
         onWheel={handleWheel}
       >
         <div
+          data-transformed
           className="absolute w-full h-full"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
@@ -231,37 +208,28 @@ const Canvas = () => {
           <ShapeRenderer
             shapes={shapes}
             scale={scale}
+            pan={pan}
+            unit="feet"
+            gridToUnit={1}
             onShapeUpdate={(shapeId, updates) => {
-              setShapes((prev) =>
-                prev.map((shape) => (shape.id === shapeId ? { ...shape, ...updates } : shape))
+              const newShapes = shapes.map((shape) =>
+                shape.id === shapeId ? ({ ...shape, ...updates } as Shape) : shape
               );
+              pushHistory(newShapes);
             }}
+            onShapeSelect={(shapeId) => setSelectedShapeId(shapeId)}
           />
-          {/* Temporary line while drawing */}
-          {drawMode === "freehand" && isDrawing && currentPath.length > 1 && (
-            <svg className="absolute inset-0 pointer-events-none">
-              <polyline
-                points={currentPath.map((p) => `${p.x},${p.y}`).join(" ")}
-                stroke="#3b82f6"
-                strokeWidth={2}
-                fill="none"
-              />
-            </svg>
-          )}
         </div>
       </div>
 
-      {/* --- Shape Tools (only in edit mode) --- */}
-      {isEditing && (
-        <div className="absolute top-4 left-4 mt-16 bg-white rounded-lg shadow-lg p-3 border z-40">
+      {/* Shape Tools */}
+      {editMode && (
+        <div
+          data-testid="edit-window"
+          className="absolute top-4 left-4 mt-10 bg-white rounded-lg shadow-lg p-3 border z-40"
+        >
           <div className="flex gap-2">
-            <button
-              onClick={() => createBed("rectangle")}
-              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
-              title="Rectangle"
-            >
-              <MdOutlineRectangle size={30} />
-            </button>
+            {/* Circle */}
             <button
               onClick={() => createShape("circle")}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -269,6 +237,8 @@ const Canvas = () => {
             >
               <FaRegCircle size={25} />
             </button>
+
+            {/* Line */}
             <button
               onClick={() => createShape("line")}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -276,21 +246,53 @@ const Canvas = () => {
             >
               <FaDrawPolygon size={25} />
             </button>
+
+            {/* Undo */}
             <button
-              onClick={() =>
-                setDrawMode((prev) => (prev === "freehand" ? "none" : "freehand"))
-              }
-              className={`p-2 rounded ${
-                drawMode === "freehand"
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-100 text-green-800 hover:bg-gray-200"
-              }`}
-              title="Freehand"
+              onClick={() => {
+                if (historyIndex > 0) {
+                  const newIndex = historyIndex - 1;
+                  setShapes(history[newIndex]);
+                  setHistoryIndex(newIndex);
+                }
+              }}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Undo"
             >
-              <MdOutlineDraw size={25} />
+              <FaUndoAlt size={25} />
             </button>
+
+            {/* Redo */}
             <button
-              onClick={toggleEditMode}
+              onClick={() => {
+                if (historyIndex < history.length - 1) {
+                  const newIndex = historyIndex + 1;
+                  setShapes(history[newIndex]);
+                  setHistoryIndex(newIndex);
+                }
+              }}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Redo"
+            >
+              <FaRedoAlt size={25} />
+            </button>
+
+            {/* Clear Canvas */}
+            <button
+              onClick={() => {
+                if (window.confirm("Are you sure you want to clear the entire canvas?")) {
+                  pushHistory([]);
+                }
+              }}
+              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+              title="Clear Canvas"
+            >
+              <FaTrashAlt size={25} />
+            </button>
+
+            {/* Exit Edit Mode */}
+            <button
+              onClick={() => setEditMode(false)}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
               title="Exit Edit Mode"
             >
@@ -299,33 +301,9 @@ const Canvas = () => {
           </div>
         </div>
       )}
-
-      {/* --- Bottom Right Controls --- */}
-      <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span>Zoom: {Math.round(scale * 100)}%</span>
-          <button
-            onClick={() => setScale(1)}
-            className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
-          >
-            Reset
-          </button>
-          <button
-            onClick={() => setShapes([])}
-            className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
 
 export default Canvas;
-
-
-
-
-
 

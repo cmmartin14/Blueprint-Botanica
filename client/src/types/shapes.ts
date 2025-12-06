@@ -25,6 +25,11 @@ export interface Line extends BaseShape {
   type: 'line';
 }
 
-export type Shape = Rectangle | Circle | Line;
+export interface Freehand extends BaseShape {
+  type: 'freehand';
+  points: Position[];
+}
 
-export type DrawingMode = 'pan' | 'rectangle' | 'circle' | 'line';
+export type Shape = Rectangle | Circle | Line | Freehand;
+
+export type DrawingMode = 'pan' | 'rectangle' | 'circle' | 'line' | 'freehand';
