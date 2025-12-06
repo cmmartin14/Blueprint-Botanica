@@ -28,7 +28,14 @@ const Canvas = () => {
   const { createGardenBed } = useGardenBed();
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
-  const[shouldCreateBed, setShouldCreateBed] = useState(false); //indicates whether we are in the process of creating a bed
+
+  //indicates whether we are in the process of creating a bed
+  const[shouldCreateBed, setShouldCreateBed] = useState(false); 
+
+  // Tracks whether the user is actively drawing a path of line segments
+  const [activeLineId, setActiveLineId] = useState<string | null>(null);
+  // Which endpoint should the buttons attach to?
+  const [activeEndpoint, setActiveEndpoint] = useState<"start" | "end" | null>(null);
 
   // Undo/redo state
   const [history, setHistory] = useState<Shape[][]>([]);
@@ -76,7 +83,11 @@ const Canvas = () => {
             endPos: { x: centerX + 50, y: centerY },
             color: "#ffffff",
             strokeWidth: 2,
+           
           };
+          const lineId = newShape.id; 
+          setActiveLineId(lineId);
+          setActiveEndpoint("end"); // default: continue from the endPos
           break;
 
         default:
@@ -166,6 +177,36 @@ const Canvas = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedShapeId, shapes, pushHistory]);
 
+
+  //Multi-line drawing functions here
+  const finishLineCreation = useCallback(() => {
+    setActiveLineId(null);
+    setActiveEndpoint(null);
+}, []);
+
+  const extendLineFromEndpoint = useCallback(() => {
+    if (!activeLineId || !activeEndpoint) return;
+
+    const current = shapes.find(s => s.id === activeLineId);
+    if (!current || current.type !== "line") return;
+
+    const from = activeEndpoint === "start" ? current.startPos : current.endPos;
+
+    const newLine: Shape = {
+        id: Date.now().toString(),
+        type: "line",
+        startPos: { ...from },      // attach to endpoint
+        endPos: { x: from.x + 50, y: from.y }, // you can adjust this default
+        color: current.color,
+        strokeWidth: current.strokeWidth,
+    };
+
+    pushHistory([...shapes, newLine]);
+
+    // Buttons now move to THIS new line segment
+    setActiveLineId(newLine.id);
+    setActiveEndpoint("end");
+  }, [activeLineId, activeEndpoint, shapes, pushHistory]);
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
       {/* Toolbar */}
@@ -219,6 +260,40 @@ const Canvas = () => {
             }}
             onShapeSelect={(shapeId) => setSelectedShapeId(shapeId)}
           />
+          {activeLineId && (() => {
+            const line = shapes.find(s => s.id === activeLineId && s.type === "line");
+            if (!line) return null;
+
+            const endpoint = activeEndpoint === "start" ? line.startPos : line.endPos;
+
+           return (
+                <div
+                    style={{
+                        position: "absolute",
+                        left: endpoint.x * scale + pan.x,
+                        top: endpoint.y * scale + pan.y - 40, // 40px above
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 100
+                    }}
+                >
+                    <div className="flex gap-2">
+                        <button
+                            onClick={finishLineCreation}
+                            className="px-2 py-1 bg-green-600 text-white rounded"
+                        >
+                            Finish
+                        </button>
+
+                        <button
+                            onClick={extendLineFromEndpoint}
+                            className="px-2 py-1 bg-blue-600 text-white rounded"
+                        >
+                            Add Segment
+                        </button>
+                    </div>
+                </div>
+            );
+        })()}
         </div>
       </div>
 
