@@ -19,7 +19,7 @@
     "@mui/icons-material": "^7.3.4",
     "@mui/material": "^7.3.4",
     "@prisma/client": "^6.19.0",
-    "@stackframe/stack": "^2.8.48",
+    "@stackframe/stack": "^2.8.56",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",

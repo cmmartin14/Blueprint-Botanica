@@ -16,6 +16,7 @@ import { RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { FaRegUser } from "react-icons/fa";
 import { useCanvasStore } from "../stores/canvasStore";
+import { useUser } from '@stackframe/stack';
 
 const Navbar = () => {
   // ====== STATE ======
@@ -38,6 +39,8 @@ const Navbar = () => {
   const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
   const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
   const toggleCalendarWindow = () => setIsCalendarOpen((prev) => !prev);
+
+  const user = useUser({ or: 'return-null' });
 
   const formatTemperature = (tempC: number) => {
     if (unit === "C") return `${tempC.toFixed(0)}°C`;
@@ -324,8 +327,8 @@ const Navbar = () => {
               <IoFolderOutline size={25} />
             </button>
 
-            <Link href="/handler/sign-up">
-              <button className="p-3 rounded-xl text-[#B7C398]" title="Profile">
+            <Link href={user ? "/settings" : "/handler/sign-up"}>
+              <button className="p-3 rounded-xl text-[#B7C398]" title={user ? "Settings" : "Profile"}>
                 <FaRegUser size={25} />
               </button>
             </Link>
