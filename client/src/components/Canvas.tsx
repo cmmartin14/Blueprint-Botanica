@@ -301,7 +301,7 @@ const Canvas = () => {
       {editMode && (
         <div
           data-testid="edit-window"
-          className="absolute top-4 left-4 mt-10 bg-white rounded-lg shadow-lg p-3 border z-40"
+          className="absolute top-0 left-4 mt-5 bg-white rounded-lg shadow-lg p-3 border z-40"
         >
           <div className="flex gap-2">
             {/* Circle */}
