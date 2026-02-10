@@ -4,6 +4,9 @@ import React, { useCallback, useRef, useState, useEffect } from "react";
 import { FaEdit, FaLeaf, FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt } from "react-icons/fa";
 import { TbCircleXFilled, TbCalendar } from "react-icons/tb";
 import { MdOutlineRectangle } from "react-icons/md";
+import { FaKey } from "react-icons/fa6";
+import { MdKeyOff } from "react-icons/md";
+import { MdKey } from "react-icons/md";
 
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
@@ -45,6 +48,9 @@ const Canvas = () => {
 
   // Use store for edit mode
   const { editMode, setEditMode } = useCanvasStore();
+
+  // Map key
+  const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
 
   // Push new state to history
   const pushHistory = useCallback((newShapes: Shape[]) => {
@@ -298,16 +304,44 @@ const Canvas = () => {
       </div>
 
       {/* Map Key */}
-      <div>
+      {!isMapKeyOpen ? (
         <button
-         onClick={() => setEditMode(false)} 
-         className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-2 border z-40 text-green-800 hover:bg-gray-100 font-semibold"
+          onClick={() => setIsMapKeyOpen(true)}
+          className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-2 z-40 text-green-800 hover:bg-gray-100 font-bold"
         >
-          Key +/-
+          <FaKey size={25}/>
         </button>
-      </div>
+      ) : (
+        <div className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-4 border z-50 w-64">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-semibold text-green-800">Key</h3>
+
+            {/* Close map key */}
+            <button onClick={() => setIsMapKeyOpen(false)}>
+              <TbCircleXFilled size={28}
+                className="text-green-800"
+              />
+            </button>
+          </div>
+
+          <ul className="text-sm space-y-1 text-green-800 font-semibold">
+            <li>Coming soon...</li>
+            <li></li>
+            <li></li>
+          </ul>
+        </div>
+      )}
+
 
       {/* Shape Tools */}
+      {/*<button
+       onClick={() => setIsMapKeyOpen(prev => !prev)}
+       className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-2 border z-40 text-green-800 hover:bg-gray-100 font-semibold"
+      >
+        Key +/-
+      </button>
+      */}
+
       {editMode && (
         <div
           data-testid="edit-window"
