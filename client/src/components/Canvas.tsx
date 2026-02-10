@@ -297,6 +297,16 @@ const Canvas = () => {
         </div>
       </div>
 
+      {/* Map Key */}
+      <div>
+        <button
+         onClick={() => setEditMode(false)} 
+         className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-2 border z-40 text-green-800 hover:bg-gray-100 font-semibold"
+        >
+          Key +/-
+        </button>
+      </div>
+
       {/* Shape Tools */}
       {editMode && (
         <div
