@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
         pathname: '/image/**',
       },
     ],
+    domains: ["perenual.com"]
   },
 };
 

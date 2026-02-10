@@ -5,33 +5,72 @@ export async function GET(request: Request) {
   const query = searchParams.get("q");
   const id = searchParams.get("id");
 
-  const token = process.env.TREFLE_TOKEN;
+  const key = process.env.PERENUAL_KEY;
+  const plantCache = new Map<number, any>();
 
-  const errorResponse = (msg: string, status = 500) =>
-    NextResponse.json({ error: msg }, { status });
-
-  if (!token) return errorResponse("Server misconfigured");
-
-  if (id && isNaN(Number(id))) return errorResponse("Invalid plant ID", 400);
+  if (!key) {
+    return NextResponse.json(
+      { error: "Server misconfigured" },
+      { status: 500 }
+    );
+  }
 
   let apiUrl = "";
+
   if (id) {
-    apiUrl = `https://trefle.io/api/v1/plants/${id}?token=${token}`;
-  } else if (query) {
-    // Swap parameter order so `q` comes first
-    apiUrl = `https://trefle.io/api/v1/plants/search?q=${encodeURIComponent(query)}&token=${token}`;
+    const numericId = Number(id);
+
+    if (plantCache.has(numericId)) {
+      return NextResponse.json(plantCache.get(numericId));
+    }
+
+    apiUrl = `https://perenual.com/api/species/details/${id}?key=${key}`;
+
+    const resp = await fetch(apiUrl);
+    if (!resp.ok) {
+      return NextResponse.json(
+        { error: "Perenual error" },
+        { status: resp.status }
+      );
+    }
+
+    const data = await resp.json();
+    plantCache.set(numericId, data);
+    return NextResponse.json(data);
+  }
+
+
+  else if (query) {
+    apiUrl = `https://perenual.com/api/species-list?key=${key}&q=${encodeURIComponent(
+      query
+    )}`;
   } else {
     return NextResponse.json({ data: [] });
   }
 
   try {
     const resp = await fetch(apiUrl);
+    if (!resp.ok) {
+      const status = resp.status;
 
-    if (!resp.ok) return errorResponse("Trefle API error");
+      return NextResponse.json(
+        {
+          error: status === 429
+            ? "Rate limit exceeded. Please wait a moment."
+            : "Perenual API error"
+        },
+        { status }
+      );
+    }
+
 
     const data = await resp.json();
     return NextResponse.json(data);
-  } catch {
-    return errorResponse("Server fetch failed");
+  } catch (err) {
+    console.error("Fetch failed", err);
+    return NextResponse.json(
+      { error: "Server fetch failed" },
+      { status: 500 }
+    );
   }
 }
