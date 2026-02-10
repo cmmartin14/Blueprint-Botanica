@@ -5,14 +5,34 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["public", "neon_auth"]
 }
 
-model users {
-  id              Int               @id @default(autoincrement())
-  name            String?           @db.VarChar(100)
-  email           String            @unique @db.VarChar(100)
-  password        String            @db.VarChar(100)
+model users_sync {
+  id              String            @id
+  name            String?
+  email           String?
+  created_at      DateTime?
+  updated_at      DateTime?
+  deleted_at      DateTime?
+  raw_json        Json?
   garden_projects garden_projects[]
+
+  @@schema("neon_auth")
+}
+
+model garden_projects {
+  id         String     @id
+  name       String     @db.VarChar(255)
+  userId     String
+  shapes     Json       @default("{}")
+  beds       Json       @default("{}")
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime   @db.Timestamptz(6)
+  users_sync users_sync @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
 }
 
 model zones {
@@ -21,50 +41,5 @@ model zones {
   temp_min Int?
   temp_max Int?
   notes    String? @db.VarChar
-}
-
-model garden_beds {
-  id              String          @id
-  name            String          @db.VarChar(255)
-  zipcode         String?         @db.VarChar(10)
-  climate         String?         @db.VarChar(50)
-  projectId       String
-  createdAt       DateTime        @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime        @db.Timestamptz(6)
-  garden_projects garden_projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  shapes          shapes[]
-
-  @@index([projectId])
-}
-
-model garden_projects {
-  id          String        @id
-  name        String        @db.VarChar(255)
-  scale       Float         @default(20)
-  unit        String        @default("feet") @db.VarChar(10)
-  userId      Int
-  createdAt   DateTime      @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime      @db.Timestamptz(6)
-  garden_beds garden_beds[]
-  users       users         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model shapes {
-  id          String      @id
-  type        String      @db.VarChar(50)
-  startPosX   Float
-  startPosY   Float
-  endPosX     Float
-  endPosY     Float
-  points      Json?
-  color       String      @default("#ffffff") @db.VarChar(20)
-  strokeWidth Int         @default(2)
-  gardenBedId String
-  createdAt   DateTime    @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime    @db.Timestamptz(6)
-  garden_beds garden_beds @relation(fields: [gardenBedId], references: [id], onDelete: Cascade)
-
-  @@index([gardenBedId])
+  @@schema("public")
 }

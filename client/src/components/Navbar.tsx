@@ -15,8 +15,9 @@ import { IoNotifications } from "react-icons/io5";
 import { RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { FaRegUser } from "react-icons/fa";
-import { useCanvasStore } from "../stores/canvasStore";
-import { useUser } from '@stackframe/stack';
+import { saveGarden, listGardens, loadGarden } from "../actions/gardenActions";
+import { useGardenStore } from "../types/garden";
+import { useUser } from "@stackframe/stack";
 
 const Navbar = () => {
   // ====== STATE ======
@@ -30,9 +31,13 @@ const Navbar = () => {
   const [unit, setUnit] = useState<"C" | "F">("C");
   const [weatherCondition, setWeatherCondition] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [savedList, setSavedList] = useState<{ id: string; name: string; updatedAt: Date }[]>([]);
+  const [showSavedList, setShowSavedList] = useState(false);
 
   // ====== Canvas store (edit mode) ======
-  const { editMode, setEditMode } = useCanvasStore();
+  const gardenState = useGardenStore();
+  const { id, name, shapes, beds, loadGarden: loadIntoStore } = useGardenStore();
+  const { editMode, setEditMode } = useGardenStore();
   const toggleEdit = () => setEditMode(!editMode);
 
   // ====== HANDLERS ======
@@ -141,7 +146,30 @@ const Navbar = () => {
     if (lower.includes("fog") || lower.includes("mist")) return "🌫️";
     return "🌤️";
   };
+  
+  const handleSave = async () => {
+    if (!user) return;
+      const gardenName = prompt("Enter garden name:", "My Garden");
+      if (!gardenName) return;
 
+      const { id: savedId } = await saveGarden(user.id, { id, name: gardenName, shapes, beds, editMode: false });
+      // Stamp the returned id onto the store so future saves update instead of insert
+      useGardenStore.setState({ id: savedId });
+  };
+
+  const handleOpenFolder = async () => {
+    if (!user) return;
+    const list = await listGardens(user.id);
+    setSavedList(list);
+    setShowSavedList(true);
+  };
+
+  const handleLoad = async (gardenId: string) => {
+    if (!user) return;
+    const state = await loadGarden(user.id, gardenId);
+    if (state) loadIntoStore(state);
+    setShowSavedList(false);
+  };
   // ====== EFFECTS ======
   useEffect(() => setMounted(true), []);
 
@@ -319,11 +347,11 @@ const Navbar = () => {
               <IoNotifications size={25} />
             </button>
 
-            <button className="p-3 rounded-xl text-[#B7C398]" title="Save">
+            <button onClick={handleSave} className="p-3 rounded-xl text-[#B7C398]" title="Save">
               <RiSave3Line size={25} />
             </button>
 
-            <button className="p-3 rounded-xl text-[#B7C398]" title="Saved Gardens">
+            <button onClick={handleOpenFolder} className="p-3 rounded-xl text-[#B7C398]" title="Saved Gardens">
               <IoFolderOutline size={25} />
             </button>
 
@@ -375,6 +403,27 @@ const Navbar = () => {
             </div>
           )}
         </div>
+
+        {showSavedList && (
+          <div className="absolute right-0 top-14 w-64 bg-[#003326] rounded-xl shadow-lg border border-[#B7C398]/40 z-50">
+            <div className="p-2 text-[#B7C398] font-semibold border-b border-[#B7C398]/20 px-4">
+              Saved Gardens
+            </div>
+            {savedList.length === 0 && (
+              <div className="px-4 py-3 text-sm text-[#B7C398]/60">No saved gardens yet.</div>
+            )}
+            {savedList.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => handleLoad(g.id)}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-[#004b34] text-[#B7C398] flex justify-between"
+              >
+                <span>{g.name}</span>
+                <span className="text-xs opacity-50">{new Date(g.updatedAt).toLocaleDateString()}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ====== Popups ===== */}
         <SearchWindow data-testid="search-window" isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
