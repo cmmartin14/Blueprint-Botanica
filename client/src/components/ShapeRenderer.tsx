@@ -29,27 +29,27 @@ interface ShapeRendererProps {
   onSelectBed: (bedId: string) => void;
   onSelectVertex: (bedId: string, index: number) => void;
 
-  // kept (legacy), but bed-body dragging uses the 3 callbacks below
   onMoveBedBy: (bedId: string, dx: number, dy: number) => void;
 
-  // legacy commit-style vertex move (still used in non-drag flows if any)
   onMoveVertexTo: (bedId: string, index: number, p: Position) => void;
   onResizeBedToBox: (bedId: string, nextBox: Box) => void;
 
-  // smooth bed drag (live update; commit once)
   onBeginBedDrag: (bedId: string, clientX: number, clientY: number) => void;
   onUpdateBedDrag: (bedId: string, clientX: number, clientY: number) => void;
   onEndBedDrag: (bedId: string) => void;
 
-  // smooth vertex drag (live update; commit once)
   onBeginVertexDrag: (bedId: string, index: number) => void;
   onUpdateVertexDrag: (bedId: string, index: number, p: Position) => void;
   onEndVertexDrag: (bedId: string, index: number) => void;
 
-  // smooth shape drag (circle included)
   onBeginShapeDrag: (shapeId: string, clientX: number, clientY: number) => void;
   onUpdateShapeDrag: (shapeId: string, clientX: number, clientY: number) => void;
   onEndShapeDrag: (shapeId: string) => void;
+
+  // NEW: smooth resize for circle/freehand/etc.
+  onBeginShapeResize: (shapeId: string) => void;
+  onUpdateShapeResize: (shapeId: string, updates: Partial<Shape>) => void;
+  onEndShapeResize: (shapeId: string) => void;
 
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
   onShapeSelect?: (shapeId: string) => void;
@@ -58,7 +58,6 @@ interface ShapeRendererProps {
 const GRID_SIZE = 20;
 
 const withAlpha = (color: string, alpha: number) => {
-  // Supports: #rgb, #rrggbb, rgb(), rgba(). Falls back to original color.
   const a = Math.max(0, Math.min(1, alpha));
 
   if (color.startsWith("#")) {
@@ -131,6 +130,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   onBeginShapeDrag,
   onUpdateShapeDrag,
   onEndShapeDrag,
+
+  onBeginShapeResize,
+  onUpdateShapeResize,
+  onEndShapeResize,
 
   onShapeUpdate,
   onShapeSelect,
@@ -311,26 +314,35 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleMouseUp);
   };
 
+  // UPDATED: endpoint drag uses smooth resize callbacks (single undo step)
   const handleEndpointMouseDown = (shapeId: string, endpoint: "start" | "end") => (e: React.MouseEvent) => {
     e.stopPropagation();
+    onBeginShapeResize(shapeId);
+
     const handleMove = (moveEvent: MouseEvent) => {
       const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
       if (!world) return;
       const snapped = snapToGrid(world.x, world.y);
-      onShapeUpdate?.(shapeId, (endpoint === "start" ? { startPos: snapped } : { endPos: snapped }) as any);
+      onUpdateShapeResize(shapeId, (endpoint === "start" ? { startPos: snapped } : { endPos: snapped }) as any);
     };
+
     const handleUp = () => {
       document.removeEventListener("mousemove", handleMove);
       document.removeEventListener("mouseup", handleUp);
+      onEndShapeResize(shapeId);
     };
+
     document.addEventListener("mousemove", handleMove);
     document.addEventListener("mouseup", handleUp);
   };
 
+  // UPDATED: circle resize uses smooth resize callbacks (single undo step)
   const handleCircleResizeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     const shape = shapes.find((s) => s.id === shapeId);
     if (!shape) return;
+
+    onBeginShapeResize(shapeId);
 
     const centerX = shape.startPos.x;
 
@@ -342,7 +354,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const newRadius = Math.max(0, dx);
       const snappedRadius = Math.round(newRadius / GRID_SIZE) * GRID_SIZE;
 
-      onShapeUpdate?.(shapeId, {
+      onUpdateShapeResize(shapeId, {
         endPos: { x: centerX + snappedRadius, y: shape.startPos.y + snappedRadius },
       } as any);
     };
@@ -350,6 +362,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     const handleUp = () => {
       document.removeEventListener("mousemove", handleMove);
       document.removeEventListener("mouseup", handleUp);
+      onEndShapeResize(shapeId);
     };
 
     document.addEventListener("mousemove", handleMove);
@@ -617,16 +630,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         {verts.length >= 2 && <path d={d} fill="none" stroke="#ffffff" strokeWidth={2} strokeDasharray="10 8" opacity={0.9} />}
 
         {preview && (
-          <line
-            x1={last.x}
-            y1={last.y}
-            x2={preview.x}
-            y2={preview.y}
-            stroke="#ffffff"
-            strokeWidth={2}
-            strokeDasharray="8 6"
-            opacity={0.9}
-          />
+          <line x1={last.x} y1={last.y} x2={preview.x} y2={preview.y} stroke="#ffffff" strokeWidth={2} strokeDasharray="8 6" opacity={0.9} />
         )}
 
         <circle cx={verts[0].x} cy={verts[0].y} r={7} fill="#111" stroke="#B7C398" strokeWidth={3} opacity={0.95} />
@@ -697,15 +701,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                     return (
                       <g key={`${bed.id}-v-${idx}`} data-interactive="true">
                         {selected && (
-                          <circle
-                            cx={v.x}
-                            cy={v.y}
-                            r={14}
-                            fill="rgba(183,195,152,0.18)"
-                            stroke="rgba(183,195,152,0.6)"
-                            strokeWidth={2}
-                            pointerEvents="none"
-                          />
+                          <circle cx={v.x} cy={v.y} r={14} fill="rgba(183,195,152,0.18)" stroke="rgba(183,195,152,0.6)" strokeWidth={2} pointerEvents="none" />
                         )}
                         <circle
                           data-interactive="true"
