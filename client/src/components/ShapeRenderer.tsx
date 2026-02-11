@@ -5,6 +5,7 @@ import { Shape, Position } from "../types/shapes";
 
 type BedPath = {
   id: string;
+  segmentIds?: string[];
   vertices: Position[];
   isClosed: boolean;
 };
@@ -16,21 +17,22 @@ interface ShapeRendererProps {
   pan: { x: number; y: number };
   gridToUnit?: number;
 
+  // Beds
   activeBedId: string | null;
-  activeVertex: { bedId: string; index: number } | null;
-  drawingBedId: string | null;
-  drawingMode: boolean;
+  activeBedSegmentIds: string[];
+  bedSelectModeActive: boolean;
+  onToggleLineForActiveBed: (lineId: string) => void;
 
+  onSelectBed: (bedId: string) => void;
+  onMoveBedBy: (bedId: string, dx: number, dy: number) => void;
+  onResizeBedHandleTo: (bedId: string, handle: "nw" | "ne" | "sw" | "se", p: Position) => void;
+
+  // Line preview
   lineStart?: Position | null;
   linePreviewEnd?: Position | null;
   linePreviewActive?: boolean;
 
-  onSelectBed: (bedId: string) => void;
-  onSelectVertex: (bedId: string, index: number) => void;
-  onMoveBedBy: (bedId: string, dx: number, dy: number) => void;
-  onMoveVertexTo: (bedId: string, index: number, p: Position) => void;
-  onRequestCloseBed: (bedId: string) => void;
-
+  // Shapes
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
   onShapeSelect?: (shapeId: string) => void;
 }
@@ -45,19 +47,17 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   gridToUnit = 1,
 
   activeBedId,
-  activeVertex,
-  drawingBedId,
-  drawingMode,
+  activeBedSegmentIds,
+  bedSelectModeActive,
+  onToggleLineForActiveBed,
+
+  onSelectBed,
+  onMoveBedBy,
+  onResizeBedHandleTo,
 
   lineStart = null,
   linePreviewEnd = null,
   linePreviewActive = false,
-
-  onSelectBed,
-  onSelectVertex,
-  onMoveBedBy,
-  onMoveVertexTo,
-  onRequestCloseBed,
 
   onShapeUpdate,
   onShapeSelect,
@@ -99,24 +99,40 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     let vertices = bed.vertices;
     if (!Array.isArray(vertices)) vertices = bed.points;
     if (!Array.isArray(vertices)) vertices = bed.path;
-    if (!Array.isArray(vertices)) return null;
+    if (!Array.isArray(vertices)) vertices = [];
 
     const clean: Position[] = vertices
       .map((p: any) => (p && typeof p.x === "number" && typeof p.y === "number" ? { x: p.x, y: p.y } : null))
       .filter(Boolean) as Position[];
 
-    return { id, vertices: clean, isClosed: Boolean(bed.isClosed) };
+    return {
+      id,
+      vertices: clean,
+      isClosed: Boolean(bed.isClosed),
+      segmentIds: Array.isArray(bed.segmentIds) ? bed.segmentIds.map(String) : undefined,
+    };
   };
 
   const normBeds: BedPath[] = beds.map(normalizeBed).filter(Boolean) as BedPath[];
 
   const bedPathD = (bed: BedPath) => {
-    if (bed.vertices.length === 0) return "";
+    if (!bed.vertices || bed.vertices.length === 0) return "";
     const [first, ...rest] = bed.vertices;
     let d = `M ${first.x} ${first.y}`;
     for (const p of rest) d += ` L ${p.x} ${p.y}`;
     if (bed.isClosed && bed.vertices.length >= 3) d += ` Z`;
     return d;
+  };
+
+  const bedBBox = (verts: Position[]) => {
+    const xs = verts.map((v) => v.x);
+    const ys = verts.map((v) => v.y);
+    return {
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys),
+    };
   };
 
   const handleBedMouseDown = (bedId: string) => (e: React.MouseEvent) => {
@@ -143,20 +159,15 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  const handleVertexMouseDown = (bedId: string, index: number) => (e: React.MouseEvent) => {
+  const handleResizeHandleMouseDown = (bedId: string, handle: "nw" | "ne" | "sw" | "se") => (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelectVertex(bedId, index);
-
-    if (drawingMode && drawingBedId === bedId && index === 0) {
-      onRequestCloseBed(bedId);
-      return;
-    }
+    onSelectBed(bedId);
 
     const handleMove = (moveEvent: MouseEvent) => {
       const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
       if (!world) return;
       const snapped = snapToGrid(world.x, world.y);
-      onMoveVertexTo(bedId, index, snapped);
+      onResizeBedHandleTo(bedId, handle, snapped);
     };
 
     const handleUp = () => {
@@ -221,7 +232,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   };
 
   const handleEndpointMouseDown = (shapeId: string, endpoint: "start" | "end") => (e: React.MouseEvent) => {
-    // NOTE: we still stop propagation for dragging endpoints, but the click will bubble to canvas.
     e.stopPropagation();
     const handleMove = (moveEvent: MouseEvent) => {
       const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
@@ -393,10 +403,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const labelX = midX + Math.cos(perpRad) * 20;
       const labelY = midY + Math.sin(perpRad) * 20;
 
-      // IMPORTANT: wrapper does NOT stop clicks anymore (so endpoints can bubble to Canvas)
+      const inActiveBed = activeBedSegmentIds.includes(shape.id);
+      const lineThickness = Math.max(strokeWidth ?? 2, 8);
+      const activeGlow = inActiveBed ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
+
       return (
         <div key={shape.id} data-interactive="true">
-          {/* Line body: stop clicks so Canvas doesn't try to draw from the line itself */}
+          {/* Line body */}
           <div
             data-interactive="true"
             style={{
@@ -404,17 +417,27 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               left: `${startPos.x}px`,
               top: `${startPos.y}px`,
               width: `${length}px`,
-              height: `${Math.max(strokeWidth ?? 2, 8)}px`,
+              height: `${lineThickness}px`,
               backgroundColor: color,
               transformOrigin: "0 50%",
               transform: `rotate(${angle}deg)`,
-              cursor: "move",
+              cursor: bedSelectModeActive ? "pointer" : "move",
               pointerEvents: "auto",
+              filter: activeGlow,
+              outline: inActiveBed ? "2px solid rgba(255,255,255,0.35)" : "none",
             }}
-            onMouseDown={handleShapeMouseDown(shape.id)}
-            onClick={stop}
+            onMouseDown={bedSelectModeActive ? undefined : handleShapeMouseDown(shape.id)}
+            onClick={(e) => {
+              if (bedSelectModeActive) {
+                e.stopPropagation();
+                onToggleLineForActiveBed(shape.id);
+                return;
+              }
+              stop(e);
+            }}
           />
 
+          {/* Label stays the same */}
           <div
             style={{
               position: "absolute",
@@ -437,7 +460,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             <div style={{ fontSize: "10px", color: "#6b7280" }}>{metersLength} m</div>
           </div>
 
-          {/* Endpoint handles: DO NOT stop click, so Canvas can use them to connect lines */}
+          {/* Endpoints (keep your existing line-connecting behavior) */}
           <div
             data-interactive="true"
             data-line-endpoint="true"
@@ -483,9 +506,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       );
     }
 
-    // rectangle / freehand / beds remain as in your current file (unchanged from prior versions)
-    // To keep this focused, we leave them intact below:
-
+    // Rectangle + freehand can remain as in your file; unchanged behavior:
     if (type === "rectangle") {
       const left = Math.min(startPos.x, endPos.x);
       const top = Math.min(startPos.y, endPos.y);
@@ -541,18 +562,22 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     return (
       <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
         {normBeds.map((bed) => {
-          if (!bed.vertices || bed.vertices.length < 2) return null;
+          if (!bed.vertices || bed.vertices.length < 3) return null;
 
           const isActive = bed.id === activeBedId;
-          const isDrawing = drawingMode && bed.id === drawingBedId;
 
           const stroke = "#ffffff";
           const strokeWidth = isActive ? 4 : 3;
           const glow = isActive ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
-          const fill = bed.isClosed ? "rgba(255,255,255,0.08)" : "transparent";
+
+          // Shaded interior for completed beds
+          const fill = bed.isClosed ? "rgba(255,255,255,0.10)" : "transparent";
+          const dash = bed.isClosed ? undefined : "10 8";
+
+          const { minX, maxX, minY, maxY } = bedBBox(bed.vertices);
 
           return (
-            <g key={bed.id} style={{ pointerEvents: "auto" }} data-interactive="true" onClick={stop}>
+            <g key={bed.id} style={{ pointerEvents: "auto" }} data-interactive="true">
               <path
                 data-interactive="true"
                 d={bedPathD(bed)}
@@ -561,37 +586,43 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 strokeWidth={strokeWidth}
                 strokeLinejoin="round"
                 strokeLinecap="round"
-                style={{ cursor: "move", filter: glow }}
-                onMouseDown={handleBedMouseDown(bed.id)}
+                strokeDasharray={dash}
+                style={{ cursor: bed.isClosed ? "move" : "default", filter: glow }}
+                onMouseDown={bed.isClosed ? handleBedMouseDown(bed.id) : undefined}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectBed(bed.id);
                 }}
               />
 
-              {(isActive || isDrawing) &&
-                bed.vertices.map((v, idx) => {
-                  const isSelectedVertex = activeVertex?.bedId === bed.id && activeVertex.index === idx;
-
-                  return (
-                    <circle
-                      key={`${bed.id}-v-${idx}`}
+              {/* Resize handles only when bed is closed and active */}
+              {bed.isClosed && isActive && (
+                <>
+                  {(
+                    [
+                      ["nw", { x: minX, y: minY }],
+                      ["ne", { x: maxX, y: minY }],
+                      ["sw", { x: minX, y: maxY }],
+                      ["se", { x: maxX, y: maxY }],
+                    ] as const
+                  ).map(([handle, pos]) => (
+                    <rect
+                      key={`${bed.id}-${handle}`}
                       data-interactive="true"
-                      cx={v.x}
-                      cy={v.y}
-                      r={isSelectedVertex ? 7 : 6}
-                      fill={isSelectedVertex ? "#B7C398" : "#111"}
+                      x={pos.x - 6}
+                      y={pos.y - 6}
+                      width={12}
+                      height={12}
+                      fill="#111"
                       stroke="white"
                       strokeWidth={2}
-                      style={{ cursor: "pointer" }}
-                      onMouseDown={handleVertexMouseDown(bed.id, idx)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectVertex(bed.id, idx);
-                      }}
+                      style={{ cursor: "nwse-resize" }}
+                      onMouseDown={handleResizeHandleMouseDown(bed.id, handle)}
+                      onClick={(e) => e.stopPropagation()}
                     />
-                  );
-                })}
+                  ))}
+                </>
+              )}
             </g>
           );
         })}
