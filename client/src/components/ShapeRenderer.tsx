@@ -221,6 +221,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   };
 
   const handleEndpointMouseDown = (shapeId: string, endpoint: "start" | "end") => (e: React.MouseEvent) => {
+    // NOTE: we still stop propagation for dragging endpoints, but the click will bubble to canvas.
     e.stopPropagation();
     const handleMove = (moveEvent: MouseEvent) => {
       const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
@@ -242,7 +243,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     if (!shape) return;
 
     const centerX = shape.startPos.x;
-    const centerY = shape.startPos.y;
 
     const handleMove = (moveEvent: MouseEvent) => {
       const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
@@ -253,7 +253,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const snappedRadius = Math.round(newRadius / GRID_SIZE) * GRID_SIZE;
 
       onShapeUpdate?.(shapeId, {
-        endPos: { x: centerX + snappedRadius, y: centerY + snappedRadius },
+        endPos: { x: centerX + snappedRadius, y: shape.startPos.y + snappedRadius },
       } as any);
     };
 
@@ -291,13 +291,9 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
     const width = Math.abs(endPos.x - startPos.x);
     const height = Math.abs(endPos.y - startPos.y);
-    const left = Math.min(startPos.x, endPos.x);
-    const top = Math.min(startPos.y, endPos.y);
 
     const commonStyle: React.CSSProperties = {
       position: "absolute",
-      left,
-      top,
       cursor: "move",
       pointerEvents: "auto",
     };
@@ -382,24 +378,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       );
     }
 
-    if (type === "rectangle") {
-      return (
-        <div
-          key={shape.id}
-          data-interactive="true"
-          style={{
-            ...commonStyle,
-            width,
-            height,
-            border: `${strokeWidth ?? 2}px solid ${color}`,
-            backgroundColor: "transparent",
-          }}
-          onMouseDown={handleShapeMouseDown(shape.id)}
-          onClick={stop}
-        />
-      );
-    }
-
     if (type === "line") {
       const angle = (Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x) * 180) / Math.PI;
       const length = Math.sqrt(width ** 2 + height ** 2);
@@ -415,8 +393,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const labelX = midX + Math.cos(perpRad) * 20;
       const labelY = midY + Math.sin(perpRad) * 20;
 
+      // IMPORTANT: wrapper does NOT stop clicks anymore (so endpoints can bubble to Canvas)
       return (
-        <div key={shape.id} data-interactive="true" onClick={stop}>
+        <div key={shape.id} data-interactive="true">
+          {/* Line body: stop clicks so Canvas doesn't try to draw from the line itself */}
           <div
             data-interactive="true"
             style={{
@@ -457,7 +437,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             <div style={{ fontSize: "10px", color: "#6b7280" }}>{metersLength} m</div>
           </div>
 
-          {/* Endpoint handles: marked as line-endpoints so Canvas can allow them in "safe line mode" */}
+          {/* Endpoint handles: DO NOT stop click, so Canvas can use them to connect lines */}
           <div
             data-interactive="true"
             data-line-endpoint="true"
@@ -477,7 +457,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               zIndex: 10,
             }}
             onMouseDown={handleEndpointMouseDown(shape.id, "start")}
-            // NOTE: no onClick stop here; Canvas uses this as an allowed exception
           />
 
           <div
@@ -501,6 +480,31 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             onMouseDown={handleEndpointMouseDown(shape.id, "end")}
           />
         </div>
+      );
+    }
+
+    // rectangle / freehand / beds remain as in your current file (unchanged from prior versions)
+    // To keep this focused, we leave them intact below:
+
+    if (type === "rectangle") {
+      const left = Math.min(startPos.x, endPos.x);
+      const top = Math.min(startPos.y, endPos.y);
+      return (
+        <div
+          key={shape.id}
+          data-interactive="true"
+          style={{
+            ...commonStyle,
+            left,
+            top,
+            width,
+            height,
+            border: `${strokeWidth ?? 2}px solid ${color}`,
+            backgroundColor: "transparent",
+          }}
+          onMouseDown={handleShapeMouseDown(shape.id)}
+          onClick={stop}
+        />
       );
     }
 
@@ -605,4 +609,3 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 };
 
 export default ShapeRenderer;
-
