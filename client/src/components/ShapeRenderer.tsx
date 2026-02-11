@@ -29,16 +29,27 @@ interface ShapeRendererProps {
   onSelectBed: (bedId: string) => void;
   onSelectVertex: (bedId: string, index: number) => void;
 
-  // kept (may be used elsewhere), but bed-body dragging now uses the three callbacks below
+  // kept (legacy), but bed-body dragging uses the 3 callbacks below
   onMoveBedBy: (bedId: string, dx: number, dy: number) => void;
 
+  // legacy commit-style vertex move (still used in non-drag flows if any)
   onMoveVertexTo: (bedId: string, index: number, p: Position) => void;
   onResizeBedToBox: (bedId: string, nextBox: Box) => void;
 
-  // NEW: smooth bed drag (live update; commit once on mouseup)
+  // NEW: smooth bed drag (live update; commit once)
   onBeginBedDrag: (bedId: string, clientX: number, clientY: number) => void;
   onUpdateBedDrag: (bedId: string, clientX: number, clientY: number) => void;
   onEndBedDrag: (bedId: string) => void;
+
+  // NEW: smooth vertex drag (live update; commit once)
+  onBeginVertexDrag: (bedId: string, index: number) => void;
+  onUpdateVertexDrag: (bedId: string, index: number, p: Position) => void;
+  onEndVertexDrag: (bedId: string, index: number) => void;
+
+  // NEW: smooth shape drag (circle included)
+  onBeginShapeDrag: (shapeId: string, clientX: number, clientY: number) => void;
+  onUpdateShapeDrag: (shapeId: string, clientX: number, clientY: number) => void;
+  onEndShapeDrag: (shapeId: string) => void;
 
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
   onShapeSelect?: (shapeId: string) => void;
@@ -69,6 +80,14 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   onBeginBedDrag,
   onUpdateBedDrag,
   onEndBedDrag,
+
+  onBeginVertexDrag,
+  onUpdateVertexDrag,
+  onEndVertexDrag,
+
+  onBeginShapeDrag,
+  onUpdateShapeDrag,
+  onEndShapeDrag,
 
   onShapeUpdate,
   onShapeSelect,
@@ -149,7 +168,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
   };
 
-  // NEW: smooth bed dragging (no history spam; commit once on mouseup)
+  // smooth bed drag
   const handleBedMouseDown = (bedId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectBed(bedId);
@@ -170,20 +189,23 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
+  // smooth vertex drag (live update; commit once)
   const handleVertexMouseDown = (bedId: string, index: number) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectVertex(bedId, index);
+    onBeginVertexDrag(bedId, index);
 
     const handleMove = (moveEvent: MouseEvent) => {
       const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
       if (!world) return;
       const snapped = snapToGrid(world.x, world.y);
-      onMoveVertexTo(bedId, index, snapped);
+      onUpdateVertexDrag(bedId, index, snapped);
     };
 
     const handleUp = () => {
       document.removeEventListener("mousemove", handleMove);
       document.removeEventListener("mouseup", handleUp);
+      onEndVertexDrag(bedId, index);
     };
 
     document.addEventListener("mousemove", handleMove);
@@ -225,53 +247,22 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // ---- existing shapes (line/circle/rectangle/freehand) ----
+  // ---- existing shapes ----
+  // smooth shape drag (circle included)
   const handleShapeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onShapeSelect?.(shapeId);
 
-    const shape = shapes.find((s) => s.id === shapeId);
-    if (!shape) return;
-
-    const startX = e.clientX;
-    const startY = e.clientY;
-
-    const originalStart = { ...shape.startPos };
-    const originalEnd = { ...shape.endPos };
-    const originalPoints = shape.type === "freehand" ? [...((shape as any).points || [])] : null;
+    onBeginShapeDrag(shapeId, e.clientX, e.clientY);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dx = (moveEvent.clientX - startX) / scale;
-      const dy = (moveEvent.clientY - startY) / scale;
-
-      if (!onShapeUpdate) return;
-
-      if (shape.type === "freehand" && originalPoints) {
-        onShapeUpdate(shapeId, {
-          points: originalPoints.map((p: any) => ({ x: p.x + dx, y: p.y + dy })),
-        } as any);
-      } else {
-        const newStart = { x: originalStart.x + dx, y: originalStart.y + dy };
-        const newEnd = { x: originalEnd.x + dx, y: originalEnd.y + dy };
-
-        if (shape.type === "line") {
-          const snappedStart = snapToGrid(newStart.x, newStart.y);
-          const offsetX = snappedStart.x - newStart.x;
-          const offsetY = snappedStart.y - newStart.y;
-
-          onShapeUpdate(shapeId, {
-            startPos: snappedStart,
-            endPos: { x: newEnd.x + offsetX, y: newEnd.y + offsetY },
-          } as any);
-        } else {
-          onShapeUpdate(shapeId, { startPos: newStart, endPos: newEnd } as any);
-        }
-      }
+      onUpdateShapeDrag(shapeId, moveEvent.clientX, moveEvent.clientY);
     };
 
     const handleMouseUp = () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      onEndShapeDrag(shapeId);
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -577,12 +568,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
     return (
       <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
-        {/* existing placed chain */}
-        {verts.length >= 2 && (
-          <path d={d} fill="none" stroke="#ffffff" strokeWidth={2} strokeDasharray="10 8" opacity={0.9} />
-        )}
+        {verts.length >= 2 && <path d={d} fill="none" stroke="#ffffff" strokeWidth={2} strokeDasharray="10 8" opacity={0.9} />}
 
-        {/* preview segment */}
         {preview && (
           <line
             x1={last.x}
@@ -596,10 +583,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           />
         )}
 
-        {/* start dot */}
         <circle cx={verts[0].x} cy={verts[0].y} r={7} fill="#111" stroke="#B7C398" strokeWidth={3} opacity={0.95} />
-
-        {/* last dot */}
         <circle cx={last.x} cy={last.y} r={6} fill="#111" stroke="white" strokeWidth={2} opacity={0.95} />
       </svg>
     );
@@ -637,10 +621,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 }}
               />
 
-              {/* Active handles + vertices */}
               {isActive && (
                 <>
-                  {/* bbox handles */}
                   {(
                     [
                       ["nw", { x: box.minX, y: box.minY }],
@@ -664,7 +646,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                     />
                   ))}
 
-                  {/* vertex handles */}
                   {bed.vertices.map((v, idx) => {
                     const selected = activeVertex?.bedId === bed.id && activeVertex.index === idx;
                     return (
