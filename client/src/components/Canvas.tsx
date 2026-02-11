@@ -62,6 +62,9 @@ const Canvas = () => {
   const [lineStart, setLineStart] = useState<Position | null>(null);
   const [linePreviewEnd, setLinePreviewEnd] = useState<Position | null>(null);
 
+  // Shift tracking for cursor + line-start requirement
+  const [isShiftDown, setIsShiftDown] = useState(false);
+
   // Undo/redo
   const [history, setHistory] = useState<CanvasSnapshot[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
@@ -75,6 +78,23 @@ const Canvas = () => {
   // Drag-suppress (prevents accidental draw after dragging)
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
   const didDragRef = useRef(false);
+
+  // Track shift globally
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setIsShiftDown(true);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setIsShiftDown(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
 
   const snapToGrid = useCallback((p: Position): Position => {
     return {
@@ -191,7 +211,7 @@ const Canvas = () => {
         }
       }
 
-      // 2) Snap near endpoints (blank canvas clicks near a handle still connect)
+      // 2) Snap near endpoints
       let best: Position | null = null;
       let bestDist = Infinity;
 
@@ -231,7 +251,7 @@ const Canvas = () => {
       const world = getWorldPointFromMouse(e);
       if (!world) return;
 
-      // ---- LINE TOOL (SAFER + SHIFT TO START) ----
+      // ---- LINE TOOL (SAFE + SHIFT TO START) ----
       if (toolMode === "drawLine") {
         const endpointHit = getEndpointTarget(e.target);
         const interactive = isInteractiveTarget(e.target);
@@ -239,7 +259,7 @@ const Canvas = () => {
         // Safe rule: allow clicks ONLY on blank canvas, except endpoints
         if (interactive && !endpointHit) return;
 
-        // If starting a new line, require Shift (even if starting from an endpoint)
+        // Starting a new line requires Shift
         if (!lineStart && SHIFT_REQUIRED_TO_START_LINE && !e.shiftKey) {
           return;
         }
@@ -273,6 +293,7 @@ const Canvas = () => {
 
       const p = snapToGrid(world);
 
+      // Create bed on first click
       if (!drawingBedId) {
         const id = Date.now().toString();
         const newBed: BedPath = { id, vertices: [p], isClosed: false };
@@ -285,6 +306,7 @@ const Canvas = () => {
       const current = beds.find((b) => b.id === drawingBedId);
       if (!current) return;
 
+      // Close if clicking near first vertex and at least 3 points
       if (current.vertices.length >= 3 && distance(p, current.vertices[0]) <= CLOSE_DISTANCE) {
         const closed: BedPath = { ...current, isClosed: true };
         const nextBeds = beds.map((b) => (b.id === current.id ? closed : b));
@@ -297,6 +319,7 @@ const Canvas = () => {
         return;
       }
 
+      // Add vertex
       const nextBed: BedPath = { ...current, vertices: [...current.vertices, p] };
       const nextBeds = beds.map((b) => (b.id === current.id ? nextBed : b));
       commit(shapes, nextBeds);
@@ -360,7 +383,6 @@ const Canvas = () => {
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
 
-      // Don't clear selection when clicking interactive things
       if (!isInteractiveTarget(e.target)) {
         setSelectedShapeId(null);
         setActiveBedId(null);
@@ -390,11 +412,21 @@ const Canvas = () => {
         linear-gradient(to bottom, #9EAD73 1px, transparent 1px)
       `,
       backgroundSize: `${GRID_SIZE * safeScale}px ${GRID_SIZE * safeScale}px`,
-      backgroundPosition: `${pan.x % (GRID_SIZE * safeScale)}px ${pan.y % (GRID_SIZE * safeScale)}px ${pan.y % (GRID_SIZE * safeScale)}px`,
+      backgroundPosition: `${pan.x % (GRID_SIZE * safeScale)}px ${pan.y % (GRID_SIZE * safeScale)}px`,
     };
   }, [pan.x, pan.y, scale]);
 
-  // Keyboard: ESC cancels line draft or bed drawing
+  // Crosshair logic:
+  // - Bed tool: crosshair whenever bed tool active (edit mode)
+  // - Line tool: crosshair only when shift is down AND line tool active (edit mode)
+  const canvasCursor = useMemo(() => {
+    if (!editMode) return "default";
+    if (toolMode === "drawBed") return "crosshair";
+    if (toolMode === "drawLine") return isShiftDown ? "crosshair" : "default";
+    return "default";
+  }, [editMode, isShiftDown, toolMode]);
+
+  // Keyboard: delete + ESC cancels drawing
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!editMode) return;
@@ -402,7 +434,6 @@ const Canvas = () => {
       if (e.key === "Escape" && toolMode === "drawLine") {
         setLineStart(null);
         setLinePreviewEnd(null);
-        // keep tool active; user can keep editing, but draft cancels
         return;
       }
 
@@ -536,7 +567,6 @@ const Canvas = () => {
 
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
-      {/* Toolbar */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
         {showGardenBedCreator && (
           <GardenBedCreator
@@ -557,7 +587,7 @@ const Canvas = () => {
         ref={canvasRef}
         data-canvas
         className="w-full h-full relative"
-        style={gridStyle}
+        style={{ ...gridStyle, cursor: canvasCursor }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -595,7 +625,13 @@ const Canvas = () => {
               setActiveVertex({ bedId, index });
               setSelectedShapeId(null);
             }}
-            onMoveBedBy={moveBedBy}
+            onMoveBedBy={(bedId, dx, dy) => {
+              const nextBeds = beds.map((b) => {
+                if (b.id !== bedId) return b;
+                return { ...b, vertices: b.vertices.map((p) => ({ x: p.x + dx, y: p.y + dy })) };
+              });
+              commit(shapes, nextBeds);
+            }}
             onMoveVertexTo={moveVertexTo}
             onRequestCloseBed={requestCloseBed}
             onShapeUpdate={(shapeId, updates) => {
@@ -724,11 +760,18 @@ const Canvas = () => {
               </button>
             </div>
 
-            {/* Mode hint (small, non-intrusive) */}
+            {/* Hints */}
             {toolMode === "drawLine" && (
               <div className="text-xs text-green-800 font-semibold select-none">
                 Line mode — hold <span className="font-bold">Shift</span> to start a new line
                 {lineStart ? " (click to place end)" : ""}
+              </div>
+            )}
+
+            {toolMode === "drawBed" && (
+              <div className="text-xs text-green-800 font-semibold select-none">
+                Bed mode — click to add corners. Click the <span className="font-bold">first point</span> to close.
+                <span className="ml-1">(Esc cancels)</span>
               </div>
             )}
           </div>
