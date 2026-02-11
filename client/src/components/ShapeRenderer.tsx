@@ -17,9 +17,9 @@ interface ShapeRendererProps {
   pan: { x: number; y: number };
   gridToUnit?: number;
 
-  // Beds
   activeBedId: string | null;
   activeBedSegmentIds: string[];
+  activeBedIsClosed: boolean;
   bedSelectModeActive: boolean;
   onToggleLineForActiveBed: (lineId: string) => void;
 
@@ -27,12 +27,10 @@ interface ShapeRendererProps {
   onMoveBedBy: (bedId: string, dx: number, dy: number) => void;
   onResizeBedHandleTo: (bedId: string, handle: "nw" | "ne" | "sw" | "se", p: Position) => void;
 
-  // Line preview
   lineStart?: Position | null;
   linePreviewEnd?: Position | null;
   linePreviewActive?: boolean;
 
-  // Shapes
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
   onShapeSelect?: (shapeId: string) => void;
 }
@@ -48,6 +46,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   activeBedId,
   activeBedSegmentIds,
+  activeBedIsClosed,
   bedSelectModeActive,
   onToggleLineForActiveBed,
 
@@ -159,25 +158,26 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  const handleResizeHandleMouseDown = (bedId: string, handle: "nw" | "ne" | "sw" | "se") => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelectBed(bedId);
+  const handleResizeHandleMouseDown =
+    (bedId: string, handle: "nw" | "ne" | "sw" | "se") => (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onSelectBed(bedId);
 
-    const handleMove = (moveEvent: MouseEvent) => {
-      const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
-      if (!world) return;
-      const snapped = snapToGrid(world.x, world.y);
-      onResizeBedHandleTo(bedId, handle, snapped);
+      const handleMove = (moveEvent: MouseEvent) => {
+        const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
+        if (!world) return;
+        const snapped = snapToGrid(world.x, world.y);
+        onResizeBedHandleTo(bedId, handle, snapped);
+      };
+
+      const handleUp = () => {
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
+      };
+
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("mouseup", handleUp);
     };
-
-    const handleUp = () => {
-      document.removeEventListener("mousemove", handleMove);
-      document.removeEventListener("mouseup", handleUp);
-    };
-
-    document.addEventListener("mousemove", handleMove);
-    document.addEventListener("mouseup", handleUp);
-  };
 
   const handleShapeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -404,12 +404,19 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const labelY = midY + Math.sin(perpRad) * 20;
 
       const inActiveBed = activeBedSegmentIds.includes(shape.id);
+
+      // ✅ more visible selection color
+      const selectedColor = "#B7C398"; // consistent with your existing highlight tone
+      const bodyColor = inActiveBed ? selectedColor : color;
+
+      // ✅ if bed is closed, de-emphasize member line bodies so they don’t “split” the fill
+      const bodyOpacity = inActiveBed && activeBedIsClosed && !bedSelectModeActive ? 0.15 : 1;
+
       const lineThickness = Math.max(strokeWidth ?? 2, 8);
-      const activeGlow = inActiveBed ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
+      const activeGlow = inActiveBed ? "drop-shadow(0 0 6px rgba(183,195,152,0.95))" : "none";
 
       return (
         <div key={shape.id} data-interactive="true">
-          {/* Line body */}
           <div
             data-interactive="true"
             style={{
@@ -418,13 +425,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               top: `${startPos.y}px`,
               width: `${length}px`,
               height: `${lineThickness}px`,
-              backgroundColor: color,
+              backgroundColor: bodyColor,
               transformOrigin: "0 50%",
               transform: `rotate(${angle}deg)`,
               cursor: bedSelectModeActive ? "pointer" : "move",
               pointerEvents: "auto",
               filter: activeGlow,
-              outline: inActiveBed ? "2px solid rgba(255,255,255,0.35)" : "none",
+              opacity: bodyOpacity,
             }}
             onMouseDown={bedSelectModeActive ? undefined : handleShapeMouseDown(shape.id)}
             onClick={(e) => {
@@ -437,7 +444,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             }}
           />
 
-          {/* Label stays the same */}
           <div
             style={{
               position: "absolute",
@@ -460,7 +466,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             <div style={{ fontSize: "10px", color: "#6b7280" }}>{metersLength} m</div>
           </div>
 
-          {/* Endpoints (keep your existing line-connecting behavior) */}
           <div
             data-interactive="true"
             data-line-endpoint="true"
@@ -506,7 +511,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       );
     }
 
-    // Rectangle + freehand can remain as in your file; unchanged behavior:
     if (type === "rectangle") {
       const left = Math.min(startPos.x, endPos.x);
       const top = Math.min(startPos.y, endPos.y);
@@ -570,8 +574,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           const strokeWidth = isActive ? 4 : 3;
           const glow = isActive ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
 
-          // Shaded interior for completed beds
-          const fill = bed.isClosed ? "rgba(255,255,255,0.10)" : "transparent";
+          // ✅ Stronger fill to clearly shade whole interior
+          const fill = bed.isClosed ? "rgba(255,255,255,0.22)" : "transparent";
           const dash = bed.isClosed ? undefined : "10 8";
 
           const { minX, maxX, minY, maxY } = bedBBox(bed.vertices);
@@ -582,6 +586,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 data-interactive="true"
                 d={bedPathD(bed)}
                 fill={fill}
+                fillRule="evenodd"
                 stroke={stroke}
                 strokeWidth={strokeWidth}
                 strokeLinejoin="round"
@@ -595,7 +600,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 }}
               />
 
-              {/* Resize handles only when bed is closed and active */}
               {bed.isClosed && isActive && (
                 <>
                   {(
