@@ -1,3 +1,4 @@
+// ShapeRenderer.tsx
 "use client";
 
 import React from "react";
@@ -27,9 +28,17 @@ interface ShapeRendererProps {
 
   onSelectBed: (bedId: string) => void;
   onSelectVertex: (bedId: string, index: number) => void;
+
+  // kept (may be used elsewhere), but bed-body dragging now uses the three callbacks below
   onMoveBedBy: (bedId: string, dx: number, dy: number) => void;
+
   onMoveVertexTo: (bedId: string, index: number, p: Position) => void;
   onResizeBedToBox: (bedId: string, nextBox: Box) => void;
+
+  // NEW: smooth bed drag (live update; commit once on mouseup)
+  onBeginBedDrag: (bedId: string, clientX: number, clientY: number) => void;
+  onUpdateBedDrag: (bedId: string, clientX: number, clientY: number) => void;
+  onEndBedDrag: (bedId: string) => void;
 
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
   onShapeSelect?: (shapeId: string) => void;
@@ -56,6 +65,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   onMoveBedBy,
   onMoveVertexTo,
   onResizeBedToBox,
+
+  onBeginBedDrag,
+  onUpdateBedDrag,
+  onEndBedDrag,
 
   onShapeUpdate,
   onShapeSelect,
@@ -136,24 +149,21 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
   };
 
+  // NEW: smooth bed dragging (no history spam; commit once on mouseup)
   const handleBedMouseDown = (bedId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectBed(bedId);
 
-    let lastX = e.clientX;
-    let lastY = e.clientY;
+    onBeginBedDrag(bedId, e.clientX, e.clientY);
 
     const handleMove = (moveEvent: MouseEvent) => {
-      const dx = (moveEvent.clientX - lastX) / scale;
-      const dy = (moveEvent.clientY - lastY) / scale;
-      onMoveBedBy(bedId, dx, dy);
-      lastX = moveEvent.clientX;
-      lastY = moveEvent.clientY;
+      onUpdateBedDrag(bedId, moveEvent.clientX, moveEvent.clientY);
     };
 
     const handleUp = () => {
       document.removeEventListener("mousemove", handleMove);
       document.removeEventListener("mouseup", handleUp);
+      onEndBedDrag(bedId);
     };
 
     document.addEventListener("mousemove", handleMove);
