@@ -11,7 +11,7 @@ type BedPath = {
 
 interface ShapeRendererProps {
   shapes: Shape[];
-  beds?: any[]; // allow legacy/undefined safely
+  beds?: any[];
   scale: number;
   pan: { x: number; y: number };
   gridToUnit?: number;
@@ -21,7 +21,7 @@ interface ShapeRendererProps {
   drawingBedId: string | null;
   drawingMode: boolean;
 
-  // NEW: line preview
+  // Line preview
   lineStart?: Position | null;
   linePreviewEnd?: Position | null;
   linePreviewActive?: boolean;
@@ -274,23 +274,21 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   const renderLinePreview = () => {
     if (!linePreviewActive || !lineStart || !linePreviewEnd) return null;
 
-    const x1 = lineStart.x;
-    const y1 = lineStart.y;
-    const x2 = linePreviewEnd.x;
-    const y2 = linePreviewEnd.y;
-
     return (
       <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
+        {/* dashed preview */}
         <line
-          x1={x1}
-          y1={y1}
-          x2={x2}
-          y2={y2}
+          x1={lineStart.x}
+          y1={lineStart.y}
+          x2={linePreviewEnd.x}
+          y2={linePreviewEnd.y}
           stroke="#ffffff"
           strokeWidth={2}
           strokeDasharray="8 6"
           opacity={0.9}
         />
+        {/* start dot */}
+        <circle cx={lineStart.x} cy={lineStart.y} r={6} fill="#111" stroke="white" strokeWidth={2} opacity={0.95} />
       </svg>
     );
   };
@@ -507,7 +505,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       );
     }
 
-    if (type === "freehand" && shape.points && shape.points.length > 1) {
+    if (type === "freehand" && (shape as any).points && (shape as any).points.length > 1) {
+      const pts = (shape as any).points as Position[];
       return (
         <svg
           key={shape.id}
@@ -517,10 +516,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         >
           <polyline
             data-interactive="true"
-            points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
+            points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
             fill="none"
-            stroke={shape.color}
-            strokeWidth={shape.strokeWidth ?? 2}
+            stroke={(shape as any).color}
+            strokeWidth={(shape as any).strokeWidth ?? 2}
             strokeLinecap="round"
             strokeLinejoin="round"
             pointerEvents="auto"
@@ -599,7 +598,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   return (
     <div style={{ position: "absolute", width: "100%", height: "100%", top: 0, left: 0, pointerEvents: "none" }}>
-      {/* NEW: preview line overlay (behind/above beds is fine; it has pointerEvents none) */}
       {renderLinePreview()}
       {renderBeds()}
       {shapes.map(renderShape)}

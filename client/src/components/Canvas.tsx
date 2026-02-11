@@ -128,12 +128,13 @@ const Canvas = () => {
       endPos: { x: centerX + 40, y: centerY + 40 },
       color: "#ffffff",
       strokeWidth: 2,
-    };
+      // BaseShape requires this; keep false by default
+      isSeletected: false,
+    } as Shape;
 
     commit([...shapes, newShape], beds);
   }, [beds, commit, pan.x, pan.y, scale, shapes]);
 
-  // Start drawing a bed (vertex-based)
   const startBedDrawing = useCallback(() => {
     setToolMode("drawBed");
     setDrawingBedId(null);
@@ -146,7 +147,6 @@ const Canvas = () => {
     setLinePreviewEnd(null);
   }, []);
 
-  // Start drawing a line (2-click)
   const startLineDrawing = useCallback(() => {
     setToolMode("drawLine");
     setLineStart(null);
@@ -165,13 +165,12 @@ const Canvas = () => {
     return Boolean(el.closest?.("[data-interactive='true']"));
   }, []);
 
-  // Canvas click while drawing: add vertices / close bed / create line
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent) => {
       if (!editMode) return;
       if (toolMode === "none") return;
 
-      // Critical: don't interpret clicks on shapes/beds/handles as "draw new line/bed"
+      // don't interpret clicks on shapes/beds/handles as draw actions
       if (isInteractiveTarget(e.target)) return;
 
       const world = getWorldPointFromMouse(e);
@@ -194,7 +193,8 @@ const Canvas = () => {
           endPos: p,
           color: "#ffffff",
           strokeWidth: 2,
-        };
+          isSeletected: false,
+        } as Shape;
 
         commit([...shapes, newLine], beds);
         setLineStart(null);
@@ -249,7 +249,6 @@ const Canvas = () => {
     ]
   );
 
-  // Mouse move: pan OR line preview
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (isDragging) {
@@ -257,7 +256,7 @@ const Canvas = () => {
         return;
       }
 
-      // Live preview for line drawing (only when a start point exists)
+      // Live preview for line drawing
       if (editMode && toolMode === "drawLine" && lineStart) {
         const world = getWorldPointFromMouse(e);
         if (!world) return;
@@ -281,7 +280,6 @@ const Canvas = () => {
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
 
-      // Clicking blank canvas clears selections
       if (!isInteractiveTarget(e.target)) {
         setSelectedShapeId(null);
         setActiveBedId(null);
@@ -312,7 +310,6 @@ const Canvas = () => {
     };
   }, [pan.x, pan.y, scale]);
 
-  // Keyboard: delete vertex/bed/shape; ESC cancels drawing
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!editMode) return;
@@ -418,7 +415,6 @@ const Canvas = () => {
     [beds, commit, distance, shapes]
   );
 
-  // Undo/redo restores shapes+beds
   const undo = useCallback(() => {
     if (historyIndex <= 0) return;
     const newIndex = historyIndex - 1;
@@ -501,7 +497,7 @@ const Canvas = () => {
             activeVertex={activeVertex}
             drawingBedId={drawingBedId}
             drawingMode={toolMode === "drawBed"}
-            // NEW: line preview props
+            // line preview
             lineStart={lineStart}
             linePreviewEnd={linePreviewEnd}
             linePreviewActive={toolMode === "drawLine" && !!lineStart}
@@ -556,10 +552,7 @@ const Canvas = () => {
 
       {/* Drawing/Edit Tools */}
       {editMode && (
-        <div
-          data-testid="edit-window"
-          className="absolute top-0 left-4 mt-5 bg-white rounded-lg shadow-lg p-3 border z-40"
-        >
+        <div className="absolute top-0 left-4 mt-5 bg-white rounded-lg shadow-lg p-3 border z-40" data-testid="edit-window">
           <div className="flex gap-2">
             {/* Circle */}
             <button
@@ -585,7 +578,7 @@ const Canvas = () => {
               <FaSlash size={25} />
             </button>
 
-            {/* Bed Tool */}
+            {/* Bed */}
             <button
               onClick={startBedDrawing}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -604,7 +597,7 @@ const Canvas = () => {
               <FaRedoAlt size={25} />
             </button>
 
-            {/* Clear Canvas */}
+            {/* Clear */}
             <button
               onClick={() => {
                 if (window.confirm("Are you sure you want to clear the entire canvas?")) {
@@ -624,7 +617,7 @@ const Canvas = () => {
               <FaTrashAlt size={25} />
             </button>
 
-            {/* Exit Edit Mode */}
+            {/* Exit */}
             <button
               onClick={() => {
                 setEditMode(false);
@@ -648,4 +641,3 @@ const Canvas = () => {
 };
 
 export default Canvas;
-
