@@ -1,4 +1,3 @@
-// ShapeRenderer.tsx
 "use client";
 
 import React from "react";
@@ -18,6 +17,8 @@ interface ShapeRendererProps {
   scale: number;
   pan: { x: number; y: number };
   gridToUnit?: number;
+
+  selectedShapeId: string | null;
 
   activeBedId: string | null;
   activeVertex: { bedId: string; index: number } | null;
@@ -46,7 +47,6 @@ interface ShapeRendererProps {
   onUpdateShapeDrag: (shapeId: string, clientX: number, clientY: number) => void;
   onEndShapeDrag: (shapeId: string) => void;
 
-  // NEW: smooth resize for circle/freehand/etc.
   onBeginShapeResize: (shapeId: string) => void;
   onUpdateShapeResize: (shapeId: string, updates: Partial<Shape>) => void;
   onEndShapeResize: (shapeId: string) => void;
@@ -88,7 +88,9 @@ const withAlpha = (color: string, alpha: number) => {
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
 
-  const rgbaMatch = color.match(/^rgba\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9.]+)\s*\)$/i);
+  const rgbaMatch = color.match(
+    /^rgba\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9.]+)\s*\)$/i
+  );
   if (rgbaMatch) {
     const r = Number(rgbaMatch[1]);
     const g = Number(rgbaMatch[2]);
@@ -99,12 +101,24 @@ const withAlpha = (color: string, alpha: number) => {
   return color;
 };
 
+const bboxOfPoints = (pts: Position[]): Box => {
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+};
+
 const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   shapes,
   beds = [],
   scale,
   pan,
   gridToUnit = 1,
+  selectedShapeId,
 
   activeBedId,
   activeVertex,
@@ -214,7 +228,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
   };
 
-  // smooth bed drag
+  // Bed dragging uses smooth callbacks so we only commit once per drag.
   const handleBedMouseDown = (bedId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectBed(bedId);
@@ -235,7 +249,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // smooth vertex drag
+  // Vertex dragging uses smooth callbacks so we only commit once per drag.
   const handleVertexMouseDown = (bedId: string, index: number) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectVertex(bedId, index);
@@ -293,7 +307,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // smooth shape drag (circle included)
+  // Shape dragging uses smooth callbacks so we only commit once per drag.
   const handleShapeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onShapeSelect?.(shapeId);
@@ -314,7 +328,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleMouseUp);
   };
 
-  // UPDATED: endpoint drag uses smooth resize callbacks (single undo step)
+  // Endpoint dragging is treated as a resize so undo/redo is one step.
   const handleEndpointMouseDown = (shapeId: string, endpoint: "start" | "end") => (e: React.MouseEvent) => {
     e.stopPropagation();
     onBeginShapeResize(shapeId);
@@ -336,7 +350,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // UPDATED: circle resize uses smooth resize callbacks (single undo step)
+  // Circle resize is treated as a resize so undo/redo is one step.
   const handleCircleResizeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     const shape = shapes.find((s) => s.id === shapeId);
@@ -368,6 +382,74 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mousemove", handleMove);
     document.addEventListener("mouseup", handleUp);
   };
+
+  // Freehand resize uses bbox scaling so the whole stroke scales consistently.
+  const handleFreehandResizeDown =
+    (shapeId: string, handle: "nw" | "ne" | "sw" | "se", startPoints: Position[]) => (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (startPoints.length < 2) return;
+
+      const startBox = bboxOfPoints(startPoints);
+      const startW = Math.max(1, startBox.maxX - startBox.minX);
+      const startH = Math.max(1, startBox.maxY - startBox.minY);
+
+      onBeginShapeResize(shapeId);
+
+      const handleMove = (moveEvent: MouseEvent) => {
+        const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
+        if (!world) return;
+
+        const p = snapToGrid(world.x, world.y);
+
+        let nextBox: Box = { ...startBox };
+
+        if (handle === "nw") {
+          nextBox = {
+            ...nextBox,
+            minX: Math.min(p.x, startBox.maxX - GRID_SIZE),
+            minY: Math.min(p.y, startBox.maxY - GRID_SIZE),
+          };
+        } else if (handle === "ne") {
+          nextBox = {
+            ...nextBox,
+            maxX: Math.max(p.x, startBox.minX + GRID_SIZE),
+            minY: Math.min(p.y, startBox.maxY - GRID_SIZE),
+          };
+        } else if (handle === "sw") {
+          nextBox = {
+            ...nextBox,
+            minX: Math.min(p.x, startBox.maxX - GRID_SIZE),
+            maxY: Math.max(p.y, startBox.minY + GRID_SIZE),
+          };
+        } else if (handle === "se") {
+          nextBox = {
+            ...nextBox,
+            maxX: Math.max(p.x, startBox.minX + GRID_SIZE),
+            maxY: Math.max(p.y, startBox.minY + GRID_SIZE),
+          };
+        }
+
+        const nextW = Math.max(1, nextBox.maxX - nextBox.minX);
+        const nextH = Math.max(1, nextBox.maxY - nextBox.minY);
+
+        const nextPoints = startPoints.map((pt) => {
+          const nx = (pt.x - startBox.minX) / startW;
+          const ny = (pt.y - startBox.minY) / startH;
+          return { x: nextBox.minX + nx * nextW, y: nextBox.minY + ny * nextH };
+        });
+
+        onUpdateShapeResize(shapeId, { points: nextPoints } as any);
+      };
+
+      const handleUp = () => {
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
+        onEndShapeResize(shapeId);
+      };
+
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("mouseup", handleUp);
+    };
 
   const renderShape = (shape: Shape) => {
     const { type, startPos, endPos, color, strokeWidth } = shape;
@@ -589,6 +671,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
     if (type === "freehand" && (shape as any).points && (shape as any).points.length > 1) {
       const pts = (shape as any).points as Position[];
+      const isSelected = selectedShapeId === shape.id;
+
+      const box = bboxOfPoints(pts);
+
       return (
         <svg
           key={shape.id}
@@ -607,8 +693,36 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             pointerEvents="auto"
             style={{ cursor: "move" }}
             onMouseDown={handleShapeMouseDown(shape.id)}
-            onClick={stop}
+            onClick={(e) => {
+              e.stopPropagation();
+              onShapeSelect?.(shape.id);
+            }}
           />
+
+          {/* Show resize handles only when selected, to keep the canvas clean. */}
+          {isSelected &&
+            (
+              [
+                ["nw", { x: box.minX, y: box.minY }],
+                ["ne", { x: box.maxX, y: box.minY }],
+                ["sw", { x: box.minX, y: box.maxY }],
+                ["se", { x: box.maxX, y: box.maxY }],
+              ] as const
+            ).map(([h, p]) => (
+              <rect
+                key={`${shape.id}-fh-${h}`}
+                data-interactive="true"
+                x={p.x - 6}
+                y={p.y - 6}
+                width={12}
+                height={12}
+                fill="#111"
+                stroke="white"
+                strokeWidth={2}
+                style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
+                onMouseDown={handleFreehandResizeDown(shape.id, h, pts.map((q) => ({ ...q })))}
+              />
+            ))}
         </svg>
       );
     }
@@ -630,7 +744,16 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         {verts.length >= 2 && <path d={d} fill="none" stroke="#ffffff" strokeWidth={2} strokeDasharray="10 8" opacity={0.9} />}
 
         {preview && (
-          <line x1={last.x} y1={last.y} x2={preview.x} y2={preview.y} stroke="#ffffff" strokeWidth={2} strokeDasharray="8 6" opacity={0.9} />
+          <line
+            x1={last.x}
+            y1={last.y}
+            x2={preview.x}
+            y2={preview.y}
+            stroke="#ffffff"
+            strokeWidth={2}
+            strokeDasharray="8 6"
+            opacity={0.9}
+          />
         )}
 
         <circle cx={verts[0].x} cy={verts[0].y} r={7} fill="#111" stroke="#B7C398" strokeWidth={3} opacity={0.95} />
@@ -701,7 +824,15 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                     return (
                       <g key={`${bed.id}-v-${idx}`} data-interactive="true">
                         {selected && (
-                          <circle cx={v.x} cy={v.y} r={14} fill="rgba(183,195,152,0.18)" stroke="rgba(183,195,152,0.6)" strokeWidth={2} pointerEvents="none" />
+                          <circle
+                            cx={v.x}
+                            cy={v.y}
+                            r={14}
+                            fill="rgba(183,195,152,0.18)"
+                            stroke="rgba(183,195,152,0.6)"
+                            strokeWidth={2}
+                            pointerEvents="none"
+                          />
                         )}
                         <circle
                           data-interactive="true"
