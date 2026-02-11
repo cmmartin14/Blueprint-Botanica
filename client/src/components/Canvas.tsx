@@ -29,6 +29,8 @@ type ToolMode = "none" | "drawBed" | "drawLine";
 
 const GRID_SIZE = 20;
 const CLOSE_DISTANCE = 18; // world units (grid-space)
+const LINE_ENDPOINT_SNAP = 18; // world units: snap radius to existing line endpoints
+const DRAG_SUPPRESS_PX = 4; // client px: if mouse moved more than this, suppress click drawing
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
@@ -71,6 +73,10 @@ const Canvas = () => {
 
   // Map key
   const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
+
+  // Drag-suppress (prevents accidental line creation after dragging)
+  const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
+  const didDragRef = useRef(false);
 
   const snapToGrid = useCallback((p: Position): Position => {
     return {
@@ -128,7 +134,6 @@ const Canvas = () => {
       endPos: { x: centerX + 40, y: centerY + 40 },
       color: "#ffffff",
       strokeWidth: 2,
-      // BaseShape requires this; keep false by default
       isSeletected: false,
     } as Shape;
 
@@ -142,7 +147,6 @@ const Canvas = () => {
     setActiveVertex(null);
     setSelectedShapeId(null);
 
-    // cancel line draft if any
     setLineStart(null);
     setLinePreviewEnd(null);
   }, []);
@@ -152,7 +156,6 @@ const Canvas = () => {
     setLineStart(null);
     setLinePreviewEnd(null);
 
-    // clear other selections
     setDrawingBedId(null);
     setActiveBedId(null);
     setActiveVertex(null);
@@ -165,21 +168,80 @@ const Canvas = () => {
     return Boolean(el.closest?.("[data-interactive='true']"));
   }, []);
 
+  const getEndpointTarget = useCallback((target: EventTarget | null) => {
+    const el = target as HTMLElement | null;
+    if (!el) return null as null | { shapeId: string; endpoint: "start" | "end" };
+    const node = el.closest?.("[data-line-endpoint='true']") as HTMLElement | null;
+    if (!node) return null;
+    const shapeId = node.getAttribute("data-shape-id") || "";
+    const endpoint = (node.getAttribute("data-endpoint") || "") as "start" | "end";
+    if (!shapeId || (endpoint !== "start" && endpoint !== "end")) return null;
+    return { shapeId, endpoint };
+  }, []);
+
+  const resolveLinePoint = useCallback(
+    (e: React.MouseEvent, fallbackWorld: Position): Position => {
+      // 1) If user clicked exactly on an endpoint handle, use it (even though it's "interactive")
+      const endpointHit = getEndpointTarget(e.target);
+      if (endpointHit) {
+        const shape = shapes.find((s) => s.id === endpointHit.shapeId);
+        if (shape && shape.type === "line") {
+          return endpointHit.endpoint === "start" ? shape.startPos : shape.endPos;
+        }
+      }
+
+      // 2) Otherwise snap to nearest existing line endpoint (lets you click near it on blank canvas)
+      let best: Position | null = null;
+      let bestDist = Infinity;
+
+      for (const s of shapes) {
+        if (s.type !== "line") continue;
+        const d1 = distance(fallbackWorld, s.startPos);
+        if (d1 < bestDist) {
+          bestDist = d1;
+          best = s.startPos;
+        }
+        const d2 = distance(fallbackWorld, s.endPos);
+        if (d2 < bestDist) {
+          bestDist = d2;
+          best = s.endPos;
+        }
+      }
+
+      if (best && bestDist <= LINE_ENDPOINT_SNAP) {
+        return best;
+      }
+
+      // 3) Default to grid-snapped world point
+      return snapToGrid(fallbackWorld);
+    },
+    [distance, getEndpointTarget, shapes, snapToGrid]
+  );
+
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent) => {
       if (!editMode) return;
       if (toolMode === "none") return;
 
-      // don't interpret clicks on shapes/beds/handles as draw actions
-      if (isInteractiveTarget(e.target)) return;
+      // If user dragged, ignore click (prevents "dragging existing line creates a new line")
+      if (didDragRef.current) {
+        didDragRef.current = false;
+        return;
+      }
 
       const world = getWorldPointFromMouse(e);
       if (!world) return;
 
-      const p = snapToGrid(world);
-
-      // ---- LINE TOOL ----
+      // ---- LINE TOOL (SAFER) ----
       if (toolMode === "drawLine") {
+        const endpointHit = getEndpointTarget(e.target);
+        const interactive = isInteractiveTarget(e.target);
+
+        // Safe rule: allow clicks ONLY on blank canvas, except endpoints
+        if (interactive && !endpointHit) return;
+
+        const p = resolveLinePoint(e, world);
+
         if (!lineStart) {
           setLineStart(p);
           setLinePreviewEnd(p);
@@ -204,6 +266,9 @@ const Canvas = () => {
 
       // ---- BED TOOL ----
       if (toolMode !== "drawBed") return;
+
+      // Existing behavior: while drawing beds, we only respond to bed clicks (no extra safety needed here)
+      const p = snapToGrid(world);
 
       if (!drawingBedId) {
         const id = Date.now().toString();
@@ -240,9 +305,11 @@ const Canvas = () => {
       distance,
       drawingBedId,
       editMode,
+      getEndpointTarget,
       getWorldPointFromMouse,
       isInteractiveTarget,
       lineStart,
+      resolveLinePoint,
       shapes,
       snapToGrid,
       toolMode,
@@ -251,24 +318,45 @@ const Canvas = () => {
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      // drag suppression tracking
+      if (pointerDownRef.current) {
+        const dx = e.clientX - pointerDownRef.current.x;
+        const dy = e.clientY - pointerDownRef.current.y;
+        if (Math.sqrt(dx * dx + dy * dy) > DRAG_SUPPRESS_PX) {
+          didDragRef.current = true;
+        }
+      }
+
       if (isDragging) {
         setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
         return;
       }
 
-      // Live preview for line drawing
+      // Live preview for line drawing (snap + endpoint snap)
       if (editMode && toolMode === "drawLine" && lineStart) {
         const world = getWorldPointFromMouse(e);
         if (!world) return;
-        const p = snapToGrid(world);
+        const p = resolveLinePoint(e, world);
         setLinePreviewEnd(p);
       }
     },
-    [dragStart.x, dragStart.y, editMode, getWorldPointFromMouse, isDragging, lineStart, snapToGrid, toolMode]
+    [
+      dragStart.x,
+      dragStart.y,
+      editMode,
+      getWorldPointFromMouse,
+      isDragging,
+      lineStart,
+      resolveLinePoint,
+      toolMode,
+    ]
   );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      pointerDownRef.current = { x: e.clientX, y: e.clientY };
+      didDragRef.current = false;
+
       if (!editMode) {
         setIsDragging(true);
         setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -280,6 +368,7 @@ const Canvas = () => {
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
 
+      // Don't clear selection when clicking on interactive things
       if (!isInteractiveTarget(e.target)) {
         setSelectedShapeId(null);
         setActiveBedId(null);
@@ -289,7 +378,11 @@ const Canvas = () => {
     [editMode, isInteractiveTarget, pan.x, pan.y, toolMode]
   );
 
-  const handleMouseUp = useCallback(() => setIsDragging(false), []);
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    pointerDownRef.current = null;
+    // didDragRef persists until click handler runs, then resets
+  }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -451,7 +544,6 @@ const Canvas = () => {
 
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
-      {/* Toolbar */}
       <div className="absolute top-4 left-4 flex gap-2 z-50">
         {showGardenBedCreator && (
           <GardenBedCreator
@@ -497,7 +589,6 @@ const Canvas = () => {
             activeVertex={activeVertex}
             drawingBedId={drawingBedId}
             drawingMode={toolMode === "drawBed"}
-            // line preview
             lineStart={lineStart}
             linePreviewEnd={linePreviewEnd}
             linePreviewActive={toolMode === "drawLine" && !!lineStart}
@@ -554,7 +645,6 @@ const Canvas = () => {
       {editMode && (
         <div className="absolute top-0 left-4 mt-5 bg-white rounded-lg shadow-lg p-3 border z-40" data-testid="edit-window">
           <div className="flex gap-2">
-            {/* Circle */}
             <button
               onClick={() => {
                 setToolMode("none");
@@ -569,7 +659,6 @@ const Canvas = () => {
               <FaRegCircle size={25} />
             </button>
 
-            {/* Line */}
             <button
               onClick={startLineDrawing}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -578,7 +667,6 @@ const Canvas = () => {
               <FaSlash size={25} />
             </button>
 
-            {/* Bed */}
             <button
               onClick={startBedDrawing}
               className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -587,17 +675,14 @@ const Canvas = () => {
               <FaDrawPolygon size={25} />
             </button>
 
-            {/* Undo */}
             <button onClick={undo} className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800" title="Undo">
               <FaUndoAlt size={25} />
             </button>
 
-            {/* Redo */}
             <button onClick={redo} className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800" title="Redo">
               <FaRedoAlt size={25} />
             </button>
 
-            {/* Clear */}
             <button
               onClick={() => {
                 if (window.confirm("Are you sure you want to clear the entire canvas?")) {
@@ -617,7 +702,6 @@ const Canvas = () => {
               <FaTrashAlt size={25} />
             </button>
 
-            {/* Exit */}
             <button
               onClick={() => {
                 setEditMode(false);

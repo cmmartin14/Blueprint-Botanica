@@ -21,7 +21,6 @@ interface ShapeRendererProps {
   drawingBedId: string | null;
   drawingMode: boolean;
 
-  // Line preview
   lineStart?: Position | null;
   linePreviewEnd?: Position | null;
   linePreviewActive?: boolean;
@@ -106,11 +105,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       .map((p: any) => (p && typeof p.x === "number" && typeof p.y === "number" ? { x: p.x, y: p.y } : null))
       .filter(Boolean) as Position[];
 
-    return {
-      id,
-      vertices: clean,
-      isClosed: Boolean(bed.isClosed),
-    };
+    return { id, vertices: clean, isClosed: Boolean(bed.isClosed) };
   };
 
   const normBeds: BedPath[] = beds.map(normalizeBed).filter(Boolean) as BedPath[];
@@ -185,7 +180,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
     const originalStart = { ...shape.startPos };
     const originalEnd = { ...shape.endPos };
-    const originalPoints = shape.type === "freehand" ? [...(shape.points || [])] : null;
+    const originalPoints = shape.type === "freehand" ? [...((shape as any).points || [])] : null;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const dx = (moveEvent.clientX - startX) / scale;
@@ -195,8 +190,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
       if (shape.type === "freehand" && originalPoints) {
         onShapeUpdate(shapeId, {
-          points: originalPoints.map((p) => ({ x: p.x + dx, y: p.y + dy })),
-        });
+          points: originalPoints.map((p: any) => ({ x: p.x + dx, y: p.y + dy })),
+        } as any);
       } else {
         const newStart = { x: originalStart.x + dx, y: originalStart.y + dy };
         const newEnd = { x: originalEnd.x + dx, y: originalEnd.y + dy };
@@ -209,9 +204,9 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           onShapeUpdate(shapeId, {
             startPos: snappedStart,
             endPos: { x: newEnd.x + offsetX, y: newEnd.y + offsetY },
-          });
+          } as any);
         } else {
-          onShapeUpdate(shapeId, { startPos: newStart, endPos: newEnd });
+          onShapeUpdate(shapeId, { startPos: newStart, endPos: newEnd } as any);
         }
       }
     };
@@ -231,7 +226,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
       if (!world) return;
       const snapped = snapToGrid(world.x, world.y);
-      onShapeUpdate?.(shapeId, endpoint === "start" ? { startPos: snapped } : { endPos: snapped });
+      onShapeUpdate?.(shapeId, (endpoint === "start" ? { startPos: snapped } : { endPos: snapped }) as any);
     };
     const handleUp = () => {
       document.removeEventListener("mousemove", handleMove);
@@ -259,7 +254,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
       onShapeUpdate?.(shapeId, {
         endPos: { x: centerX + snappedRadius, y: centerY + snappedRadius },
-      });
+      } as any);
     };
 
     const handleUp = () => {
@@ -276,7 +271,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
     return (
       <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
-        {/* dashed preview */}
         <line
           x1={lineStart.x}
           y1={lineStart.y}
@@ -287,7 +281,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           strokeDasharray="8 6"
           opacity={0.9}
         />
-        {/* start dot */}
         <circle cx={lineStart.x} cy={lineStart.y} r={6} fill="#111" stroke="white" strokeWidth={2} opacity={0.95} />
       </svg>
     );
@@ -464,8 +457,12 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             <div style={{ fontSize: "10px", color: "#6b7280" }}>{metersLength} m</div>
           </div>
 
+          {/* Endpoint handles: marked as line-endpoints so Canvas can allow them in "safe line mode" */}
           <div
             data-interactive="true"
+            data-line-endpoint="true"
+            data-shape-id={shape.id}
+            data-endpoint="start"
             style={{
               position: "absolute",
               left: `${startPos.x - 6}px`,
@@ -480,11 +477,14 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               zIndex: 10,
             }}
             onMouseDown={handleEndpointMouseDown(shape.id, "start")}
-            onClick={stop}
+            // NOTE: no onClick stop here; Canvas uses this as an allowed exception
           />
 
           <div
             data-interactive="true"
+            data-line-endpoint="true"
+            data-shape-id={shape.id}
+            data-endpoint="end"
             style={{
               position: "absolute",
               left: `${endPos.x - 6}px`,
@@ -499,7 +499,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               zIndex: 10,
             }}
             onMouseDown={handleEndpointMouseDown(shape.id, "end")}
-            onClick={stop}
           />
         </div>
       );
@@ -606,3 +605,4 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 };
 
 export default ShapeRenderer;
+
