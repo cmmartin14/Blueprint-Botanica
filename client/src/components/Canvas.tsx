@@ -247,7 +247,7 @@ const Canvas = () => {
 
   const resolvePoint = useCallback(
     (e: React.MouseEvent, rawWorld: Position): Position => {
-      // 1) exact endpoint click
+      // exact endpoint click
       const endpointHit = getEndpointTarget(e.target);
       if (endpointHit) {
         const s = shapesRef.current.find((x) => x.id === endpointHit.shapeId);
@@ -256,7 +256,7 @@ const Canvas = () => {
         }
       }
 
-      // 2) snap near any existing line endpoints
+      // snap near any existing line endpoints
       let best: Position | null = null;
       let bestDist = Infinity;
 
@@ -276,7 +276,7 @@ const Canvas = () => {
 
       if (best && bestDist <= LINE_ENDPOINT_SNAP) return best;
 
-      // 3) grid snap
+      // grid snap
       return snapToGrid(rawWorld);
     },
     [getEndpointTarget, snapToGrid]
@@ -290,12 +290,6 @@ const Canvas = () => {
     setDraft(null);
     setPreviewEnd(null);
   }, [commit, draft]);
-
-  const finishDraftAsLines = useCallback(() => {
-    // keep the created line segments; just stop chaining
-    setDraft(null);
-    setPreviewEnd(null);
-  }, []);
 
   const closeDraftIntoBed = useCallback(
     (closingPoint: Position) => {
@@ -477,7 +471,7 @@ const Canvas = () => {
     return isShiftDown || draft ? "crosshair" : "default";
   }, [draft, editMode, isShiftDown, toolMode]);
 
-  // Keyboard: Esc cancels draft; Enter finishes draft (keeps lines); Delete removes selected bed/vertex/shape
+  // Keyboard: Esc cancels draft; Delete removes selected bed/vertex/shape
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!editMode) return;
@@ -486,11 +480,6 @@ const Canvas = () => {
         if (draft) cancelDraft();
         return;
       }
-
-      {/*if (e.key === "Enter") {
-        if (draft) finishDraftAsLines();
-        return;
-      }*/}
 
       if (e.key !== "Backspace" && e.key !== "Delete") return;
 
@@ -534,7 +523,7 @@ const Canvas = () => {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeBedId, activeVertex, cancelDraft, commit, draft, editMode, finishDraftAsLines, selectedShapeId]);
+  }, [activeBedId, activeVertex, cancelDraft, commit, draft, editMode, selectedShapeId]);
 
   // ---- Bed mutations ----
   // (kept for compatibility; not used for bed-body dragging after the changes below)
@@ -678,14 +667,17 @@ const Canvas = () => {
   );
 
   // ---- Smooth shape drag handlers (circle included) ----
-  const beginShapeDrag = useCallback((shapeId: string, clientX: number, clientY: number) => {
+  const beginShapeDrag = useCallback((shapeId: string, clientX: string | number, clientY: string | number) => {
+    const cx = typeof clientX === "string" ? Number(clientX) : clientX;
+    const cy = typeof clientY === "string" ? Number(clientY) : clientY;
+
     const s = shapesRef.current.find((x) => x.id === shapeId);
     if (!s) return;
 
     shapeDragRef.current = {
       shapeId,
-      startClientX: clientX,
-      startClientY: clientY,
+      startClientX: cx,
+      startClientY: cy,
       startPos: { ...s.startPos },
       endPos: { ...s.endPos },
       startPoints: s.type === "freehand" ? ([...(((s as any).points as Position[]) || [])] as Position[]) : null,
@@ -729,7 +721,7 @@ const Canvas = () => {
       shapeDragRef.current = null;
       if (!d || d.shapeId !== shapeId) return;
 
-      // Snap ONCE for lines (preserve your previous behavior: snap start, offset end)
+      // Snap once for lines
       const nextShapes = shapesRef.current.map((s) => {
         if (s.id !== shapeId) return s;
         if (s.type !== "line") return s;
@@ -849,7 +841,7 @@ const Canvas = () => {
             onBeginVertexDrag={beginVertexDrag}
             onUpdateVertexDrag={updateVertexDrag}
             onEndVertexDrag={endVertexDrag}
-            onBeginShapeDrag={beginShapeDrag}
+            onBeginShapeDrag={(shapeId, clientX, clientY) => beginShapeDrag(shapeId, clientX, clientY)}
             onUpdateShapeDrag={updateShapeDrag}
             onEndShapeDrag={endShapeDrag}
             onShapeUpdate={(shapeId, updates) => {
@@ -866,7 +858,6 @@ const Canvas = () => {
         </div>
       </div>
 
-      {/* Map Key */}
       {!isMapKeyOpen ? (
         <button
           onClick={() => setIsMapKeyOpen(true)}
@@ -889,12 +880,10 @@ const Canvas = () => {
         </div>
       )}
 
-      {/* Drawing/Edit Tools */}
       {editMode && (
         <div className="absolute top-0 left-4 mt-5 bg-white rounded-lg shadow-lg p-3 border z-40" data-testid="edit-window">
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
-              {/* Circle */}
               <button
                 onClick={() => {
                   setToolMode("none");
@@ -908,7 +897,6 @@ const Canvas = () => {
                 <FaRegCircle size={25} />
               </button>
 
-              {/* Combined Draw */}
               <button
                 onClick={startDrawMode}
                 className={`p-2 rounded text-green-800 ${toolMode === "draw" ? "bg-gray-200" : "bg-gray-100 hover:bg-gray-200"}`}
@@ -917,17 +905,14 @@ const Canvas = () => {
                 <FaDrawPolygon size={25} />
               </button>
 
-              {/* Undo */}
               <button onClick={undo} className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800" title="Undo">
                 <FaUndoAlt size={25} />
               </button>
 
-              {/* Redo */}
               <button onClick={redo} className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800" title="Redo">
                 <FaRedoAlt size={25} />
               </button>
 
-              {/* Clear */}
               <button
                 onClick={() => {
                   if (window.confirm("Are you sure you want to clear the entire canvas?")) {
@@ -946,7 +931,6 @@ const Canvas = () => {
                 <FaTrashAlt size={25} />
               </button>
 
-              {/* Exit */}
               <button
                 onClick={() => {
                   setEditMode(false);

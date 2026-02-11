@@ -57,6 +57,49 @@ interface ShapeRendererProps {
 
 const GRID_SIZE = 20;
 
+const withAlpha = (color: string, alpha: number) => {
+  // Supports: #rgb, #rrggbb, rgb(), rgba(). Falls back to original color.
+  const a = Math.max(0, Math.min(1, alpha));
+
+  if (color.startsWith("#")) {
+    const hex = color.slice(1);
+    const full =
+      hex.length === 3
+        ? hex
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : hex.length === 6
+          ? hex
+          : null;
+
+    if (!full) return color;
+
+    const r = parseInt(full.slice(0, 2), 16);
+    const g = parseInt(full.slice(2, 4), 16);
+    const b = parseInt(full.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+
+  const rgbMatch = color.match(/^rgb\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*\)$/i);
+  if (rgbMatch) {
+    const r = Number(rgbMatch[1]);
+    const g = Number(rgbMatch[2]);
+    const b = Number(rgbMatch[3]);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+
+  const rgbaMatch = color.match(/^rgba\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9.]+)\s*\)$/i);
+  if (rgbaMatch) {
+    const r = Number(rgbaMatch[1]);
+    const g = Number(rgbaMatch[2]);
+    const b = Number(rgbaMatch[3]);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+
+  return color;
+};
+
 const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   shapes,
   beds = [],
@@ -189,7 +232,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // smooth vertex drag (live update; commit once)
+  // smooth vertex drag
   const handleVertexMouseDown = (bedId: string, index: number) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectVertex(bedId, index);
@@ -247,7 +290,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // ---- existing shapes ----
   // smooth shape drag (circle included)
   const handleShapeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -328,6 +370,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const centerX = startPos.x;
       const centerY = startPos.y;
 
+      const stroke = (shape as any).color ?? color ?? "#ffffff";
+      const sw = (shape as any).strokeWidth ?? strokeWidth ?? 2;
+      const fill = withAlpha(stroke, 0.18);
+
       const gridUnits = radius / GRID_SIZE;
       const feet = (gridUnits * gridToUnit).toFixed(1);
       const meters = feetToMeters(parseFloat(feet));
@@ -347,8 +393,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               width: radius * 2,
               height: radius * 2,
               borderRadius: "50%",
-              border: `${strokeWidth ?? 2}px solid ${color}`,
-              backgroundColor: "transparent",
+              border: `${sw}px solid ${stroke}`,
+              backgroundColor: fill,
               left: centerX - radius,
               top: centerY - radius,
               cursor: "move",
