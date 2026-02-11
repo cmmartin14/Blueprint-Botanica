@@ -36,17 +36,17 @@ interface ShapeRendererProps {
   onMoveVertexTo: (bedId: string, index: number, p: Position) => void;
   onResizeBedToBox: (bedId: string, nextBox: Box) => void;
 
-  // NEW: smooth bed drag (live update; commit once)
+  // smooth bed drag (live update; commit once)
   onBeginBedDrag: (bedId: string, clientX: number, clientY: number) => void;
   onUpdateBedDrag: (bedId: string, clientX: number, clientY: number) => void;
   onEndBedDrag: (bedId: string) => void;
 
-  // NEW: smooth vertex drag (live update; commit once)
+  // smooth vertex drag (live update; commit once)
   onBeginVertexDrag: (bedId: string, index: number) => void;
   onUpdateVertexDrag: (bedId: string, index: number, p: Position) => void;
   onEndVertexDrag: (bedId: string, index: number) => void;
 
-  // NEW: smooth shape drag (circle included)
+  // smooth shape drag (circle included)
   onBeginShapeDrag: (shapeId: string, clientX: number, clientY: number) => void;
   onUpdateShapeDrag: (shapeId: string, clientX: number, clientY: number) => void;
   onEndShapeDrag: (shapeId: string) => void;

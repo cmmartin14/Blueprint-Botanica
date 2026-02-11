@@ -487,10 +487,10 @@ const Canvas = () => {
         return;
       }
 
-      if (e.key === "Enter") {
+      {/*if (e.key === "Enter") {
         if (draft) finishDraftAsLines();
         return;
-      }
+      }*/}
 
       if (e.key !== "Backspace" && e.key !== "Delete") return;
 
@@ -627,7 +627,7 @@ const Canvas = () => {
     [commit, snapToGrid]
   );
 
-  // ---- NEW: Smooth bed drag handlers (live update; commit once) ----
+  // ---- Smooth bed drag handlers (live update; commit once) ----
   const beginBedDrag = useCallback((bedId: string, clientX: number, clientY: number) => {
     const bed = bedsRef.current.find((b) => b.id === bedId);
     if (!bed) return;
@@ -677,7 +677,7 @@ const Canvas = () => {
     [commit, snapToGrid]
   );
 
-  // ---- NEW: Smooth shape drag handlers (circle included) ----
+  // ---- Smooth shape drag handlers (circle included) ----
   const beginShapeDrag = useCallback((shapeId: string, clientX: number, clientY: number) => {
     const s = shapesRef.current.find((x) => x.id === shapeId);
     if (!s) return;
@@ -969,7 +969,7 @@ const Canvas = () => {
                 <span className="font-bold">first point</span> to close into a bed.
                 {draft ? (
                   <span className="ml-1">
-                    (<span className="font-bold">Enter</span> finishes lines, <span className="font-bold">Esc</span> cancels)
+                    (<span className="font-bold">Esc</span> cancels)
                   </span>
                 ) : null}
               </div>
