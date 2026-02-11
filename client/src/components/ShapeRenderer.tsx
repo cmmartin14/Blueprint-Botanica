@@ -1,61 +1,191 @@
 "use client";
 
-import React from 'react';
-import { Shape } from '../types/shapes';
-import { Bed } from '../types/beds'
+import React from "react";
+import { Shape, Position } from "../types/shapes";
 
-// --- Tracking Variables ---
-let selectedShapeID: number = -1
-
+type BedPath = {
+  id: string;
+  vertices: Position[];
+  isClosed: boolean;
+};
 
 interface ShapeRendererProps {
   shapes: Shape[];
-  beds: Bed[]; //Store a list of beds
+  beds?: any[]; // allow legacy/undefined safely
   scale: number;
   pan: { x: number; y: number };
-  unit?: 'feet' | 'meters';
   gridToUnit?: number;
-  snapToShapes?: boolean;
+
+  activeBedId: string | null;
+  activeVertex: { bedId: string; index: number } | null;
+  drawingBedId: string | null;
+  drawingMode: boolean;
+
+  // NEW: line preview
+  lineStart?: Position | null;
+  linePreviewEnd?: Position | null;
+  linePreviewActive?: boolean;
+
+  onSelectBed: (bedId: string) => void;
+  onSelectVertex: (bedId: string, index: number) => void;
+  onMoveBedBy: (bedId: string, dx: number, dy: number) => void;
+  onMoveVertexTo: (bedId: string, index: number, p: Position) => void;
+  onRequestCloseBed: (bedId: string) => void;
+
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
   onShapeSelect?: (shapeId: string) => void;
 }
 
+const GRID_SIZE = 20;
+
 const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   shapes,
+  beds = [],
   scale,
   pan,
-  unit = 'feet',
   gridToUnit = 1,
+
+  activeBedId,
+  activeVertex,
+  drawingBedId,
+  drawingMode,
+
+  lineStart = null,
+  linePreviewEnd = null,
+  linePreviewActive = false,
+
+  onSelectBed,
+  onSelectVertex,
+  onMoveBedBy,
+  onMoveVertexTo,
+  onRequestCloseBed,
+
   onShapeUpdate,
   onShapeSelect,
 }) => {
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
-  const snapToGrid = (x: number, y: number, gridSize: number = 20) => {
+  const snapToGrid = (x: number, y: number) => ({
+    x: Math.round(x / GRID_SIZE) * GRID_SIZE,
+    y: Math.round(y / GRID_SIZE) * GRID_SIZE,
+  });
+
+  const feetToMeters = (feet: number) => (feet * 0.3048).toFixed(2);
+
+  const getWorldFromClient = (clientX: number, clientY: number): Position | null => {
+    const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
+    const transformed = canvasElement?.querySelector("[data-transformed]") as HTMLElement;
+    if (!canvasElement || !transformed) return null;
+
+    const rect = canvasElement.getBoundingClientRect();
+    const transform = transformed.style.transform;
+
+    const translateMatch = transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
+    const scaleMatch = transform.match(/scale\(([^)]+)\)/);
+
+    const panX = translateMatch ? parseFloat(translateMatch[1]) : 0;
+    const panY = translateMatch ? parseFloat(translateMatch[2]) : 0;
+    const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+
+    const rawX = (clientX - rect.left - panX) / currentScale;
+    const rawY = (clientY - rect.top - panY) / currentScale;
+    return { x: rawX, y: rawY };
+  };
+
+  const normalizeBed = (bed: any): BedPath | null => {
+    if (!bed) return null;
+    const id = String(bed.id ?? bed.bedId ?? bed._id ?? "");
+    if (!id) return null;
+
+    let vertices = bed.vertices;
+    if (!Array.isArray(vertices)) vertices = bed.points;
+    if (!Array.isArray(vertices)) vertices = bed.path;
+    if (!Array.isArray(vertices)) return null;
+
+    const clean: Position[] = vertices
+      .map((p: any) => (p && typeof p.x === "number" && typeof p.y === "number" ? { x: p.x, y: p.y } : null))
+      .filter(Boolean) as Position[];
+
     return {
-      x: Math.round(x / gridSize) * gridSize,
-      y: Math.round(y / gridSize) * gridSize,
+      id,
+      vertices: clean,
+      isClosed: Boolean(bed.isClosed),
     };
   };
 
-  const feetToMeters = (feet: number) => (feet * 0.3048).toFixed(2);
+  const normBeds: BedPath[] = beds.map(normalizeBed).filter(Boolean) as BedPath[];
+
+  const bedPathD = (bed: BedPath) => {
+    if (bed.vertices.length === 0) return "";
+    const [first, ...rest] = bed.vertices;
+    let d = `M ${first.x} ${first.y}`;
+    for (const p of rest) d += ` L ${p.x} ${p.y}`;
+    if (bed.isClosed && bed.vertices.length >= 3) d += ` Z`;
+    return d;
+  };
+
+  const handleBedMouseDown = (bedId: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelectBed(bedId);
+
+    let lastX = e.clientX;
+    let lastY = e.clientY;
+
+    const handleMove = (moveEvent: MouseEvent) => {
+      const dx = (moveEvent.clientX - lastX) / scale;
+      const dy = (moveEvent.clientY - lastY) / scale;
+      onMoveBedBy(bedId, dx, dy);
+      lastX = moveEvent.clientX;
+      lastY = moveEvent.clientY;
+    };
+
+    const handleUp = () => {
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleUp);
+    };
+
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleUp);
+  };
+
+  const handleVertexMouseDown = (bedId: string, index: number) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelectVertex(bedId, index);
+
+    if (drawingMode && drawingBedId === bedId && index === 0) {
+      onRequestCloseBed(bedId);
+      return;
+    }
+
+    const handleMove = (moveEvent: MouseEvent) => {
+      const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
+      if (!world) return;
+      const snapped = snapToGrid(world.x, world.y);
+      onMoveVertexTo(bedId, index, snapped);
+    };
+
+    const handleUp = () => {
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleUp);
+    };
+
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleUp);
+  };
 
   const handleShapeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onShapeSelect?.(shapeId);
 
-    const shape = shapes.find(s => s.id === shapeId);
+    const shape = shapes.find((s) => s.id === shapeId);
     if (!shape) return;
-    //If the shape that is clicked on isn't currently selected, select it
-    // if (shape.id != selectedShapeID) {
-    //   shape.isSeletected = true
-    // }
-    console.log(shape.id)
+
     const startX = e.clientX;
     const startY = e.clientY;
 
     const originalStart = { ...shape.startPos };
     const originalEnd = { ...shape.endPos };
-    const originalPoints = shape.type === 'freehand' ? [...(shape.points || [])] : null;
+    const originalPoints = shape.type === "freehand" ? [...(shape.points || [])] : null;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const dx = (moveEvent.clientX - startX) / scale;
@@ -63,15 +193,15 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
       if (!onShapeUpdate) return;
 
-      if (shape.type === 'freehand' && originalPoints) {
+      if (shape.type === "freehand" && originalPoints) {
         onShapeUpdate(shapeId, {
-          points: originalPoints.map(p => ({ x: p.x + dx, y: p.y + dy })),
+          points: originalPoints.map((p) => ({ x: p.x + dx, y: p.y + dy })),
         });
       } else {
         const newStart = { x: originalStart.x + dx, y: originalStart.y + dy };
         const newEnd = { x: originalEnd.x + dx, y: originalEnd.y + dy };
 
-        if (shape.type === 'line') {
+        if (shape.type === "line") {
           const snappedStart = snapToGrid(newStart.x, newStart.y);
           const offsetX = snappedStart.x - newStart.x;
           const offsetY = snappedStart.y - newStart.y;
@@ -87,101 +217,82 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
 
     const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
   };
 
-  const handleEndpointMouseDown = (shapeId: string, endpoint: 'start' | 'end') => (e: React.MouseEvent) => {
+  const handleEndpointMouseDown = (shapeId: string, endpoint: "start" | "end") => (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    const canvasElement = document.querySelector('[data-canvas]') as HTMLElement;
-    if (!canvasElement) return;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const rect = canvasElement.getBoundingClientRect();
-      const transformed = canvasElement.querySelector('[data-transformed]') as HTMLElement;
-      if (!transformed) return;
-
-      const transform = transformed.style.transform;
-      const translateMatch = transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
-      const scaleMatch = transform.match(/scale\(([^)]+)\)/);
-
-      const panX = translateMatch ? parseFloat(translateMatch[1]) : 0;
-      const panY = translateMatch ? parseFloat(translateMatch[2]) : 0;
-      const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
-
-      const rawX = (moveEvent.clientX - rect.left - panX) / currentScale;
-      const rawY = (moveEvent.clientY - rect.top - panY) / currentScale;
-
-      const snapped = snapToGrid(rawX, rawY);
-
-      onShapeUpdate?.(shapeId, endpoint === 'start'
-        ? { startPos: snapped }
-        : { endPos: snapped }
-      );
+    const handleMove = (moveEvent: MouseEvent) => {
+      const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
+      if (!world) return;
+      const snapped = snapToGrid(world.x, world.y);
+      onShapeUpdate?.(shapeId, endpoint === "start" ? { startPos: snapped } : { endPos: snapped });
     };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+    const handleUp = () => {
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleUp);
     };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleUp);
   };
 
   const handleCircleResizeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    const shape = shapes.find(s => s.id === shapeId);
+    const shape = shapes.find((s) => s.id === shapeId);
     if (!shape) return;
-
-    const canvasElement = document.querySelector('[data-canvas]') as HTMLElement;
-    const transformed = canvasElement?.querySelector('[data-transformed]') as HTMLElement;
-    if (!canvasElement || !transformed) return;
-
-    const rect = canvasElement.getBoundingClientRect();
-    const transform = transformed.style.transform;
-
-    const translateMatch = transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
-    const scaleMatch = transform.match(/scale\(([^)]+)\)/);
-
-    const panX = translateMatch ? parseFloat(translateMatch[1]) : 0;
-    const panY = translateMatch ? parseFloat(translateMatch[2]) : 0;
-    const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
 
     const centerX = shape.startPos.x;
     const centerY = shape.startPos.y;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const rawX = (moveEvent.clientX - rect.left - panX) / currentScale;
-      const rawY = (moveEvent.clientY - rect.top - panY) / currentScale;
+    const handleMove = (moveEvent: MouseEvent) => {
+      const world = getWorldFromClient(moveEvent.clientX, moveEvent.clientY);
+      if (!world) return;
 
-      const dx = rawX - centerX;
+      const dx = world.x - centerX;
       const newRadius = Math.max(0, dx);
-
-      // Snap radius to grid
-      const snappedRadius = Math.round(newRadius / 20) * 20;
+      const snappedRadius = Math.round(newRadius / GRID_SIZE) * GRID_SIZE;
 
       onShapeUpdate?.(shapeId, {
-        endPos: {
-          x: centerX + snappedRadius,
-          y: centerY + snappedRadius,
-        },
+        endPos: { x: centerX + snappedRadius, y: centerY + snappedRadius },
       });
     };
 
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+    const handleUp = () => {
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleUp);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleUp);
+  };
+
+  const renderLinePreview = () => {
+    if (!linePreviewActive || !lineStart || !linePreviewEnd) return null;
+
+    const x1 = lineStart.x;
+    const y1 = lineStart.y;
+    const x2 = linePreviewEnd.x;
+    const y2 = linePreviewEnd.y;
+
+    return (
+      <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
+        <line
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke="#ffffff"
+          strokeWidth={2}
+          strokeDasharray="8 6"
+          opacity={0.9}
+        />
+      </svg>
+    );
   };
 
   const renderShape = (shape: Shape) => {
@@ -208,31 +319,32 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const centerX = startPos.x;
       const centerY = startPos.y;
 
-      const gridUnits = radius / 20;
+      const gridUnits = radius / GRID_SIZE;
       const feet = (gridUnits * gridToUnit).toFixed(1);
       const meters = feetToMeters(parseFloat(feet));
 
       const labelX = centerX;
       const labelY = centerY - radius - 20;
 
-      // Handle is now exactly on right edge
       const handleX = centerX + radius;
       const handleY = centerY;
 
       return (
-        <div key={shape.id}>
+        <div key={shape.id} data-interactive="true" onClick={stop}>
           <div
+            data-interactive="true"
             style={{
               ...commonStyle,
               width: radius * 2,
               height: radius * 2,
               borderRadius: "50%",
-              border: `${strokeWidth ?? 2, 7}px solid ${color}`,
+              border: `${strokeWidth ?? 2}px solid ${color}`,
               backgroundColor: "transparent",
               left: centerX - radius,
               top: centerY - radius,
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
+            onClick={stop}
           />
 
           <div
@@ -258,6 +370,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           </div>
 
           <div
+            data-interactive="true"
             style={{
               position: "absolute",
               left: `${handleX - 6}px`,
@@ -272,16 +385,17 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               zIndex: 10,
             }}
             onMouseDown={handleCircleResizeMouseDown(shape.id)}
+            onClick={stop}
           />
         </div>
       );
     }
 
-    // RECTANGLE, LINE, FREEHAND (same as previous version)
     if (type === "rectangle") {
       return (
         <div
           key={shape.id}
+          data-interactive="true"
           style={{
             ...commonStyle,
             width,
@@ -290,28 +404,30 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             backgroundColor: "transparent",
           }}
           onMouseDown={handleShapeMouseDown(shape.id)}
+          onClick={stop}
         />
       );
     }
 
     if (type === "line") {
-      const angle = Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x) * (180 / Math.PI);
+      const angle = (Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x) * 180) / Math.PI;
       const length = Math.sqrt(width ** 2 + height ** 2);
 
-      const gridUnits = length / 20;
+      const gridUnits = length / GRID_SIZE;
       const feetLength = (gridUnits * gridToUnit).toFixed(1);
       const metersLength = feetToMeters(parseFloat(feetLength));
 
       const midX = (startPos.x + endPos.x) / 2;
       const midY = (startPos.y + endPos.y) / 2;
+      const perpRad = ((angle + 90) * Math.PI) / 180;
 
-      const perpRad = (angle + 90) * (Math.PI / 180);
       const labelX = midX + Math.cos(perpRad) * 20;
       const labelY = midY + Math.sin(perpRad) * 20;
 
       return (
-        <div key={shape.id}>
+        <div key={shape.id} data-interactive="true" onClick={stop}>
           <div
+            data-interactive="true"
             style={{
               position: "absolute",
               left: `${startPos.x}px`,
@@ -325,6 +441,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               pointerEvents: "auto",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
+            onClick={stop}
           />
 
           <div
@@ -350,6 +467,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           </div>
 
           <div
+            data-interactive="true"
             style={{
               position: "absolute",
               left: `${startPos.x - 6}px`,
@@ -364,9 +482,11 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               zIndex: 10,
             }}
             onMouseDown={handleEndpointMouseDown(shape.id, "start")}
+            onClick={stop}
           />
 
           <div
+            data-interactive="true"
             style={{
               position: "absolute",
               left: `${endPos.x - 6}px`,
@@ -381,33 +501,32 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               zIndex: 10,
             }}
             onMouseDown={handleEndpointMouseDown(shape.id, "end")}
+            onClick={stop}
           />
         </div>
       );
     }
 
-    if (type === 'freehand' && shape.points && shape.points.length > 1) {
+    if (type === "freehand" && shape.points && shape.points.length > 1) {
       return (
         <svg
           key={shape.id}
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            overflow: 'visible',
-            pointerEvents: 'none',
-          }}
+          data-interactive="true"
+          onClick={stop}
+          style={{ position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none" }}
         >
           <polyline
-            points={shape.points.map(p => `${p.x},${p.y}`).join(' ')}
+            data-interactive="true"
+            points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
             fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth ?? 2}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth ?? 2}
             strokeLinecap="round"
             strokeLinejoin="round"
             pointerEvents="auto"
-            style={{ cursor: 'move' }}
+            style={{ cursor: "move" }}
             onMouseDown={handleShapeMouseDown(shape.id)}
+            onClick={stop}
           />
         </svg>
       );
@@ -416,17 +535,73 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     return null;
   };
 
+  const renderBeds = () => {
+    return (
+      <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
+        {normBeds.map((bed) => {
+          if (!bed.vertices || bed.vertices.length < 2) return null;
+
+          const isActive = bed.id === activeBedId;
+          const isDrawing = drawingMode && bed.id === drawingBedId;
+
+          const stroke = "#ffffff";
+          const strokeWidth = isActive ? 4 : 3;
+          const glow = isActive ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
+          const fill = bed.isClosed ? "rgba(255,255,255,0.08)" : "transparent";
+
+          return (
+            <g key={bed.id} style={{ pointerEvents: "auto" }} data-interactive="true" onClick={stop}>
+              <path
+                data-interactive="true"
+                d={bedPathD(bed)}
+                fill={fill}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                style={{ cursor: "move", filter: glow }}
+                onMouseDown={handleBedMouseDown(bed.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectBed(bed.id);
+                }}
+              />
+
+              {(isActive || isDrawing) &&
+                bed.vertices.map((v, idx) => {
+                  const isSelectedVertex = activeVertex?.bedId === bed.id && activeVertex.index === idx;
+
+                  return (
+                    <circle
+                      key={`${bed.id}-v-${idx}`}
+                      data-interactive="true"
+                      cx={v.x}
+                      cy={v.y}
+                      r={isSelectedVertex ? 7 : 6}
+                      fill={isSelectedVertex ? "#B7C398" : "#111"}
+                      stroke="white"
+                      strokeWidth={2}
+                      style={{ cursor: "pointer" }}
+                      onMouseDown={handleVertexMouseDown(bed.id, idx)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectVertex(bed.id, idx);
+                      }}
+                    />
+                  );
+                })}
+            </g>
+          );
+        })}
+      </svg>
+    );
+  };
+
   return (
-    <div
-      style={{
-        position: "absolute",
-        width: "100%",
-        height: "100%",
-        top: 0,
-        left: 0,
-        pointerEvents: "none",
-      }}
-    >
+    <div style={{ position: "absolute", width: "100%", height: "100%", top: 0, left: 0, pointerEvents: "none" }}>
+      {/* NEW: preview line overlay (behind/above beds is fine; it has pointerEvents none) */}
+      {renderLinePreview()}
+      {renderBeds()}
       {shapes.map(renderShape)}
     </div>
   );
