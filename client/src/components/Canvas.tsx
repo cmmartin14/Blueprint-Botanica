@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt, FaSlash } from "react-icons/fa";
+import { FaRegCircle, FaUndoAlt, FaRedoAlt, FaTrashAlt, FaDrawPolygon } from "react-icons/fa";
 import { TbCircleXFilled } from "react-icons/tb";
 import { FaKey } from "react-icons/fa6";
 
@@ -25,16 +25,24 @@ type CanvasSnapshot = {
   beds: BedPath[];
 };
 
-type ToolMode = "none" | "drawBed" | "drawLine";
+type ToolMode = "none" | "draw";
+
+type DraftChain = {
+  id: string;
+  vertices: Position[]; // points in order
+  segmentIds: string[]; // line-shape IDs created for this chain
+};
+
+type Box = { minX: number; minY: number; maxX: number; maxY: number };
 
 const GRID_SIZE = 20;
 const CLOSE_DISTANCE = 18;
-
 const LINE_ENDPOINT_SNAP = 18;
-const DRAG_SUPPRESS_PX = 4;
-const SHIFT_REQUIRED_TO_START_LINE = true;
 
-const distance = (a: Position, b: Position) => {
+const DRAG_SUPPRESS_PX = 4;
+const SHIFT_REQUIRED_TO_START = true;
+
+const dist = (a: Position, b: Position) => {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
   return Math.sqrt(dx * dx + dy * dy);
@@ -42,7 +50,7 @@ const distance = (a: Position, b: Position) => {
 
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
   const [dragStart, setDragStart] = useState<Position>({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
 
@@ -58,17 +66,16 @@ const Canvas = () => {
 
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
 
+  // Bed selection
   const [activeBedId, setActiveBedId] = useState<string | null>(null);
   const [activeVertex, setActiveVertex] = useState<{ bedId: string; index: number } | null>(null);
 
+  // Combined tool
   const [toolMode, setToolMode] = useState<ToolMode>("none");
-  const [drawingBedId, setDrawingBedId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<DraftChain | null>(null);
+  const [previewEnd, setPreviewEnd] = useState<Position | null>(null);
 
-  // Line draft + preview
-  const [lineStart, setLineStart] = useState<Position | null>(null);
-  const [linePreviewEnd, setLinePreviewEnd] = useState<Position | null>(null);
-
-  // Shift tracking for cursor + line-start requirement
+  // Shift tracking for cursor + start requirement
   const [isShiftDown, setIsShiftDown] = useState(false);
 
   // Undo/redo
@@ -76,11 +83,10 @@ const Canvas = () => {
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   const canvasRef = useRef<HTMLDivElement>(null);
-
   const { editMode, setEditMode } = useCanvasStore();
   const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
 
-  // Drag-suppress
+  // Drag-suppress (prevents accidental click actions after drag)
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
   const didDragRef = useRef(false);
 
@@ -91,7 +97,6 @@ const Canvas = () => {
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key === "Shift") setIsShiftDown(false);
     };
-
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     return () => {
@@ -155,26 +160,13 @@ const Canvas = () => {
     commit([...shapes, newShape], beds);
   }, [beds, commit, pan.x, pan.y, scale, shapes]);
 
-  const startBedDrawing = useCallback(() => {
-    setToolMode("drawBed");
-    setDrawingBedId(null);
+  const startDrawMode = useCallback(() => {
+    setToolMode("draw");
+    setSelectedShapeId(null);
     setActiveBedId(null);
     setActiveVertex(null);
-    setSelectedShapeId(null);
-
-    setLineStart(null);
-    setLinePreviewEnd(null);
-  }, []);
-
-  const startLineDrawing = useCallback(() => {
-    setToolMode("drawLine");
-    setLineStart(null);
-    setLinePreviewEnd(null);
-
-    setDrawingBedId(null);
-    setActiveBedId(null);
-    setActiveVertex(null);
-    setSelectedShapeId(null);
+    setDraft(null);
+    setPreviewEnd(null);
   }, []);
 
   const isInteractiveTarget = useCallback((target: EventTarget | null) => {
@@ -197,9 +189,9 @@ const Canvas = () => {
     return { shapeId, endpoint };
   }, []);
 
-  const resolveLinePoint = useCallback(
+  const resolvePoint = useCallback(
     (e: React.MouseEvent, rawWorld: Position): Position => {
-      // exact endpoint click
+      // 1) exact endpoint click
       const endpointHit = getEndpointTarget(e.target);
       if (endpointHit) {
         const s = shapes.find((x) => x.id === endpointHit.shapeId);
@@ -208,18 +200,18 @@ const Canvas = () => {
         }
       }
 
-      // near endpoint snap
+      // 2) snap near any existing line endpoints
       let best: Position | null = null;
       let bestDist = Infinity;
 
       for (const s of shapes) {
         if (s.type !== "line") continue;
-        const d1 = distance(rawWorld, s.startPos);
+        const d1 = dist(rawWorld, s.startPos);
         if (d1 < bestDist) {
           bestDist = d1;
           best = s.startPos;
         }
-        const d2 = distance(rawWorld, s.endPos);
+        const d2 = dist(rawWorld, s.endPos);
         if (d2 < bestDist) {
           bestDist = d2;
           best = s.endPos;
@@ -228,16 +220,61 @@ const Canvas = () => {
 
       if (best && bestDist <= LINE_ENDPOINT_SNAP) return best;
 
+      // 3) grid snap
       return snapToGrid(rawWorld);
     },
     [getEndpointTarget, shapes, snapToGrid]
   );
 
+  const cancelDraft = useCallback(() => {
+    if (!draft) return;
+    // remove only segments created for this draft
+    const nextShapes = shapes.filter((s) => !draft.segmentIds.includes(s.id));
+    commit(nextShapes, beds);
+    setDraft(null);
+    setPreviewEnd(null);
+  }, [beds, commit, draft, shapes]);
+
+  const finishDraftAsLines = useCallback(() => {
+    // keep the created line segments; just stop chaining
+    setDraft(null);
+    setPreviewEnd(null);
+  }, []);
+
+  const closeDraftIntoBed = useCallback(
+    (closingPoint: Position) => {
+      if (!draft) return;
+      if (draft.vertices.length < 3) return;
+
+      // create bed from the vertices (do NOT include duplicate start)
+      const bedId = Date.now().toString();
+      const newBed: BedPath = { id: bedId, vertices: [...draft.vertices], isClosed: true };
+
+      // remove draft line segments from map (default choice)
+      const nextShapes = shapes.filter((s) => !draft.segmentIds.includes(s.id));
+      const nextBeds = [...beds, newBed];
+
+      commit(nextShapes, nextBeds);
+
+      setDraft(null);
+      setPreviewEnd(null);
+      setActiveBedId(bedId);
+      setActiveVertex(null);
+      setSelectedShapeId(null);
+
+      // optional: leave draw mode on, so user can immediately start another with shift
+      // setToolMode("draw");
+      void closingPoint;
+    },
+    [beds, commit, draft, shapes]
+  );
+
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent) => {
       if (!editMode) return;
-      if (toolMode === "none") return;
+      if (toolMode !== "draw") return;
 
+      // suppress after dragging
       if (didDragRef.current) {
         didDragRef.current = false;
         return;
@@ -246,91 +283,70 @@ const Canvas = () => {
       const world = getWorldPointFromMouse(e);
       if (!world) return;
 
-      // ---- LINE TOOL ----
-      if (toolMode === "drawLine") {
-        const endpointHit = getEndpointTarget(e.target);
-        const interactive = isInteractiveTarget(e.target);
+      const endpointHit = getEndpointTarget(e.target);
+      const interactive = isInteractiveTarget(e.target);
 
-        // safe: ignore clicks on interactive elements except endpoints
-        if (interactive && !endpointHit) return;
+      // safe rule: ignore clicks on interactive elements except endpoints
+      if (interactive && !endpointHit) return;
 
-        if (!lineStart && SHIFT_REQUIRED_TO_START_LINE && !e.shiftKey) return;
+      // starting new chain requires Shift (unless a chain is already active)
+      if (!draft && SHIFT_REQUIRED_TO_START && !e.shiftKey) return;
 
-        const p = resolveLinePoint(e, world);
+      const p = resolvePoint(e, world);
 
-        if (!lineStart) {
-          setLineStart(p);
-          setLinePreviewEnd(p);
-          return;
-        }
-
-        const newLine: Shape = {
-          id: Date.now().toString(),
-          type: "line",
-          startPos: lineStart,
-          endPos: p,
-          color: "#ffffff",
-          strokeWidth: 2,
-          isSeletected: false,
-        } as Shape;
-
-        commit([...shapes, newLine], beds);
-        setLineStart(null);
-        setLinePreviewEnd(null);
+      // start chain
+      if (!draft) {
+        const id = Date.now().toString();
+        setDraft({ id, vertices: [p], segmentIds: [] });
+        setPreviewEnd(p);
+        setSelectedShapeId(null);
+        setActiveBedId(null);
+        setActiveVertex(null);
         return;
       }
 
-      // ---- BED TOOL (VERTEX-BASED) ----
-      if (toolMode === "drawBed") {
-        // if user clicked an existing bed/vertex, renderer handles it; we only handle blank clicks
-        if (isInteractiveTarget(e.target)) return;
-
-        const p = snapToGrid(world);
-
-        // first click creates the in-progress bed
-        if (!drawingBedId) {
-          const id = Date.now().toString();
-          const newBed: BedPath = { id, vertices: [p], isClosed: false };
-          commit(shapes, [...beds, newBed]);
-          setDrawingBedId(id);
-          setActiveBedId(id);
-          setActiveVertex({ bedId: id, index: 0 });
-          return;
-        }
-
-        const bed = beds.find((b) => b.id === drawingBedId);
-        if (!bed) return;
-
-        // close if near first vertex and >= 3 vertices
-        if (bed.vertices.length >= 3 && distance(p, bed.vertices[0]) <= CLOSE_DISTANCE) {
-          const closed: BedPath = { ...bed, isClosed: true };
-          commit(shapes, beds.map((b) => (b.id === bed.id ? closed : b)));
-          setDrawingBedId(null);
-          setActiveBedId(closed.id);
-          setActiveVertex(null);
-          return;
-        }
-
-        // add vertex
-        const next: BedPath = { ...bed, vertices: [...bed.vertices, p], isClosed: false };
-        commit(shapes, beds.map((b) => (b.id === bed.id ? next : b)));
-        setActiveBedId(bed.id);
-        setActiveVertex({ bedId: bed.id, index: next.vertices.length - 1 });
+      // if clicking near the start, and enough vertices => close into bed
+      const start = draft.vertices[0];
+      if (draft.vertices.length >= 3 && dist(p, start) <= CLOSE_DISTANCE) {
+        closeDraftIntoBed(p);
+        return;
       }
+
+      // add segment (line) from last point to p
+      const last = draft.vertices[draft.vertices.length - 1];
+      const segId = `${Date.now().toString()}-${Math.random().toString(16).slice(2)}`;
+
+      const newLine: Shape = {
+        id: segId,
+        type: "line",
+        startPos: last,
+        endPos: p,
+        color: "#ffffff",
+        strokeWidth: 2,
+        isSeletected: false,
+      } as Shape;
+
+      // commit the new line shape immediately, but keep draft in local state
+      commit([...shapes, newLine], beds);
+
+      setDraft((prev) => {
+        if (!prev) return prev;
+        return { ...prev, vertices: [...prev.vertices, p], segmentIds: [...prev.segmentIds, segId] };
+      });
+      setPreviewEnd(p);
     },
     [
       beds,
+      closeDraftIntoBed,
       commit,
+      draft,
       editMode,
       getEndpointTarget,
       getWorldPointFromMouse,
       isInteractiveTarget,
-      lineStart,
-      resolveLinePoint,
+      resolvePoint,
       shapes,
-      snapToGrid,
       toolMode,
-      drawingBedId,
     ]
   );
 
@@ -342,19 +358,19 @@ const Canvas = () => {
         if (Math.sqrt(dx * dx + dy * dy) > DRAG_SUPPRESS_PX) didDragRef.current = true;
       }
 
-      if (isDragging) {
+      if (isPanning) {
         setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
         return;
       }
 
-      if (editMode && toolMode === "drawLine" && lineStart) {
+      if (editMode && toolMode === "draw" && draft) {
         const world = getWorldPointFromMouse(e);
         if (!world) return;
-        const p = resolveLinePoint(e, world);
-        setLinePreviewEnd(p);
+        const p = resolvePoint(e, world);
+        setPreviewEnd(p);
       }
     },
-    [dragStart.x, dragStart.y, editMode, getWorldPointFromMouse, isDragging, lineStart, resolveLinePoint, toolMode]
+    [draft, dragStart.x, dragStart.y, editMode, getWorldPointFromMouse, isPanning, resolvePoint, toolMode]
   );
 
   const handleMouseDown = useCallback(
@@ -362,17 +378,25 @@ const Canvas = () => {
       pointerDownRef.current = { x: e.clientX, y: e.clientY };
       didDragRef.current = false;
 
-      // don't pan if interacting with shapes/beds
+      // do not pan if interacting with something interactive
       if (editMode && isInteractiveTarget(e.target)) return;
 
-      setIsDragging(true);
+      setIsPanning(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+
+      // clicking blank canvas clears selections (but not the draft)
+      if (!editMode) return;
+      if (!isInteractiveTarget(e.target)) {
+        setSelectedShapeId(null);
+        setActiveBedId(null);
+        setActiveVertex(null);
+      }
     },
     [editMode, isInteractiveTarget, pan.x, pan.y]
   );
 
   const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
+    setIsPanning(false);
     pointerDownRef.current = null;
   }, []);
 
@@ -397,33 +421,22 @@ const Canvas = () => {
 
   const canvasCursor = useMemo(() => {
     if (!editMode) return "default";
-    if (toolMode === "drawBed") return "crosshair";
-    if (toolMode === "drawLine") return isShiftDown ? "crosshair" : "default";
-    return "default";
-  }, [editMode, isShiftDown, toolMode]);
+    if (toolMode !== "draw") return "default";
+    return isShiftDown || draft ? "crosshair" : "default";
+  }, [draft, editMode, isShiftDown, toolMode]);
 
-  // Keyboard: delete + ESC cancels
+  // Keyboard: Esc cancels draft; Enter finishes draft (keeps lines); Delete removes selected bed/vertex/shape
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!editMode) return;
 
-      if (e.key === "Escape" && toolMode === "drawLine") {
-        setLineStart(null);
-        setLinePreviewEnd(null);
+      if (e.key === "Escape") {
+        if (draft) cancelDraft();
         return;
       }
 
-      if (e.key === "Escape" && toolMode === "drawBed") {
-        if (drawingBedId) {
-          const bed = beds.find((b) => b.id === drawingBedId);
-          if (bed && !bed.isClosed) {
-            commit(shapes, beds.filter((b) => b.id !== drawingBedId));
-          }
-        }
-        setToolMode("none");
-        setDrawingBedId(null);
-        setActiveBedId(null);
-        setActiveVertex(null);
+      if (e.key === "Enter") {
+        if (draft) finishDraftAsLines();
         return;
       }
 
@@ -443,7 +456,7 @@ const Canvas = () => {
           return;
         }
 
-        commit(shapes, beds.map((b) => (b.id === bedId ? { ...b, vertices: nextVerts, isClosed: false } : b)));
+        commit(shapes, beds.map((b) => (b.id === bedId ? { ...b, vertices: nextVerts, isClosed: true } : b)));
         setActiveVertex(null);
         setActiveBedId(bedId);
         return;
@@ -466,8 +479,9 @@ const Canvas = () => {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeBedId, activeVertex, beds, commit, drawingBedId, editMode, selectedShapeId, shapes, toolMode]);
+  }, [activeBedId, activeVertex, beds, cancelDraft, commit, draft, editMode, finishDraftAsLines, selectedShapeId, shapes]);
 
+  // Bed mutations
   const moveBedBy = useCallback(
     (bedId: string, dx: number, dy: number) => {
       const nextBeds = beds.map((b) => {
@@ -485,22 +499,42 @@ const Canvas = () => {
       const nextBeds = beds.map((b) => {
         if (b.id !== bedId) return b;
         const nextVerts = b.vertices.map((v, i) => (i === index ? snapped : v));
-        return { ...b, vertices: nextVerts, isClosed: false };
+        return { ...b, vertices: nextVerts, isClosed: true };
       });
       commit(shapes, nextBeds);
     },
     [beds, commit, shapes, snapToGrid]
   );
 
-  const finalizeCloseBed = useCallback(
-    (bedId: string) => {
+  const resizeBedToBox = useCallback(
+    (bedId: string, nextBox: Box) => {
       const bed = beds.find((b) => b.id === bedId);
-      if (!bed || bed.vertices.length < 3) return;
-      commit(shapes, beds.map((b) => (b.id === bedId ? { ...b, isClosed: true } : b)));
-      setDrawingBedId(null);
-      setActiveVertex(null);
+      if (!bed) return;
+
+      const xs = bed.vertices.map((v) => v.x);
+      const ys = bed.vertices.map((v) => v.y);
+      const prevBox: Box = {
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs),
+        minY: Math.min(...ys),
+        maxY: Math.max(...ys),
+      };
+
+      const prevW = Math.max(1, prevBox.maxX - prevBox.minX);
+      const prevH = Math.max(1, prevBox.maxY - prevBox.minY);
+
+      const nextW = Math.max(1, nextBox.maxX - nextBox.minX);
+      const nextH = Math.max(1, nextBox.maxY - nextBox.minY);
+
+      const nextVerts = bed.vertices.map((v) => {
+        const nx = (v.x - prevBox.minX) / prevW;
+        const ny = (v.y - prevBox.minY) / prevH;
+        return snapToGrid({ x: nextBox.minX + nx * nextW, y: nextBox.minY + ny * nextH });
+      });
+
+      commit(shapes, beds.map((b) => (b.id === bedId ? { ...b, vertices: nextVerts, isClosed: true } : b)));
     },
-    [beds, commit, shapes]
+    [beds, commit, shapes, snapToGrid]
   );
 
   const undo = useCallback(() => {
@@ -514,10 +548,9 @@ const Canvas = () => {
     setSelectedShapeId(null);
     setActiveBedId(null);
     setActiveVertex(null);
+    setDraft(null);
+    setPreviewEnd(null);
     setToolMode("none");
-    setDrawingBedId(null);
-    setLineStart(null);
-    setLinePreviewEnd(null);
   }, [history, historyIndex]);
 
   const redo = useCallback(() => {
@@ -531,10 +564,9 @@ const Canvas = () => {
     setSelectedShapeId(null);
     setActiveBedId(null);
     setActiveVertex(null);
+    setDraft(null);
+    setPreviewEnd(null);
     setToolMode("none");
-    setDrawingBedId(null);
-    setLineStart(null);
-    setLinePreviewEnd(null);
   }, [history, historyIndex]);
 
   return (
@@ -580,11 +612,11 @@ const Canvas = () => {
             scale={scale}
             pan={pan}
             gridToUnit={1}
-            selectedShapeId={selectedShapeId}
             activeBedId={activeBedId}
             activeVertex={activeVertex}
-            drawingBedId={drawingBedId}
-            drawingMode={toolMode === "drawBed"}
+            draftVertices={draft?.vertices ?? null}
+            draftPreviewEnd={previewEnd}
+            drawModeActive={toolMode === "draw"}
             onSelectBed={(id) => {
               setActiveBedId(id);
               setActiveVertex(null);
@@ -597,10 +629,7 @@ const Canvas = () => {
             }}
             onMoveBedBy={moveBedBy}
             onMoveVertexTo={moveVertexTo}
-            onRequestCloseBed={finalizeCloseBed}
-            lineStart={lineStart}
-            linePreviewEnd={linePreviewEnd}
-            linePreviewActive={toolMode === "drawLine" && !!lineStart}
+            onResizeBedToBox={resizeBedToBox}
             onShapeUpdate={(shapeId, updates) => {
               const nextShapes = shapes.map((s) => (s.id === shapeId ? ({ ...s, ...updates } as Shape) : s));
               commit(nextShapes, beds);
@@ -614,6 +643,7 @@ const Canvas = () => {
         </div>
       </div>
 
+      {/* Map Key */}
       {!isMapKeyOpen ? (
         <button
           onClick={() => setIsMapKeyOpen(true)}
@@ -636,16 +666,17 @@ const Canvas = () => {
         </div>
       )}
 
+      {/* Drawing/Edit Tools */}
       {editMode && (
         <div className="absolute top-0 left-4 mt-5 bg-white rounded-lg shadow-lg p-3 border z-40" data-testid="edit-window">
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
+              {/* Circle */}
               <button
                 onClick={() => {
                   setToolMode("none");
-                  setDrawingBedId(null);
-                  setLineStart(null);
-                  setLinePreviewEnd(null);
+                  setDraft(null);
+                  setPreviewEnd(null);
                   createCircleShape();
                 }}
                 className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -654,34 +685,26 @@ const Canvas = () => {
                 <FaRegCircle size={25} />
               </button>
 
+              {/* Combined Draw */}
               <button
-                onClick={startLineDrawing}
-                className={`p-2 rounded text-green-800 ${
-                  toolMode === "drawLine" ? "bg-gray-200" : "bg-gray-100 hover:bg-gray-200"
-                }`}
-                title="Line mode (hold Shift to start a new line)"
-              >
-                <FaSlash size={25} />
-              </button>
-
-              <button
-                onClick={startBedDrawing}
-                className={`p-2 rounded text-green-800 ${
-                  toolMode === "drawBed" ? "bg-gray-200" : "bg-gray-100 hover:bg-gray-200"
-                }`}
-                title="Bed Tool (click points, click first point to close)"
+                onClick={startDrawMode}
+                className={`p-2 rounded text-green-800 ${toolMode === "draw" ? "bg-gray-200" : "bg-gray-100 hover:bg-gray-200"}`}
+                title="Draw (lines + beds). Hold Shift to start. Click points. Click start to close into a bed."
               >
                 <FaDrawPolygon size={25} />
               </button>
 
+              {/* Undo */}
               <button onClick={undo} className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800" title="Undo">
                 <FaUndoAlt size={25} />
               </button>
 
+              {/* Redo */}
               <button onClick={redo} className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800" title="Redo">
                 <FaRedoAlt size={25} />
               </button>
 
+              {/* Clear */}
               <button
                 onClick={() => {
                   if (window.confirm("Are you sure you want to clear the entire canvas?")) {
@@ -690,9 +713,8 @@ const Canvas = () => {
                     setActiveBedId(null);
                     setActiveVertex(null);
                     setToolMode("none");
-                    setDrawingBedId(null);
-                    setLineStart(null);
-                    setLinePreviewEnd(null);
+                    setDraft(null);
+                    setPreviewEnd(null);
                   }
                 }}
                 className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
@@ -701,15 +723,15 @@ const Canvas = () => {
                 <FaTrashAlt size={25} />
               </button>
 
+              {/* Exit */}
               <button
                 onClick={() => {
                   setEditMode(false);
                   setToolMode("none");
-                  setDrawingBedId(null);
                   setActiveBedId(null);
                   setActiveVertex(null);
-                  setLineStart(null);
-                  setLinePreviewEnd(null);
+                  setDraft(null);
+                  setPreviewEnd(null);
                 }}
                 className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
                 title="Exit Edit Mode"
@@ -718,17 +740,15 @@ const Canvas = () => {
               </button>
             </div>
 
-            {toolMode === "drawLine" && (
+            {toolMode === "draw" && (
               <div className="text-xs text-green-800 font-semibold select-none">
-                Line mode — hold <span className="font-bold">Shift</span> to start a new line
-                {lineStart ? " (click to place end)" : ""}
-              </div>
-            )}
-
-            {toolMode === "drawBed" && (
-              <div className="text-xs text-green-800 font-semibold select-none">
-                Bed mode — click to add corners. Click the <span className="font-bold">first point</span> to close.
-                <span className="ml-1">(Esc cancels)</span>
+                Draw — hold <span className="font-bold">Shift</span> to start. Click to add points. Click the{" "}
+                <span className="font-bold">first point</span> to close into a bed.
+                {draft ? (
+                  <span className="ml-1">
+                    (<span className="font-bold">Enter</span> finishes lines, <span className="font-bold">Esc</span> cancels)
+                  </span>
+                ) : null}
               </div>
             )}
           </div>
