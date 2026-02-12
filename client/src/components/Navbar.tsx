@@ -437,25 +437,32 @@ const Navbar = () => {
         </div>
 
         {showSavedList && (
-          <div className="absolute right-0 top-14 w-64 bg-[#003326] rounded-xl shadow-lg border border-[#B7C398]/40 z-50">
-            <div className="p-2 text-[#B7C398] font-semibold border-b border-[#B7C398]/20 px-4">
-              Saved Gardens
-            </div>
-            {savedList.length === 0 && (
-              <div className="px-4 py-3 text-sm text-[#B7C398]/60">No saved gardens yet.</div>
-            )}
-            {savedList.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => handleLoad(g.id)}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-[#004b34] text-[#B7C398] flex justify-between"
-              >
-                <span>{g.name}</span>
-                <span className="text-xs opacity-50">{new Date(g.updatedAt).toLocaleDateString()}</span>
-              </button>
-            ))}
-          </div>
-        )}
+  <div className="absolute right-0 top-14 w-64 bg-[#003326] rounded-xl shadow-lg border border-[#B7C398]/40 z-50">
+    <div className="p-2 text-[#B7C398] font-semibold border-b border-[#B7C398]/20 px-4 flex justify-between items-center">
+      <span>Saved Gardens</span>
+      <button
+        onClick={() => setShowSavedList(false)}
+        className="hover:bg-[#004b34] rounded p-1"
+        title="Close"
+      >
+        <HiX size={20} className="text-[#B7C398]" />
+      </button>
+    </div>
+    {savedList.length === 0 && (
+      <div className="px-4 py-3 text-sm text-[#B7C398]/60">No saved gardens yet.</div>
+    )}
+    {savedList.map((g) => (
+      <button
+        key={g.id}
+        onClick={() => handleLoad(g.id)}
+        className="w-full text-left px-4 py-2 text-sm hover:bg-[#004b34] text-[#B7C398] flex justify-between"
+      >
+        <span>{g.name}</span>
+        <span className="text-xs opacity-50">{new Date(g.updatedAt).toLocaleDateString()}</span>
+      </button>
+    ))}
+  </div>
+)}
 
         {/* ====== Popups ===== */}
         <SearchWindow data-testid="search-window" isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
