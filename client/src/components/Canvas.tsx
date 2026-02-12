@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { FaEdit, FaLeaf, FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt } from "react-icons/fa";
+import { FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt } from "react-icons/fa";
 import { TbCircleXFilled } from "react-icons/tb";
-import { MdOutlineRectangle } from "react-icons/md";
+import { FaKey } from "react-icons/fa6";
 
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
@@ -77,7 +77,6 @@ const Canvas = () => {
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const { editMode, setEditMode } = useCanvasStore();
   const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
 
   // Drag-suppress (prevents accidental click actions after drag)
@@ -88,6 +87,15 @@ const Canvas = () => {
   const shapesRef = useRef<Shape[]>([]);
   const bedsRef = useRef<BedPath[]>([]);
   const historyIndexRef = useRef<number>(-1);
+  const shapesRecord = useGardenStore((state) => state.shapes);
+  const shapes = useMemo(() => Object.values(shapesRecord), [shapesRecord]);
+  const bedsRecord = useGardenStore((state) => state.beds);
+  const beds = useMemo(
+    () => Object.values(bedsRecord).sort((a, b) => a.createdAt - b.createdAt),
+    [bedsRecord]
+  );
+  const editMode = useGardenStore((state) => state.editMode);
+
 
   useEffect(() => {
     shapesRef.current = shapes;
@@ -162,28 +170,36 @@ const Canvas = () => {
     [pan.x, pan.y, scale]
   );
 
-  const pushHistory = useCallback((next: CanvasSnapshot) => {
-    const idx = historyIndexRef.current;
+  const pushHistory = useCallback((nextShapesRecord: Record<string, Shape>, nextBedsRecord: Record<string, Bed>) => {
+  const newEntry: CanvasSnapshot = {
+    shapes: Object.values(nextShapesRecord),
+    beds: Object.values(nextBedsRecord),
+  };
+  
+  const newHistory = history.slice(0, historyIndex + 1);
+  newHistory.push(newEntry);
+  setHistory(newHistory);
+  
+  const newIndex = newHistory.length - 1;
+  historyIndexRef.current = newIndex;
+  setHistoryIndex(newIndex);
 
-    setHistory((prev) => {
-      const base = prev.slice(0, idx + 1);
-      return [...base, next];
-    });
-
-    const newIndex = idx + 1;
-    historyIndexRef.current = newIndex;
-    setHistoryIndex(newIndex);
-
-    setShapes(next.shapes);
-    setBeds(next.beds);
-  }, []);
+  useGardenStore.setState({ 
+    shapes: nextShapesRecord, 
+    beds: nextBedsRecord 
+  });
+}, [history, historyIndex]);
 
   const commit = useCallback(
-    (nextShapes: Shape[], nextBeds: BedPath[]) => {
-      pushHistory({ shapes: nextShapes, beds: nextBeds });
-    },
-    [pushHistory]
-  );
+  (nextShapes: Shape[], nextBeds: BedPath[]) => {
+    // Convert arrays to Records
+    const shapesRecord = Object.fromEntries(nextShapes.map(s => [s.id, s]));
+    const bedsRecord = Object.fromEntries(nextBeds.map(b => [b.id, b]));
+    
+    pushHistory(shapesRecord, bedsRecord);
+  },
+  [pushHistory]
+);
 
   const createCircleShape = useCallback(() => {
     if (!canvasRef.current) return;
@@ -527,17 +543,20 @@ const Canvas = () => {
   }, []);
 
   const updateVertexDrag = useCallback((bedId: string, index: number, p: Position) => {
-    const d = vertexDragRef.current;
-    if (!d || d.bedId !== bedId || d.index !== index) return;
+  const d = vertexDragRef.current;
+  if (!d || d.bedId !== bedId || d.index !== index) return;
 
-    setBeds((prev) =>
-      prev.map((b) => {
-        if (b.id !== bedId) return b;
-        const nextVerts = b.vertices.map((v, i) => (i === index ? p : v));
-        return { ...b, vertices: nextVerts, isClosed: true };
-      })
-    );
-  }, []);
+  useGardenStore.setState((state) => {
+    const bedsRecord = { ...state.beds };
+    const bed = bedsRecord[bedId];
+    if (!bed) return state;
+    
+    const nextVerts = bed.vertices.map((v, i) => (i === index ? p : v));
+    bedsRecord[bedId] = { ...bed, vertices: nextVerts, isClosed: true };
+    
+    return { beds: bedsRecord };
+  });
+}, []);
 
   const endVertexDrag = useCallback(
     (bedId: string, index: number) => {
@@ -611,22 +630,29 @@ const Canvas = () => {
   }, []);
 
   const updateBedDrag = useCallback(
-    (bedId: string, clientX: number, clientY: number) => {
-      const d = bedDragRef.current;
-      if (!d || d.bedId !== bedId) return;
+  (bedId: string, clientX: number, clientY: number) => {
+    const d = bedDragRef.current;
+    if (!d || d.bedId !== bedId) return;
 
-      const dx = (clientX - d.startClientX) / scale;
-      const dy = (clientY - d.startClientY) / scale;
+    const dx = (clientX - d.startClientX) / scale;
+    const dy = (clientY - d.startClientY) / scale;
 
-      setBeds((prev) =>
-        prev.map((b) => {
-          if (b.id !== bedId) return b;
-          return { ...b, vertices: d.startVerts.map((p) => ({ x: p.x + dx, y: p.y + dy })), isClosed: true };
-        })
-      );
-    },
-    [scale]
-  );
+    useGardenStore.setState((state) => {
+      const bedsRecord = { ...state.beds };
+      const bed = bedsRecord[bedId];
+      if (!bed) return state;
+      
+      bedsRecord[bedId] = {
+        ...bed,
+        vertices: d.startVerts.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+        isClosed: true
+      };
+      
+      return { beds: bedsRecord };
+    });
+  },
+  [scale]
+);
 
   const endBedDrag = useCallback(
     (bedId: string) => {
@@ -661,34 +687,36 @@ const Canvas = () => {
   }, []);
 
   const updateShapeDrag = useCallback(
-    (shapeId: string, clientX: number, clientY: number) => {
-      const d = shapeDragRef.current;
-      if (!d || d.shapeId !== shapeId) return;
+  (shapeId: string, clientX: number, clientY: number) => {
+    const d = shapeDragRef.current;
+    if (!d || d.shapeId !== shapeId) return;
 
-      const dx = (clientX - d.startClientX) / scale;
-      const dy = (clientY - d.startClientY) / scale;
+    const dx = (clientX - d.startClientX) / scale;
+    const dy = (clientY - d.startClientY) / scale;
 
-      setShapes((prev) =>
-        prev.map((s) => {
-          if (s.id !== shapeId) return s;
+    useGardenStore.setState((state) => {
+      const shapesRecord = { ...state.shapes };
+      const s = shapesRecord[shapeId];
+      if (!s) return state;
 
-          if (d.type === "freehand" && d.startPoints) {
-            return {
-              ...(s as any),
-              points: d.startPoints.map((p) => ({ x: p.x + dx, y: p.y + dy })),
-            } as any;
-          }
-
-          return {
-            ...s,
-            startPos: { x: d.startPos.x + dx, y: d.startPos.y + dy },
-            endPos: { x: d.endPos.x + dx, y: d.endPos.y + dy },
-          } as Shape;
-        })
-      );
-    },
-    [scale]
-  );
+      if (d.type === "freehand" && d.startPoints) {
+        shapesRecord[shapeId] = {
+          ...(s as any),
+          points: d.startPoints.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+        };
+      } else {
+        shapesRecord[shapeId] = {
+          ...s,
+          startPos: { x: d.startPos.x + dx, y: d.startPos.y + dy },
+          endPos: { x: d.endPos.x + dx, y: d.endPos.y + dy },
+        };
+      }
+      
+      return { shapes: shapesRecord };
+    });
+  },
+  [scale]
+);
 
   const endShapeDrag = useCallback(
     (shapeId: string) => {
@@ -723,11 +751,19 @@ const Canvas = () => {
   }, []);
 
   const updateShapeResize = useCallback((shapeId: string, updates: Partial<Shape>) => {
-    const d = shapeResizeRef.current;
-    if (!d || d.shapeId !== shapeId) return;
+  const d = shapeResizeRef.current;
+  if (!d || d.shapeId !== shapeId) return;
 
-    setShapes((prev) => prev.map((s) => (s.id === shapeId ? ({ ...s, ...updates } as Shape) : s)));
-  }, []);
+  useGardenStore.setState((state) => {
+    const shapesRecord = { ...state.shapes };
+    const s = shapesRecord[shapeId];
+    if (!s) return state;
+    
+    shapesRecord[shapeId] = { ...s, ...updates } as Shape;
+    
+    return { shapes: shapesRecord };
+  });
+}, []);
 
   const endShapeResize = useCallback(
     (shapeId: string) => {
@@ -741,36 +777,50 @@ const Canvas = () => {
   );
 
   const undo = useCallback(() => {
-    if (historyIndex <= 0) return;
-    const newIndex = historyIndex - 1;
-    const snap = history[newIndex];
-    setShapes(snap.shapes);
-    setBeds(snap.beds);
-    setHistoryIndex(newIndex);
+  if (historyIndex <= 0) return;
+  const newIndex = historyIndex - 1;
+  const snap = history[newIndex];
+  
+  // Convert arrays to Records
+  const shapesRecord = Object.fromEntries(snap.shapes.map(s => [s.id, s]));
+  const bedsRecord = Object.fromEntries(snap.beds.map(b => [b.id, b]));
+  
+  useGardenStore.setState({ 
+    shapes: shapesRecord, 
+    beds: bedsRecord 
+  });
+  
+  setHistoryIndex(newIndex);
+  setSelectedShapeId(null);
+  setActiveBedId(null);
+  setActiveVertex(null);
+  setDraft(null);
+  setPreviewEnd(null);
+  setToolMode("none");
+}, [history, historyIndex]);
 
-    setSelectedShapeId(null);
-    setActiveBedId(null);
-    setActiveVertex(null);
-    setDraft(null);
-    setPreviewEnd(null);
-    setToolMode("none");
-  }, [history, historyIndex]);
-
-  const redo = useCallback(() => {
-    if (historyIndex >= history.length - 1) return;
-    const newIndex = historyIndex + 1;
-    const snap = history[newIndex];
-    setShapes(snap.shapes);
-    setBeds(snap.beds);
-    setHistoryIndex(newIndex);
-
-    setSelectedShapeId(null);
-    setActiveBedId(null);
-    setActiveVertex(null);
-    setDraft(null);
-    setPreviewEnd(null);
-    setToolMode("none");
-  }, [history, historyIndex]);
+const redo = useCallback(() => {
+  if (historyIndex >= history.length - 1) return;
+  const newIndex = historyIndex + 1;
+  const snap = history[newIndex];
+  
+  // Convert arrays to Records
+  const shapesRecord = Object.fromEntries(snap.shapes.map(s => [s.id, s]));
+  const bedsRecord = Object.fromEntries(snap.beds.map(b => [b.id, b]));
+  
+  useGardenStore.setState({ 
+    shapes: shapesRecord, 
+    beds: bedsRecord 
+  });
+  
+  setHistoryIndex(newIndex);
+  setSelectedShapeId(null);
+  setActiveBedId(null);
+  setActiveVertex(null);
+  setDraft(null);
+  setPreviewEnd(null);
+  setToolMode("none");
+}, [history, historyIndex]);
 
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">

@@ -364,15 +364,11 @@ const Navbar = () => {
               <IoNotifications size={25} className={navIconClass} />
             </button>
 
-            <button className={navIconButtonClass} title="Save">
+            <button onClick={handleSave} className={navIconButtonClass} title="Save">
               <RiSave3Line size={25} className={navIconClass} />
             </button>
 
-            <button onClick={handleSave} className="p-3 rounded-xl text-[#B7C398]" title="Save">
-              <RiSave3Line size={25} />
-            </button>
-
-            <button onClick={handleOpenFolder} className="p-3 rounded-xl text-[#B7C398]" title="Saved Gardens">
+            <button onClick={handleOpenFolder} className={navIconButtonClass} title="Saved Gardens">
               <IoFolderOutline size={25} />
             </button>
 
@@ -391,7 +387,7 @@ const Navbar = () => {
             </button>
 
             <Link href={user ? "/settings" : "/handler/sign-up"}>
-              <button className="p-3 rounded-xl text-[#B7C398]" title={user ? "Settings" : "Profile"}>
+              <button className={navIconButtonClass} title={user ? "Settings" : "Profile"}>
                 <FaRegUser size={25} />
               </button>
             </Link>
