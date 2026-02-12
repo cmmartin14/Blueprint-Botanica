@@ -14,7 +14,9 @@ import { IoNotifications } from "react-icons/io5";
 import { RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { FaRegUser } from "react-icons/fa";
-import { useCanvasStore } from "../stores/canvasStore";
+import { saveGarden, listGardens, loadGarden } from "../actions/gardenActions";
+import { useGardenStore } from "../types/garden";
+import { useUser } from "@stackframe/stack";
 import Chatbot from "./Chatbot";
 import { LuMenu, LuSprout } from "react-icons/lu";
 
@@ -31,9 +33,13 @@ const Navbar = () => {
   const [unit, setUnit] = useState<"C" | "F">("C");
   const [weatherCondition, setWeatherCondition] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [savedList, setSavedList] = useState<{ id: string; name: string; updatedAt: Date }[]>([]);
+  const [showSavedList, setShowSavedList] = useState(false);
 
   // ====== Canvas store (edit mode) ======
-  const { editMode, setEditMode } = useCanvasStore();
+  const gardenState = useGardenStore();
+  const { id, name, shapes, beds, loadGarden: loadIntoStore } = useGardenStore();
+  const { editMode, setEditMode } = useGardenStore();
   const toggleEdit = () => setEditMode(!editMode);
 
   // ====== HANDLERS ======
@@ -41,6 +47,8 @@ const Navbar = () => {
   const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
   const toggleCalendarWindow = () => setIsCalendarOpen((prev) => !prev);
   const toggleChatWindow = () => setIsChatOpen((prev) => !prev);
+
+  const user = useUser({ or: 'return-null' });
 
   const formatTemperature = (tempC: number) => {
     if (unit === "C") return `${tempC.toFixed(0)}°C`;
@@ -143,7 +151,30 @@ const Navbar = () => {
     if (lower.includes("fog") || lower.includes("mist")) return "🌫️";
     return "🌤️";
   };
+  
+  const handleSave = async () => {
+    if (!user) return;
+      const gardenName = prompt("Enter garden name:", "My Garden");
+      if (!gardenName) return;
 
+      const { id: savedId } = await saveGarden(user.id, { id, name: gardenName, shapes, beds, editMode: false });
+      // Stamp the returned id onto the store so future saves update instead of insert
+      useGardenStore.setState({ id: savedId });
+  };
+
+  const handleOpenFolder = async () => {
+    if (!user) return;
+    const list = await listGardens(user.id);
+    setSavedList(list);
+    setShowSavedList(true);
+  };
+
+  const handleLoad = async (gardenId: string) => {
+    if (!user) return;
+    const state = await loadGarden(user.id, gardenId);
+    if (state) loadIntoStore(state);
+    setShowSavedList(false);
+  };
   const navIconButtonClass =
     "group p-3 rounded-xl text-[#B7C398] transition-all duration-200 ease-out hover:bg-[#004b34] hover:text-[#d9e8bc] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7C398]/60";
   const navIconClass =
@@ -333,14 +364,14 @@ const Navbar = () => {
               <IoNotifications size={25} className={navIconClass} />
             </button>
 
-            <button className={navIconButtonClass} title="Save">
+            <button onClick={handleSave} className={navIconButtonClass} title="Save">
               <RiSave3Line size={25} className={navIconClass} />
             </button>
 
-            <button className={navIconButtonClass} title="Saved Gardens">
-              <IoFolderOutline size={25} className={navIconClass} />
+            <button onClick={handleOpenFolder} className={navIconButtonClass} title="Saved Gardens">
+              <IoFolderOutline size={25} />
             </button>
-            
+
             <button
               data-testid="chatbot-button"
               onClick={toggleChatWindow}
@@ -350,13 +381,14 @@ const Navbar = () => {
               <LuSprout size={25} className={`${navIconClass} text-[#f4a45a] group-hover:text-[#ffc078]`} />
             </button>
 
+
             <button className={navIconButtonClass} title="Notifications">
               <IoNotifications size={25} className={navIconClass} />
             </button>
 
-            <Link href="/handler/sign-up">
-              <button className={navIconButtonClass} title="Profile">
-                <FaRegUser size={25} className={navIconClass} />
+            <Link href={user ? "/settings" : "/handler/sign-up"}>
+              <button className={navIconButtonClass} title={user ? "Settings" : "Profile"}>
+                <FaRegUser size={25} />
               </button>
             </Link>
           </div>
@@ -403,6 +435,27 @@ const Navbar = () => {
             </div>
           )}
         </div>
+
+        {showSavedList && (
+          <div className="absolute right-0 top-14 w-64 bg-[#003326] rounded-xl shadow-lg border border-[#B7C398]/40 z-50">
+            <div className="p-2 text-[#B7C398] font-semibold border-b border-[#B7C398]/20 px-4">
+              Saved Gardens
+            </div>
+            {savedList.length === 0 && (
+              <div className="px-4 py-3 text-sm text-[#B7C398]/60">No saved gardens yet.</div>
+            )}
+            {savedList.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => handleLoad(g.id)}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-[#004b34] text-[#B7C398] flex justify-between"
+              >
+                <span>{g.name}</span>
+                <span className="text-xs opacity-50">{new Date(g.updatedAt).toLocaleDateString()}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ====== Popups ===== */}
         <SearchWindow data-testid="search-window" isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />

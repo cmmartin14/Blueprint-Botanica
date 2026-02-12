@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { StackProvider, StackTheme } from "@stackframe/stack";
+import { Suspense } from 'react';
 import { stackClientApp } from "../stack/client";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -29,10 +30,20 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      ><StackProvider app={stackClientApp}><StackTheme>
-        <Navbar />
-        {children}
-      </StackTheme></StackProvider></body>
+      >
+        <StackProvider app={stackClientApp}>
+          <StackTheme>
+            <Suspense fallback={
+              <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50 h-16 flex items-center justify-center">
+                <span className="text-[#B7C398] text-sm">Loading...</span>
+              </nav>
+            }>
+              <Navbar />
+            </Suspense>
+            {children}
+          </StackTheme>
+        </StackProvider>
+      </body>
     </html>
   );
 }
