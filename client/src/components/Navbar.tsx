@@ -8,7 +8,6 @@ import Calendar from "./Calendar";
 import { GiOakLeaf } from "react-icons/gi";
 import { TbHomeEdit } from "react-icons/tb";
 import { HiX } from "react-icons/hi";
-import { LuMenu } from "react-icons/lu";
 import { FaEdit, FaSearch } from "react-icons/fa";
 import { FaCalendarAlt } from "react-icons/fa";
 import { IoNotifications } from "react-icons/io5";
@@ -16,6 +15,8 @@ import { RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { FaRegUser } from "react-icons/fa";
 import { useCanvasStore } from "../stores/canvasStore";
+import Chatbot from "./Chatbot";
+import { LuMenu, LuSprout } from "react-icons/lu";
 
 const Navbar = () => {
   // ====== STATE ======
@@ -25,6 +26,7 @@ const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [city, setCity] = useState<string | null>(null);
   const [unit, setUnit] = useState<"C" | "F">("C");
   const [weatherCondition, setWeatherCondition] = useState<string | null>(null);
@@ -38,11 +40,14 @@ const Navbar = () => {
   const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
   const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
   const toggleCalendarWindow = () => setIsCalendarOpen((prev) => !prev);
+  const toggleChatWindow = () => setIsChatOpen((prev) => !prev);
 
   const formatTemperature = (tempC: number) => {
     if (unit === "C") return `${tempC.toFixed(0)}°C`;
     return `${((tempC * 9) / 5 + 32).toFixed(0)}°F`;
   };
+
+
 
   const getStateAbbreviation = (stateName: string): string | null => {
     const states: Record<string, string> = {
@@ -139,6 +144,11 @@ const Navbar = () => {
     return "🌤️";
   };
 
+  const navIconButtonClass =
+    "group p-3 rounded-xl text-[#B7C398] transition-all duration-200 ease-out hover:bg-[#004b34] hover:text-[#d9e8bc] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7C398]/60";
+  const navIconClass =
+    "transition-transform duration-200 ease-out group-hover:scale-110 group-hover:-translate-y-0.5";
+
   // ====== EFFECTS ======
   useEffect(() => setMounted(true), []);
 
@@ -219,6 +229,14 @@ const Navbar = () => {
     );
   }
 
+  if (!mounted) {
+    return (
+      <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50 h-16 flex items-center justify-center">
+        <span className="text-[#B7C398] text-sm">Loading...</span>
+      </nav>
+    );
+  }
+
   // ====== RENDER ======
   return (
     <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50 relative">
@@ -245,11 +263,10 @@ const Navbar = () => {
           {/* Variable toggle */}
           <button
             onClick={toggleVariableWindow}
-            className="p-3 rounded-xl"
+            className={navIconButtonClass}
             title="Variable / Zipcode"
-            style={{ color: "#B7C398" }}
           >
-            <TbHomeEdit size={27} />
+            <TbHomeEdit size={27} className={navIconClass} />
           </button>
 
           {/* Weather info */}
@@ -288,45 +305,58 @@ const Navbar = () => {
             <button
               data-testid="edit-button"
               onClick={toggleEdit}
-              className="p-3 rounded-xl text-[#B7C398]"
+              className={navIconButtonClass}
               title="Edit Mode"
             >
-              <FaEdit size={25} />
+              <FaEdit size={25} className={navIconClass} />
             </button>                
 
             <button
               data-testid="search-button"
               onClick={toggleSearchWindow}
-              className="p-3 rounded-xl text-[#B7C398]"
+              className={navIconButtonClass}
               title="Search"
             >
-              <FaSearch size={25} />
+              <FaSearch size={25} className={navIconClass} />
             </button>
 
             <button
               data-testid="calendar-button"
               onClick={toggleCalendarWindow}
-              className="p-3 rounded-xl text-[#B7C398]"
+              className={navIconButtonClass}
               title="Calendar"
             >
-              <FaCalendarAlt size={25} />
+              <FaCalendarAlt size={25} className={navIconClass} />
             </button>
 
-            <button className="p-3 rounded-xl text-[#B7C398]" title="Notifications">
-              <IoNotifications size={25} />
+            <button className={navIconButtonClass} title="Notifications">
+              <IoNotifications size={25} className={navIconClass} />
             </button>
 
-            <button className="p-3 rounded-xl text-[#B7C398]" title="Save">
-              <RiSave3Line size={25} />
+            <button className={navIconButtonClass} title="Save">
+              <RiSave3Line size={25} className={navIconClass} />
             </button>
 
-            <button className="p-3 rounded-xl text-[#B7C398]" title="Saved Gardens">
-              <IoFolderOutline size={25} />
+            <button className={navIconButtonClass} title="Saved Gardens">
+              <IoFolderOutline size={25} className={navIconClass} />
+            </button>
+            
+            <button
+              data-testid="chatbot-button"
+              onClick={toggleChatWindow}
+              className={`${navIconButtonClass} ${isChatOpen ? "bg-[#004b34]" : ""}`}
+              title="Gardening Assistant"
+            >
+              <LuSprout size={25} className={`${navIconClass} text-[#f4a45a] group-hover:text-[#ffc078]`} />
+            </button>
+
+            <button className={navIconButtonClass} title="Notifications">
+              <IoNotifications size={25} className={navIconClass} />
             </button>
 
             <Link href="/handler/sign-up">
-              <button className="p-3 rounded-xl text-[#B7C398]" title="Profile">
-                <FaRegUser size={25} />
+              <button className={navIconButtonClass} title="Profile">
+                <FaRegUser size={25} className={navIconClass} />
               </button>
             </Link>
           </div>
@@ -354,6 +384,7 @@ const Navbar = () => {
                 { name: "Notifications", action: () => {}, icon: <IoNotifications size={20} /> },
                 { name: "Save", action: () => {}, icon: <RiSave3Line size={20} /> },
                 { name: "Saved Gardens", action: () => {}, icon: <IoFolderOutline size={20} /> },
+                { name: "Assistant", action: toggleChatWindow, icon: <LuSprout size={20} className="text-[#f4a45a]" /> },
                 { name: "Profile", action: () => {}, icon: <FaRegUser size={20} /> },
               ].map((item) => (
                 <button
@@ -362,10 +393,10 @@ const Navbar = () => {
                     item.action();
                     setIsMenuOpen(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-[#004b34] transition-colors text-left"
+                  className="group w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-[#004b34] transition-colors text-left"
                   style={{ color: "#B7C398" }}
                 >
-                  {item.icon}
+                  <span className={navIconClass}>{item.icon}</span>
                   {item.name}
                 </button>
               ))}
@@ -377,6 +408,7 @@ const Navbar = () => {
         <SearchWindow data-testid="search-window" isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
         <VariableWindow data-testid="variable-window" isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
         <Calendar data-testid="calendar-window" isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
+        <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> {/* <--- RENDER CHATBOT */}
       </div>
     </nav>
   );

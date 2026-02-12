@@ -35,3 +35,7 @@ The local database should be automatically opened in a new window named 'Prisma 
 If not, click here to open localhost on port:5555-> [Prisma Studio](http://localhost:5555).
 
 Currently, user data is hosted using Neon. To access this, login to Neon and locate the relevant keys to place in your environment file.
+
+To use AI Generation make sure to install the GenAI library
+
+npm install @google/genai
