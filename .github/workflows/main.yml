@@ -63,4 +63,7 @@ jobs:
 
       - name: Run Playwright tests
         run: npx playwright test ./src/tests 
+        env:
+          PERENUAL_API_KEY: ${{ secrets.PERENUAL_API_KEY }}
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
 
