@@ -95,6 +95,7 @@ const Canvas = () => {
     [bedsRecord]
   );
   const editMode = useGardenStore((state) => state.editMode);
+  const setEditMode = useGardenStore((state) => state.setEditMode);
 
 
   useEffect(() => {
