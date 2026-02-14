@@ -8,8 +8,7 @@
     "type-check": "tsc --noEmit",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest",
-    "postinstall": "prisma generate"
+    "test": "vitest"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
