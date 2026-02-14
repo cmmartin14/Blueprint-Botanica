@@ -36,6 +36,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps && npx playwright install
 
+      - name: Generate Prisma client
+        run: npx prisma Generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Linting
         run: npm run lint
         continue-on-error: true
