@@ -8,6 +8,8 @@ test('home link navigates', async ({ page }) => {
 
 test('login link navigates', async ({ page }) => {
   await page.goto('http://localhost:3000')
-  await page.click('a[href="/handler/sign-up"]')
+  const link = page.locator('a[href="/handler/sign-up"]')
+  await link.waitFor({ state: 'visible', timeout: 10000 })
+  await link.click()
   await expect(page).toHaveURL('http://localhost:3000/handler/sign-up')
 })

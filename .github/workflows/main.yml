@@ -62,5 +62,5 @@ jobs:
           PORT: 3000
 
       - name: Run Playwright tests
-        run: npx playwright test ./src/tests --headed
+        run: npx playwright test ./src/tests
 
