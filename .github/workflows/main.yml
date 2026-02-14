@@ -62,5 +62,5 @@ jobs:
           PORT: 3000
 
       - name: Run Playwright tests
-        run: xvfb-run --auto-servernum npx playwright test ./src/tests
+        run: xvfb-run --auto-servernum npx playwright test ./src/tests --headed
 
