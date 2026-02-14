@@ -37,7 +37,7 @@ jobs:
         run: npm ci --legacy-peer-deps && npx playwright install
 
       - name: Generate Prisma client
-        run: npx prisma Generate
+        run: cd primsa && npx prisma Generate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
