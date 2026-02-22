@@ -1,3 +1,4 @@
+// ShapeRenderer.tsx
 "use client";
 
 import React from "react";
@@ -17,6 +18,8 @@ interface ShapeRendererProps {
   scale: number;
   pan: { x: number; y: number };
   gridToUnit?: number;
+
+  canEdit: boolean;
 
   selectedShapeId: string | null;
 
@@ -118,6 +121,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   scale,
   pan,
   gridToUnit = 1,
+  canEdit,
   selectedShapeId,
 
   activeBedId,
@@ -228,10 +232,11 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
   };
 
-  // Bed dragging uses smooth callbacks so we only commit once per drag.
   const handleBedMouseDown = (bedId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectBed(bedId);
+
+    if (!canEdit) return;
 
     onBeginBedDrag(bedId, e.clientX, e.clientY);
 
@@ -249,10 +254,12 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // Vertex dragging uses smooth callbacks so we only commit once per drag.
   const handleVertexMouseDown = (bedId: string, index: number) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectVertex(bedId, index);
+
+    if (!canEdit) return;
+
     onBeginVertexDrag(bedId, index);
 
     const handleMove = (moveEvent: MouseEvent) => {
@@ -276,6 +283,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     e.stopPropagation();
     onSelectBed(bed.id);
 
+    if (!canEdit) return;
+
     const startBox = bboxOf(bed.vertices);
 
     const handleMove = (moveEvent: MouseEvent) => {
@@ -286,13 +295,29 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       let nextBox: Box = { ...startBox };
 
       if (handle === "nw") {
-        nextBox = { ...nextBox, minX: Math.min(p.x, startBox.maxX - GRID_SIZE), minY: Math.min(p.y, startBox.maxY - GRID_SIZE) };
+        nextBox = {
+          ...nextBox,
+          minX: Math.min(p.x, startBox.maxX - GRID_SIZE),
+          minY: Math.min(p.y, startBox.maxY - GRID_SIZE),
+        };
       } else if (handle === "ne") {
-        nextBox = { ...nextBox, maxX: Math.max(p.x, startBox.minX + GRID_SIZE), minY: Math.min(p.y, startBox.maxY - GRID_SIZE) };
+        nextBox = {
+          ...nextBox,
+          maxX: Math.max(p.x, startBox.minX + GRID_SIZE),
+          minY: Math.min(p.y, startBox.maxY - GRID_SIZE),
+        };
       } else if (handle === "sw") {
-        nextBox = { ...nextBox, minX: Math.min(p.x, startBox.maxX - GRID_SIZE), maxY: Math.max(p.y, startBox.minY + GRID_SIZE) };
+        nextBox = {
+          ...nextBox,
+          minX: Math.min(p.x, startBox.maxX - GRID_SIZE),
+          maxY: Math.max(p.y, startBox.minY + GRID_SIZE),
+        };
       } else if (handle === "se") {
-        nextBox = { ...nextBox, maxX: Math.max(p.x, startBox.minX + GRID_SIZE), maxY: Math.max(p.y, startBox.minY + GRID_SIZE) };
+        nextBox = {
+          ...nextBox,
+          maxX: Math.max(p.x, startBox.minX + GRID_SIZE),
+          maxY: Math.max(p.y, startBox.minY + GRID_SIZE),
+        };
       }
 
       onResizeBedToBox(bed.id, nextBox);
@@ -307,10 +332,11 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // Shape dragging uses smooth callbacks so we only commit once per drag.
   const handleShapeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     onShapeSelect?.(shapeId);
+
+    if (!canEdit) return;
 
     onBeginShapeDrag(shapeId, e.clientX, e.clientY);
 
@@ -328,9 +354,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleMouseUp);
   };
 
-  // Endpoint dragging is treated as a resize so undo/redo is one step.
   const handleEndpointMouseDown = (shapeId: string, endpoint: "start" | "end") => (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!canEdit) return;
+
     onBeginShapeResize(shapeId);
 
     const handleMove = (moveEvent: MouseEvent) => {
@@ -350,9 +377,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // Circle resize is treated as a resize so undo/redo is one step.
   const handleCircleResizeMouseDown = (shapeId: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!canEdit) return;
+
     const shape = shapes.find((s) => s.id === shapeId);
     if (!shape) return;
 
@@ -383,10 +411,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     document.addEventListener("mouseup", handleUp);
   };
 
-  // Freehand resize uses bbox scaling so the whole stroke scales consistently.
   const handleFreehandResizeDown =
     (shapeId: string, handle: "nw" | "ne" | "sw" | "se", startPoints: Position[]) => (e: React.MouseEvent) => {
       e.stopPropagation();
+      if (!canEdit) return;
       if (startPoints.length < 2) return;
 
       const startBox = bboxOfPoints(startPoints);
@@ -453,6 +481,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   const renderShape = (shape: Shape) => {
     const { type, startPos, endPos, color, strokeWidth } = shape;
+    const isSelected = selectedShapeId === shape.id;
+    const showShapeHandles = canEdit && isSelected;
 
     const width = Math.abs(endPos.x - startPos.x);
     const height = Math.abs(endPos.y - startPos.y);
@@ -480,7 +510,14 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const handleY = centerY;
 
       return (
-        <div key={shape.id} data-interactive="true" onClick={stop}>
+        <div
+          key={shape.id}
+          data-interactive="true"
+          onClick={(e) => {
+            e.stopPropagation();
+            onShapeSelect?.(shape.id);
+          }}
+        >
           <div
             data-interactive="true"
             style={{
@@ -492,11 +529,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               backgroundColor: fill,
               left: centerX - radius,
               top: centerY - radius,
-              cursor: "move",
+              cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
-            onClick={stop}
           />
 
           <div
@@ -521,24 +557,27 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             <div style={{ fontSize: "10px", color: "#6b7280" }}>{meters} m</div>
           </div>
 
-          <div
-            data-interactive="true"
-            style={{
-              position: "absolute",
-              left: `${handleX - 6}px`,
-              top: `${handleY - 6}px`,
-              width: "12px",
-              height: "12px",
-              borderRadius: "50%",
-              backgroundColor: "#111",
-              border: "2px solid white",
-              cursor: "ew-resize",
-              pointerEvents: "auto",
-              zIndex: 10,
-            }}
-            onMouseDown={handleCircleResizeMouseDown(shape.id)}
-            onClick={stop}
-          />
+          {/* Circle resize handle: only when selected AND edit mode is active */}
+          {showShapeHandles && (
+            <div
+              data-interactive="true"
+              style={{
+                position: "absolute",
+                left: `${handleX - 6}px`,
+                top: `${handleY - 6}px`,
+                width: "12px",
+                height: "12px",
+                borderRadius: "50%",
+                backgroundColor: "#111",
+                border: "2px solid white",
+                cursor: "ew-resize",
+                pointerEvents: "auto",
+                zIndex: 10,
+              }}
+              onMouseDown={handleCircleResizeMouseDown(shape.id)}
+              onClick={stop}
+            />
+          )}
         </div>
       );
     }
@@ -559,7 +598,14 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const labelY = midY + Math.sin(perpRad) * 20;
 
       return (
-        <div key={shape.id} data-interactive="true">
+        <div
+          key={shape.id}
+          data-interactive="true"
+          onClick={(e) => {
+            e.stopPropagation();
+            onShapeSelect?.(shape.id);
+          }}
+        >
           <div
             data-interactive="true"
             style={{
@@ -571,7 +617,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               backgroundColor: color,
               transformOrigin: "0 50%",
               transform: `rotate(${angle}deg)`,
-              cursor: "move",
+              cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
@@ -600,47 +646,52 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             <div style={{ fontSize: "10px", color: "#6b7280" }}>{metersLength} m</div>
           </div>
 
-          <div
-            data-interactive="true"
-            data-line-endpoint="true"
-            data-shape-id={shape.id}
-            data-endpoint="start"
-            style={{
-              position: "absolute",
-              left: `${startPos.x - 6}px`,
-              top: `${startPos.y - 6}px`,
-              width: "12px",
-              height: "12px",
-              borderRadius: "50%",
-              backgroundColor: "black",
-              border: "2px solid white",
-              cursor: "pointer",
-              pointerEvents: "auto",
-              zIndex: 10,
-            }}
-            onMouseDown={handleEndpointMouseDown(shape.id, "start")}
-          />
+          {/* Line endpoints are resize handles: only show when selected AND edit mode is active */}
+          {showShapeHandles && (
+            <>
+              <div
+                data-interactive="true"
+                data-line-endpoint="true"
+                data-shape-id={shape.id}
+                data-endpoint="start"
+                style={{
+                  position: "absolute",
+                  left: `${startPos.x - 6}px`,
+                  top: `${startPos.y - 6}px`,
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "50%",
+                  backgroundColor: "black",
+                  border: "2px solid white",
+                  cursor: "pointer",
+                  pointerEvents: "auto",
+                  zIndex: 10,
+                }}
+                onMouseDown={handleEndpointMouseDown(shape.id, "start")}
+              />
 
-          <div
-            data-interactive="true"
-            data-line-endpoint="true"
-            data-shape-id={shape.id}
-            data-endpoint="end"
-            style={{
-              position: "absolute",
-              left: `${endPos.x - 6}px`,
-              top: `${endPos.y - 6}px`,
-              width: "12px",
-              height: "12px",
-              borderRadius: "50%",
-              backgroundColor: "black",
-              border: "2px solid white",
-              cursor: "pointer",
-              pointerEvents: "auto",
-              zIndex: 10,
-            }}
-            onMouseDown={handleEndpointMouseDown(shape.id, "end")}
-          />
+              <div
+                data-interactive="true"
+                data-line-endpoint="true"
+                data-shape-id={shape.id}
+                data-endpoint="end"
+                style={{
+                  position: "absolute",
+                  left: `${endPos.x - 6}px`,
+                  top: `${endPos.y - 6}px`,
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "50%",
+                  backgroundColor: "black",
+                  border: "2px solid white",
+                  cursor: "pointer",
+                  pointerEvents: "auto",
+                  zIndex: 10,
+                }}
+                onMouseDown={handleEndpointMouseDown(shape.id, "end")}
+              />
+            </>
+          )}
         </div>
       );
     }
@@ -660,19 +711,20 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             height,
             border: `${strokeWidth ?? 2}px solid ${color}`,
             backgroundColor: "transparent",
-            cursor: "move",
+            cursor: canEdit ? "move" : "pointer",
             pointerEvents: "auto",
           }}
           onMouseDown={handleShapeMouseDown(shape.id)}
-          onClick={stop}
+          onClick={(e) => {
+            e.stopPropagation();
+            onShapeSelect?.(shape.id);
+          }}
         />
       );
     }
 
     if (type === "freehand" && (shape as any).points && (shape as any).points.length > 1) {
       const pts = (shape as any).points as Position[];
-      const isSelected = selectedShapeId === shape.id;
-
       const box = bboxOfPoints(pts);
 
       return (
@@ -691,7 +743,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             strokeLinecap="round"
             strokeLinejoin="round"
             pointerEvents="auto"
-            style={{ cursor: "move" }}
+            style={{ cursor: canEdit ? "move" : "pointer" }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onClick={(e) => {
               e.stopPropagation();
@@ -699,8 +751,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             }}
           />
 
-          {/* Show resize handles only when selected, to keep the canvas clean. */}
-          {isSelected &&
+          {/* Freehand resize handles: only when selected AND edit mode is active */}
+          {showShapeHandles &&
             (
               [
                 ["nw", { x: box.minX, y: box.minY }],
@@ -737,11 +789,14 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     const d = openPathD(verts);
 
     const last = verts[verts.length - 1];
-    const preview = draftPreviewEnd && (draftPreviewEnd.x !== last.x || draftPreviewEnd.y !== last.y) ? draftPreviewEnd : null;
+    const preview =
+      draftPreviewEnd && (draftPreviewEnd.x !== last.x || draftPreviewEnd.y !== last.y) ? draftPreviewEnd : null;
 
     return (
       <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
-        {verts.length >= 2 && <path d={d} fill="none" stroke="#ffffff" strokeWidth={2} strokeDasharray="10 8" opacity={0.9} />}
+        {verts.length >= 2 && (
+          <path d={d} fill="none" stroke="#ffffff" strokeWidth={2} strokeDasharray="10 8" opacity={0.9} />
+        )}
 
         {preview && (
           <line
@@ -769,6 +824,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           if (!bed.isClosed || bed.vertices.length < 3) return null;
 
           const isActive = bed.id === activeBedId;
+          const showBedHandles = canEdit && isActive;
+
           const glow = isActive ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
 
           const fill = "rgba(255,255,255,0.22)";
@@ -786,7 +843,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 strokeWidth={strokeWidth}
                 strokeLinejoin="round"
                 strokeLinecap="round"
-                style={{ cursor: "move", filter: glow }}
+                style={{ cursor: canEdit ? "move" : "pointer", filter: glow }}
                 onMouseDown={handleBedMouseDown(bed.id)}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -794,7 +851,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 }}
               />
 
-              {isActive && (
+              {/* Bed resize handles + vertices: only when edit mode is active */}
+              {showBedHandles && (
                 <>
                   {(
                     [
