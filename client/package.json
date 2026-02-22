@@ -52,7 +52,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "node-fetch": "^3.3.2",
-    "prisma": "^6.19.0",
+    "prisma": "^7.4.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
