@@ -1,3 +1,4 @@
+// Canvas.tsx
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
@@ -57,6 +58,7 @@ const Canvas = () => {
   const [isCalendarOpen, setCalendarOpen] = useState(false);
 
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
+  const [pendingBedShapeId, setPendingBedShapeId] = useState<string | null>(null);
 
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
 
@@ -87,22 +89,25 @@ const Canvas = () => {
   const shapesRef = useRef<Shape[]>([]);
   const bedsRef = useRef<BedPath[]>([]);
   const historyIndexRef = useRef<number>(-1);
+
   const shapesRecord = useGardenStore((state) => state.shapes);
   const shapes = useMemo(() => Object.values(shapesRecord), [shapesRecord]);
+
   const bedsRecord = useGardenStore((state) => state.beds);
   const beds = useMemo(
-    () => Object.values(bedsRecord).sort((a, b) => a.createdAt - b.createdAt),
+    () => Object.values(bedsRecord).sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0)),
     [bedsRecord]
   );
-  const editMode = useGardenStore((state) => state.editMode);
 
+  const editMode = useGardenStore((state) => state.editMode);
+  const setEditMode = useGardenStore((state) => state.setEditMode);
 
   useEffect(() => {
     shapesRef.current = shapes;
   }, [shapes]);
 
   useEffect(() => {
-    bedsRef.current = beds;
+    bedsRef.current = beds as unknown as BedPath[];
   }, [beds]);
 
   useEffect(() => {
@@ -137,6 +142,15 @@ const Canvas = () => {
   // Smooth shape resize session
   const shapeResizeRef = useRef<null | { shapeId: string }>(null);
 
+  // If edit mode gets turned off from anywhere, hard-stop any active drag sessions.
+  useEffect(() => {
+    if (editMode) return;
+    bedDragRef.current = null;
+    vertexDragRef.current = null;
+    shapeDragRef.current = null;
+    shapeResizeRef.current = null;
+  }, [editMode]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Shift") setIsShiftDown(true);
@@ -170,36 +184,37 @@ const Canvas = () => {
     [pan.x, pan.y, scale]
   );
 
-  const pushHistory = useCallback((nextShapesRecord: Record<string, Shape>, nextBedsRecord: Record<string, Bed>) => {
-  const newEntry: CanvasSnapshot = {
-    shapes: Object.values(nextShapesRecord),
-    beds: Object.values(nextBedsRecord),
-  };
-  
-  const newHistory = history.slice(0, historyIndex + 1);
-  newHistory.push(newEntry);
-  setHistory(newHistory);
-  
-  const newIndex = newHistory.length - 1;
-  historyIndexRef.current = newIndex;
-  setHistoryIndex(newIndex);
+  const pushHistory = useCallback(
+    (nextShapesRecord: Record<string, Shape>, nextBedsRecord: Record<string, BedPath>) => {
+      const newEntry: CanvasSnapshot = {
+        shapes: Object.values(nextShapesRecord),
+        beds: Object.values(nextBedsRecord),
+      };
 
-  useGardenStore.setState({ 
-    shapes: nextShapesRecord, 
-    beds: nextBedsRecord 
-  });
-}, [history, historyIndex]);
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push(newEntry);
+      setHistory(newHistory);
+
+      const newIndex = newHistory.length - 1;
+      historyIndexRef.current = newIndex;
+      setHistoryIndex(newIndex);
+
+      useGardenStore.setState({
+        shapes: nextShapesRecord,
+        beds: nextBedsRecord as any,
+      });
+    },
+    [history, historyIndex]
+  );
 
   const commit = useCallback(
-  (nextShapes: Shape[], nextBeds: BedPath[]) => {
-    // Convert arrays to Records
-    const shapesRecord = Object.fromEntries(nextShapes.map(s => [s.id, s]));
-    const bedsRecord = Object.fromEntries(nextBeds.map(b => [b.id, b]));
-    
-    pushHistory(shapesRecord, bedsRecord);
-  },
-  [pushHistory]
-);
+    (nextShapes: Shape[], nextBeds: BedPath[]) => {
+      const shapesRecord = Object.fromEntries(nextShapes.map((s) => [s.id, s]));
+      const bedsRecord = Object.fromEntries(nextBeds.map((b) => [b.id, b]));
+      pushHistory(shapesRecord, bedsRecord);
+    },
+    [pushHistory]
+  );
 
   const createCircleShape = useCallback(() => {
     if (!canvasRef.current) return;
@@ -251,7 +266,6 @@ const Canvas = () => {
 
   const resolvePoint = useCallback(
     (e: React.MouseEvent, rawWorld: Position): Position => {
-      // exact endpoint click
       const endpointHit = getEndpointTarget(e.target);
       if (endpointHit) {
         const s = shapesRef.current.find((x) => x.id === endpointHit.shapeId);
@@ -260,7 +274,6 @@ const Canvas = () => {
         }
       }
 
-      // snap near any existing line endpoints
       let best: Position | null = null;
       let bestDist = Infinity;
 
@@ -280,7 +293,6 @@ const Canvas = () => {
 
       if (best && bestDist <= LINE_ENDPOINT_SNAP) return best;
 
-      // grid snap
       return snapToGrid(rawWorld);
     },
     [getEndpointTarget, snapToGrid]
@@ -323,7 +335,6 @@ const Canvas = () => {
       if (!editMode) return;
       if (toolMode !== "draw") return;
 
-      // suppress after dragging
       if (didDragRef.current) {
         didDragRef.current = false;
         return;
@@ -335,15 +346,12 @@ const Canvas = () => {
       const endpointHit = getEndpointTarget(e.target);
       const interactive = isInteractiveTarget(e.target);
 
-      // ignore clicks on interactive elements except endpoints
       if (interactive && !endpointHit) return;
 
-      // starting new chain requires Shift (unless a chain is already active)
       if (!draft && SHIFT_REQUIRED_TO_START && !e.shiftKey) return;
 
       const p = resolvePoint(e, world);
 
-      // start chain
       if (!draft) {
         const id = Date.now().toString();
         setDraft({ id, vertices: [p], segmentIds: [] });
@@ -354,14 +362,12 @@ const Canvas = () => {
         return;
       }
 
-      // click near start to close
       const start = draft.vertices[0];
       if (draft.vertices.length >= 3 && dist(p, start) <= CLOSE_DISTANCE) {
         closeDraftIntoBed(p);
         return;
       }
 
-      // add segment (line)
       const last = draft.vertices[draft.vertices.length - 1];
       const segId = `${Date.now().toString()}-${Math.random().toString(16).slice(2)}`;
 
@@ -424,13 +430,11 @@ const Canvas = () => {
       pointerDownRef.current = { x: e.clientX, y: e.clientY };
       didDragRef.current = false;
 
-      // do not pan if interacting with something interactive
       if (editMode && isInteractiveTarget(e.target)) return;
 
       setIsPanning(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
 
-      // clicking blank canvas clears selections (but not the draft)
       if (!editMode) return;
       if (!isInteractiveTarget(e.target)) {
         setSelectedShapeId(null);
@@ -471,7 +475,6 @@ const Canvas = () => {
     return isShiftDown || draft ? "crosshair" : "default";
   }, [draft, editMode, isShiftDown, toolMode]);
 
-  // Keyboard: Esc cancels draft; Delete removes selected bed/vertex/shape
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!editMode) return;
@@ -483,7 +486,6 @@ const Canvas = () => {
 
       if (e.key !== "Backspace" && e.key !== "Delete") return;
 
-      // delete selected vertex
       if (activeVertex) {
         const { bedId, index } = activeVertex;
         const bed = bedsRef.current.find((b) => b.id === bedId);
@@ -506,7 +508,6 @@ const Canvas = () => {
         return;
       }
 
-      // delete selected bed
       if (activeBedId) {
         commit(shapesRef.current, bedsRef.current.filter((b) => b.id !== activeBedId));
         setActiveBedId(null);
@@ -514,7 +515,6 @@ const Canvas = () => {
         return;
       }
 
-      // delete selected shape
       if (selectedShapeId) {
         commit(shapesRef.current.filter((s) => s.id !== selectedShapeId), bedsRef.current);
         setSelectedShapeId(null);
@@ -525,52 +525,64 @@ const Canvas = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeBedId, activeVertex, cancelDraft, commit, draft, editMode, selectedShapeId]);
 
-  // Bed mutations
   const moveBedBy = useCallback(
     (bedId: string, dx: number, dy: number) => {
+      if (!editMode) return;
       const nextBeds = bedsRef.current.map((b) => {
         if (b.id !== bedId) return b;
         return { ...b, vertices: b.vertices.map((p) => snapToGrid({ x: p.x + dx, y: p.y + dy })) };
       });
       commit(shapesRef.current, nextBeds);
     },
-    [commit, snapToGrid]
+    [commit, editMode, snapToGrid]
   );
 
-  // Smooth vertex drag (live update + commit once)
-  const beginVertexDrag = useCallback((bedId: string, index: number) => {
-    vertexDragRef.current = { bedId, index };
-  }, []);
+  const beginVertexDrag = useCallback(
+    (bedId: string, index: number) => {
+      if (!editMode) return;
+      vertexDragRef.current = { bedId, index };
+    },
+    [editMode]
+  );
 
-  const updateVertexDrag = useCallback((bedId: string, index: number, p: Position) => {
-  const d = vertexDragRef.current;
-  if (!d || d.bedId !== bedId || d.index !== index) return;
+  const updateVertexDrag = useCallback(
+    (bedId: string, index: number, p: Position) => {
+      if (!editMode) return;
 
-  useGardenStore.setState((state) => {
-    const bedsRecord = { ...state.beds };
-    const bed = bedsRecord[bedId];
-    if (!bed) return state;
-    
-    const nextVerts = bed.vertices.map((v, i) => (i === index ? p : v));
-    bedsRecord[bedId] = { ...bed, vertices: nextVerts, isClosed: true };
-    
-    return { beds: bedsRecord };
-  });
-}, []);
+      const d = vertexDragRef.current;
+      if (!d || d.bedId !== bedId || d.index !== index) return;
+
+      useGardenStore.setState((state) => {
+        const bedsRecord = { ...state.beds };
+        const bed = bedsRecord[bedId];
+        if (!bed) return state;
+
+        const nextVerts = bed.vertices.map((v: Position, i: number) => (i === index ? p : v));
+        bedsRecord[bedId] = { ...bed, vertices: nextVerts, isClosed: true };
+
+        return { beds: bedsRecord };
+      });
+    },
+    [editMode]
+  );
 
   const endVertexDrag = useCallback(
     (bedId: string, index: number) => {
+      if (!editMode) return;
+
       const d = vertexDragRef.current;
       vertexDragRef.current = null;
       if (!d || d.bedId !== bedId || d.index !== index) return;
 
       commit(shapesRef.current, bedsRef.current);
     },
-    [commit]
+    [commit, editMode]
   );
 
   const moveVertexTo = useCallback(
     (bedId: string, index: number, p: Position) => {
+      if (!editMode) return;
+
       const snapped = snapToGrid(p);
       const nextBeds = bedsRef.current.map((b) => {
         if (b.id !== bedId) return b;
@@ -579,11 +591,13 @@ const Canvas = () => {
       });
       commit(shapesRef.current, nextBeds);
     },
-    [commit, snapToGrid]
+    [commit, editMode, snapToGrid]
   );
 
   const resizeBedToBox = useCallback(
     (bedId: string, nextBox: Box) => {
+      if (!editMode) return;
+
       const bed = bedsRef.current.find((b) => b.id === bedId);
       if (!bed) return;
 
@@ -613,49 +627,57 @@ const Canvas = () => {
         bedsRef.current.map((b) => (b.id === bedId ? { ...b, vertices: nextVerts, isClosed: true } : b))
       );
     },
-    [commit, snapToGrid]
+    [commit, editMode, snapToGrid]
   );
 
-  // Smooth bed drag (live update; commit once)
-  const beginBedDrag = useCallback((bedId: string, clientX: number, clientY: number) => {
-    const bed = bedsRef.current.find((b) => b.id === bedId);
-    if (!bed) return;
+  const beginBedDrag = useCallback(
+    (bedId: string, clientX: number, clientY: number) => {
+      if (!editMode) return;
 
-    bedDragRef.current = {
-      bedId,
-      startClientX: clientX,
-      startClientY: clientY,
-      startVerts: bed.vertices.map((p) => ({ ...p })),
-    };
-  }, []);
+      const bed = bedsRef.current.find((b) => b.id === bedId);
+      if (!bed) return;
+
+      bedDragRef.current = {
+        bedId,
+        startClientX: clientX,
+        startClientY: clientY,
+        startVerts: bed.vertices.map((p) => ({ ...p })),
+      };
+    },
+    [editMode]
+  );
 
   const updateBedDrag = useCallback(
-  (bedId: string, clientX: number, clientY: number) => {
-    const d = bedDragRef.current;
-    if (!d || d.bedId !== bedId) return;
+    (bedId: string, clientX: number, clientY: number) => {
+      if (!editMode) return;
 
-    const dx = (clientX - d.startClientX) / scale;
-    const dy = (clientY - d.startClientY) / scale;
+      const d = bedDragRef.current;
+      if (!d || d.bedId !== bedId) return;
 
-    useGardenStore.setState((state) => {
-      const bedsRecord = { ...state.beds };
-      const bed = bedsRecord[bedId];
-      if (!bed) return state;
-      
-      bedsRecord[bedId] = {
-        ...bed,
-        vertices: d.startVerts.map((p) => ({ x: p.x + dx, y: p.y + dy })),
-        isClosed: true
-      };
-      
-      return { beds: bedsRecord };
-    });
-  },
-  [scale]
-);
+      const dx = (clientX - d.startClientX) / scale;
+      const dy = (clientY - d.startClientY) / scale;
+
+      useGardenStore.setState((state) => {
+        const bedsRecord = { ...state.beds };
+        const bed = bedsRecord[bedId];
+        if (!bed) return state;
+
+        bedsRecord[bedId] = {
+          ...bed,
+          vertices: d.startVerts.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+          isClosed: true,
+        };
+
+        return { beds: bedsRecord };
+      });
+    },
+    [editMode, scale]
+  );
 
   const endBedDrag = useCallback(
     (bedId: string) => {
+      if (!editMode) return;
+
       const d = bedDragRef.current;
       bedDragRef.current = null;
       if (!d || d.bedId !== bedId) return;
@@ -667,64 +689,71 @@ const Canvas = () => {
 
       commit(shapesRef.current, nextBeds);
     },
-    [commit, snapToGrid]
+    [commit, editMode, snapToGrid]
   );
 
-  // Smooth shape drag (live update; commit once)
-  const beginShapeDrag = useCallback((shapeId: string, clientX: number, clientY: number) => {
-    const s = shapesRef.current.find((x) => x.id === shapeId);
-    if (!s) return;
+  const beginShapeDrag = useCallback(
+    (shapeId: string, clientX: number, clientY: number) => {
+      if (!editMode) return;
 
-    shapeDragRef.current = {
-      shapeId,
-      startClientX: clientX,
-      startClientY: clientY,
-      startPos: { ...s.startPos },
-      endPos: { ...s.endPos },
-      startPoints: s.type === "freehand" ? ([...(((s as any).points as Position[]) || [])] as Position[]) : null,
-      type: s.type,
-    };
-  }, []);
+      const s = shapesRef.current.find((x) => x.id === shapeId);
+      if (!s) return;
+
+      shapeDragRef.current = {
+        shapeId,
+        startClientX: clientX,
+        startClientY: clientY,
+        startPos: { ...s.startPos },
+        endPos: { ...s.endPos },
+        startPoints: s.type === "freehand" ? ([...(((s as any).points as Position[]) || [])] as Position[]) : null,
+        type: s.type,
+      };
+    },
+    [editMode]
+  );
 
   const updateShapeDrag = useCallback(
-  (shapeId: string, clientX: number, clientY: number) => {
-    const d = shapeDragRef.current;
-    if (!d || d.shapeId !== shapeId) return;
+    (shapeId: string, clientX: number, clientY: number) => {
+      if (!editMode) return;
 
-    const dx = (clientX - d.startClientX) / scale;
-    const dy = (clientY - d.startClientY) / scale;
+      const d = shapeDragRef.current;
+      if (!d || d.shapeId !== shapeId) return;
 
-    useGardenStore.setState((state) => {
-      const shapesRecord = { ...state.shapes };
-      const s = shapesRecord[shapeId];
-      if (!s) return state;
+      const dx = (clientX - d.startClientX) / scale;
+      const dy = (clientY - d.startClientY) / scale;
 
-      if (d.type === "freehand" && d.startPoints) {
-        shapesRecord[shapeId] = {
-          ...(s as any),
-          points: d.startPoints.map((p) => ({ x: p.x + dx, y: p.y + dy })),
-        };
-      } else {
-        shapesRecord[shapeId] = {
-          ...s,
-          startPos: { x: d.startPos.x + dx, y: d.startPos.y + dy },
-          endPos: { x: d.endPos.x + dx, y: d.endPos.y + dy },
-        };
-      }
-      
-      return { shapes: shapesRecord };
-    });
-  },
-  [scale]
-);
+      useGardenStore.setState((state) => {
+        const shapesRecord = { ...state.shapes };
+        const s = shapesRecord[shapeId];
+        if (!s) return state;
+
+        if (d.type === "freehand" && d.startPoints) {
+          shapesRecord[shapeId] = {
+            ...(s as any),
+            points: d.startPoints.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+          };
+        } else {
+          shapesRecord[shapeId] = {
+            ...s,
+            startPos: { x: d.startPos.x + dx, y: d.startPos.y + dy },
+            endPos: { x: d.endPos.x + dx, y: d.endPos.y + dy },
+          };
+        }
+
+        return { shapes: shapesRecord };
+      });
+    },
+    [editMode, scale]
+  );
 
   const endShapeDrag = useCallback(
     (shapeId: string) => {
+      if (!editMode) return;
+
       const d = shapeDragRef.current;
       shapeDragRef.current = null;
       if (!d || d.shapeId !== shapeId) return;
 
-      // Snap behavior for lines only.
       const nextShapes = shapesRef.current.map((s) => {
         if (s.id !== shapeId) return s;
         if (s.type !== "line") return s;
@@ -742,85 +771,93 @@ const Canvas = () => {
 
       commit(nextShapes, bedsRef.current);
     },
-    [commit, snapToGrid]
+    [commit, editMode, snapToGrid]
   );
 
-  // Smooth shape resize (live update; commit once)
-  const beginShapeResize = useCallback((shapeId: string) => {
-    shapeResizeRef.current = { shapeId };
-  }, []);
+  const beginShapeResize = useCallback(
+    (shapeId: string) => {
+      if (!editMode) return;
+      shapeResizeRef.current = { shapeId };
+    },
+    [editMode]
+  );
 
-  const updateShapeResize = useCallback((shapeId: string, updates: Partial<Shape>) => {
-  const d = shapeResizeRef.current;
-  if (!d || d.shapeId !== shapeId) return;
+  const updateShapeResize = useCallback(
+    (shapeId: string, updates: Partial<Shape>) => {
+      if (!editMode) return;
 
-  useGardenStore.setState((state) => {
-    const shapesRecord = { ...state.shapes };
-    const s = shapesRecord[shapeId];
-    if (!s) return state;
-    
-    shapesRecord[shapeId] = { ...s, ...updates } as Shape;
-    
-    return { shapes: shapesRecord };
-  });
-}, []);
+      const d = shapeResizeRef.current;
+      if (!d || d.shapeId !== shapeId) return;
+
+      useGardenStore.setState((state) => {
+        const shapesRecord = { ...state.shapes };
+        const s = shapesRecord[shapeId];
+        if (!s) return state;
+
+        shapesRecord[shapeId] = { ...s, ...updates } as Shape;
+
+        return { shapes: shapesRecord };
+      });
+    },
+    [editMode]
+  );
 
   const endShapeResize = useCallback(
     (shapeId: string) => {
+      if (!editMode) return;
+
       const d = shapeResizeRef.current;
       shapeResizeRef.current = null;
       if (!d || d.shapeId !== shapeId) return;
 
       commit(shapesRef.current, bedsRef.current);
     },
-    [commit]
+    [commit, editMode]
   );
 
   const undo = useCallback(() => {
-  if (historyIndex <= 0) return;
-  const newIndex = historyIndex - 1;
-  const snap = history[newIndex];
-  
-  // Convert arrays to Records
-  const shapesRecord = Object.fromEntries(snap.shapes.map(s => [s.id, s]));
-  const bedsRecord = Object.fromEntries(snap.beds.map(b => [b.id, b]));
-  
-  useGardenStore.setState({ 
-    shapes: shapesRecord, 
-    beds: bedsRecord 
-  });
-  
-  setHistoryIndex(newIndex);
-  setSelectedShapeId(null);
-  setActiveBedId(null);
-  setActiveVertex(null);
-  setDraft(null);
-  setPreviewEnd(null);
-  setToolMode("none");
-}, [history, historyIndex]);
+    if (historyIndex <= 0) return;
+    const newIndex = historyIndex - 1;
+    const snap = history[newIndex];
 
-const redo = useCallback(() => {
-  if (historyIndex >= history.length - 1) return;
-  const newIndex = historyIndex + 1;
-  const snap = history[newIndex];
-  
-  // Convert arrays to Records
-  const shapesRecord = Object.fromEntries(snap.shapes.map(s => [s.id, s]));
-  const bedsRecord = Object.fromEntries(snap.beds.map(b => [b.id, b]));
-  
-  useGardenStore.setState({ 
-    shapes: shapesRecord, 
-    beds: bedsRecord 
-  });
-  
-  setHistoryIndex(newIndex);
-  setSelectedShapeId(null);
-  setActiveBedId(null);
-  setActiveVertex(null);
-  setDraft(null);
-  setPreviewEnd(null);
-  setToolMode("none");
-}, [history, historyIndex]);
+    const shapesRecord = Object.fromEntries(snap.shapes.map((s) => [s.id, s]));
+    const bedsRecord = Object.fromEntries(snap.beds.map((b) => [b.id, b]));
+
+    useGardenStore.setState({
+      shapes: shapesRecord,
+      beds: bedsRecord as any,
+    });
+
+    setHistoryIndex(newIndex);
+    setSelectedShapeId(null);
+    setActiveBedId(null);
+    setActiveVertex(null);
+    setDraft(null);
+    setPreviewEnd(null);
+    setToolMode("none");
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex >= history.length - 1) return;
+    const newIndex = historyIndex + 1;
+    const snap = history[newIndex];
+
+    const shapesRecord = Object.fromEntries(snap.shapes.map((s) => [s.id, s]));
+    const bedsRecord = Object.fromEntries(snap.beds.map((b) => [b.id, b]));
+
+    useGardenStore.setState({
+      shapes: shapesRecord,
+      beds: bedsRecord as any,
+    });
+
+    setHistoryIndex(newIndex);
+    setSelectedShapeId(null);
+    setActiveBedId(null);
+    setActiveVertex(null);
+    setDraft(null);
+    setPreviewEnd(null);
+    setToolMode("none");
+  }, [history, historyIndex]);
 
   return (
     <div className="fixed inset-0 top-16 overflow-hidden bg-gray-50">
@@ -865,10 +902,11 @@ const redo = useCallback(() => {
         >
           <ShapeRenderer
             shapes={shapes}
-            beds={beds}
+            beds={beds as any}
             scale={scale}
             pan={pan}
             gridToUnit={1}
+            canEdit={editMode}
             selectedShapeId={selectedShapeId}
             activeBedId={activeBedId}
             activeVertex={activeVertex}
@@ -901,7 +939,7 @@ const redo = useCallback(() => {
             onUpdateShapeResize={updateShapeResize}
             onEndShapeResize={endShapeResize}
             onShapeUpdate={(shapeId, updates) => {
-              // One-off updates are fine here; drag/resize paths should use the smooth handlers.
+              if (!editMode) return;
               const nextShapes = shapesRef.current.map((s) => (s.id === shapeId ? ({ ...s, ...updates } as Shape) : s));
               commit(nextShapes, bedsRef.current);
             }}
@@ -914,7 +952,6 @@ const redo = useCallback(() => {
         </div>
       </div>
 
-      {/* Map Key */}
       {!isMapKeyOpen ? (
         <button
           onClick={() => setIsMapKeyOpen(true)}
@@ -937,7 +974,6 @@ const redo = useCallback(() => {
         </div>
       )}
 
-      {/* Drawing/Edit Tools */}
       {editMode && (
         <div className="absolute top-0 left-4 mt-5 bg-white rounded-lg shadow-lg p-3 border z-40" data-testid="edit-window">
           <div className="flex flex-col gap-2">

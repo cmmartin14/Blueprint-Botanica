@@ -11,10 +11,10 @@ import { HiX } from "react-icons/hi";
 import { FaEdit, FaSearch } from "react-icons/fa";
 import { FaCalendarAlt } from "react-icons/fa";
 import { IoNotifications } from "react-icons/io5";
-import { RiSave3Line } from "react-icons/ri";
+import { RiDeleteBin6Line, RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { FaRegUser } from "react-icons/fa";
-import { saveGarden, listGardens, loadGarden } from "../actions/gardenActions";
+import { saveGarden, listGardens, loadGarden, deleteGarden } from "../actions/gardenActions";
 import { useGardenStore } from "../types/garden";
 import { useUser } from "@stackframe/stack";
 import Chatbot from "./Chatbot";
@@ -174,6 +174,24 @@ const Navbar = () => {
     const state = await loadGarden(user.id, gardenId);
     if (state) loadIntoStore(state);
     setShowSavedList(false);
+  };
+
+  const handleDelete = async (gardenId: string, gardenName: string) => {
+    if (!user) return;
+    const confirmed = window.confirm(`Delete "${gardenName}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      await deleteGarden(user.id, gardenId);
+      setSavedList((prev) => prev.filter((garden) => garden.id !== gardenId));
+
+      if (id === gardenId) {
+        useGardenStore.setState({ id: "" });
+      }
+    } catch (error) {
+      console.error("Failed to delete garden:", error);
+      window.alert("Could not delete this garden. Please try again.");
+    }
   };
   const navIconButtonClass =
     "group p-3 rounded-xl text-[#B7C398] transition-all duration-200 ease-out hover:bg-[#004b34] hover:text-[#d9e8bc] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7C398]/60";
@@ -414,8 +432,8 @@ const Navbar = () => {
                 { name: "Search", action: toggleSearchWindow, icon: <FaSearch size={20} /> },
                 { name: "Calendar", action: toggleCalendarWindow, icon: <FaCalendarAlt size={20} /> },
                 { name: "Notifications", action: () => {}, icon: <IoNotifications size={20} /> },
-                { name: "Save", action: () => {}, icon: <RiSave3Line size={20} /> },
-                { name: "Saved Gardens", action: () => {}, icon: <IoFolderOutline size={20} /> },
+                { name: "Save", action: handleSave, icon: <RiSave3Line size={20} /> },
+                { name: "Saved Gardens", action: handleOpenFolder, icon: <IoFolderOutline size={20} /> },
                 { name: "Assistant", action: toggleChatWindow, icon: <LuSprout size={20} className="text-[#f4a45a]" /> },
                 { name: "Profile", action: () => {}, icon: <FaRegUser size={20} /> },
               ].map((item) => (
@@ -452,14 +470,27 @@ const Navbar = () => {
       <div className="px-4 py-3 text-sm text-[#B7C398]/60">No saved gardens yet.</div>
     )}
     {savedList.map((g) => (
-      <button
+      <div
         key={g.id}
-        onClick={() => handleLoad(g.id)}
-        className="w-full text-left px-4 py-2 text-sm hover:bg-[#004b34] text-[#B7C398] flex justify-between"
+        className="w-full px-4 py-2 text-sm text-[#B7C398] flex items-center justify-between hover:bg-[#004b34]"
       >
-        <span>{g.name}</span>
-        <span className="text-xs opacity-50">{new Date(g.updatedAt).toLocaleDateString()}</span>
-      </button>
+        <button
+          onClick={() => handleLoad(g.id)}
+          className="min-w-0 flex-1 text-left"
+          title={`Load ${g.name}`}
+        >
+          <div className="truncate">{g.name}</div>
+          <div className="text-xs opacity-50">{new Date(g.updatedAt).toLocaleDateString()}</div>
+        </button>
+        <button
+          onClick={() => handleDelete(g.id, g.name)}
+          className="ml-3 p-1 rounded hover:bg-[#00563B]"
+          title={`Delete ${g.name}`}
+          aria-label={`Delete ${g.name}`}
+        >
+          <RiDeleteBin6Line size={16} />
+        </button>
+      </div>
     ))}
   </div>
 )}

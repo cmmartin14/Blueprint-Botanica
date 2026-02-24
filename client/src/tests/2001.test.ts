@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { GET } from "../app/api/trefle/route"; 
+import { GET } from "../app/api/perenual/route";
 
 // Mock global fetch
 const mockFetch = vi.fn();
 
 beforeEach(() => {
   vi.stubGlobal("fetch", mockFetch);
-  vi.stubEnv("TREFLE_TOKEN", "fake_token"); 
+  vi.stubEnv("PERENUAL_KEY", "fake_key");
 });
 
 afterEach(() => {
@@ -14,12 +14,13 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("GET /api/trefle", () => {
-  it("returns plant data when Trefle responds correctly", async () => {
+describe("GET /api/perenual", () => {
+
+  it("returns plant list when query is provided", async () => {
     const fakeQuery = "rose";
 
     const fakeData = {
-      data: [{ id: 1, common_name: "Rose", scientific_name: "Rosa" }],
+      data: [{ id: 1, common_name: "Rose" }],
     };
 
     mockFetch.mockResolvedValueOnce({
@@ -27,12 +28,15 @@ describe("GET /api/trefle", () => {
       json: async () => fakeData,
     });
 
-    const req = new Request(`https://example.com/api/trefle?q=${fakeQuery}`);
+    const req = new Request(
+      `https://example.com/api/perenual?q=${fakeQuery}`
+    );
+
     const res = await GET(req);
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining(
-        "https://trefle.io/api/v1/plants/search?q=rose&token=fake_token"
+        "https://perenual.com/api/species-list"
       )
     );
 
@@ -40,10 +44,34 @@ describe("GET /api/trefle", () => {
     expect(json).toEqual(fakeData);
   });
 
-  it("returns 500 if TREFLE_TOKEN is missing", async () => {
-    vi.unstubAllEnvs(); // remove TREFLE_TOKEN
+  it("returns plant details when id is provided", async () => {
+    const fakeData = {
+      id: 123,
+      common_name: "Rose",
+    };
 
-    const req = new Request(`https://example.com/api/trefle?q=sunflower`);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => fakeData,
+    });
+
+    const req = new Request(
+      `https://example.com/api/perenual?id=123`
+    );
+
+    const res = await GET(req);
+    const json = await res.json();
+
+    expect(json).toEqual(fakeData);
+  });
+
+  it("returns 500 if PERENUAL_KEY is missing", async () => {
+    vi.unstubAllEnvs(); // remove PERENUAL_KEY
+
+    const req = new Request(
+      `https://example.com/api/perenual?q=rose`
+    );
+
     const res = await GET(req);
 
     expect(res.status).toBe(500);
@@ -51,29 +79,38 @@ describe("GET /api/trefle", () => {
     expect(json).toEqual({ error: "Server misconfigured" });
   });
 
-  it("returns 500 if Trefle returns non-OK response", async () => {
+  it("returns perenual error status when API responds non-OK", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
-      status: 503,
-      text: async () => "Service Unavailable",
+      status: 429,
     });
 
-    const req = new Request(`https://example.com/api/trefle?q=tulip`);
+    const req = new Request(
+      `https://example.com/api/perenual?q=tulip`
+    );
+
     const res = await GET(req);
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(429);
     const json = await res.json();
-    expect(json).toEqual({ error: "Trefle API error" });
+
+    expect(json).toEqual({
+      error: "Rate limit exceeded. Please wait a moment.",
+    });
   });
 
   it("returns 500 if fetch throws", async () => {
     mockFetch.mockRejectedValueOnce(new Error("Network failure"));
 
-    const req = new Request(`https://example.com/api/trefle?q=lily`);
+    const req = new Request(
+      `https://example.com/api/perenual?q=lily`
+    );
+
     const res = await GET(req);
 
     expect(res.status).toBe(500);
     const json = await res.json();
     expect(json).toEqual({ error: "Server fetch failed" });
   });
+
 });

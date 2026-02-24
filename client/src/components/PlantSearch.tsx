@@ -127,7 +127,7 @@ export default function PlantSearch() {
   const fetchResults = async (q: string) => {
     setLoading(true);
     try {
-      const resp = await fetch(`/api/trefle?q=${encodeURIComponent(q)}`);
+      const resp = await fetch(`/api/perenual?q=${encodeURIComponent(q)}`);
       if (!resp.ok) throw new Error(`API returned ${resp.status}`);
       const json: ApiResponse = await resp.json();
       setResults(json.data || []);
@@ -145,7 +145,7 @@ export default function PlantSearch() {
     setLoadingPlant(true); // start loading
     setCurrentPlantId(plant.id);
     try {
-      const resp = await fetch(`/api/trefle?id=${plant.id}`);
+      const resp = await fetch(`/api/perenual?id=${plant.id}`);
       if (!resp.ok) throw new Error(`API returned ${resp.status}`);
       const json = await resp.json();
       console.log("DETAIL RESPONSE:", json);
