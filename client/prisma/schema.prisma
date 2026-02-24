@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   schemas  = ["public", "neon_auth"]
-  schemas  = ["neon_auth", "public"]
 }
 
 model users_sync {
