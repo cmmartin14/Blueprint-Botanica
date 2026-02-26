@@ -23,7 +23,7 @@ This hosts the current build on your [localhost](http://localhost:3000/)
 Ensure that your database is both running and that your .env file has the proper database url key.
 It should be formated as `DATABASE_URL="postgresql://USERNAME:PASSWORD@localhost:PORT/DATABASE?schema=public"` with your data replacing USERNAME, PASSWORD, PORT, and DATABASE.
 
-Then, navigate to the prisma folder, and run:
+Then run from client:
 
 ```bash
 npx prisma db pull
