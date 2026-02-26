@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 
 const plantCache = new Map<number, any>();
+const careGuideCache = new Map<number, any>();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
   const id = searchParams.get("id");
-
+  const speciesId = searchParams.get("species_id");
+  const careGuides = searchParams.get("care_guides");
+  
   const key = process.env.PERENUAL_KEY;
 
   if (!key) {
@@ -17,10 +20,34 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Handle care guides request
+    if (speciesId && careGuides === "true") {
+      const numericId = Number(speciesId);
+      
+      // Check cache first
+      if (careGuideCache.has(numericId)) {
+        return NextResponse.json(careGuideCache.get(numericId));
+      }
+      
+      const apiUrl = `https://perenual.com/api/species-care-guide-list?species_id=${numericId}&key=${key}`;
+      const resp = await fetch(apiUrl);
+      
+      if (!resp.ok) {
+        return NextResponse.json(
+          { error: "Care guides API error" },
+          { status: resp.status }
+        );
+      }
+      
+      const data = await resp.json();
+      careGuideCache.set(numericId, data);
+      return NextResponse.json(data);
+    }
 
+    // Handle plant details by ID
     if (id) {
       const numericId = Number(id);
-
+      
       if (plantCache.has(numericId)) {
         return NextResponse.json(plantCache.get(numericId));
       }
@@ -37,20 +64,18 @@ export async function GET(request: Request) {
 
       const data = await resp.json();
       plantCache.set(numericId, data);
-
       return NextResponse.json(data);
     }
 
+    // Handle plant search by query
     if (query) {
       const apiUrl = `https://perenual.com/api/species-list?key=${key}&q=${encodeURIComponent(
         query
       )}`;
-
       const resp = await fetch(apiUrl);
 
       if (!resp.ok) {
         const status = resp.status;
-
         return NextResponse.json(
           {
             error:
@@ -67,10 +92,8 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ data: [] });
-
   } catch (err) {
     console.error("Perenual fetch failed:", err);
-
     return NextResponse.json(
       { error: "Server fetch failed" },
       { status: 500 }

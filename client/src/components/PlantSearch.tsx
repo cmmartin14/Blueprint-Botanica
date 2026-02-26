@@ -14,6 +14,20 @@ interface GrowthDetails {
   };
 }
 
+interface CareGuideSection {
+  id: number;
+  type: string;
+  description: string;
+}
+
+interface CareGuide {
+  id: number;
+  species_id: number;
+  common_name: string;
+  scientific_name: string[];
+  section: CareGuideSection[];
+}
+
 
 interface Plant {
   id: number;
@@ -26,6 +40,9 @@ interface Plant {
     original_url?: string;
   };
   description?: string;
+  descriptionSource?: string; // Track where the description came from
+  "care-guides"?: string; // URL to care guides API
+  careGuideData?: CareGuide[]; // Fetched care guide information
   cycle?: string;
   watering?: string;
   sunlight?: string[];
@@ -130,12 +147,142 @@ export default function PlantSearch() {
       const resp = await fetch(`/api/perenual?q=${encodeURIComponent(q)}`);
       if (!resp.ok) throw new Error(`API returned ${resp.status}`);
       const json: ApiResponse = await resp.json();
-      setResults(json.data || []);
+      // Filter to only include plants with ID 1-3000
+      const filtered = (json.data || []).filter(plant => plant.id >= 1 && plant.id <= 3000);
+      setResults(filtered);
     } catch (err) {
       console.error("Error fetching plants:", err);
       setResults([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch Wikipedia description for a plant
+  const fetchWikipediaDescription = async (
+    commonName: string,
+    scientificName: string | string[]
+  ): Promise<string | null> => {
+    try {
+      // Prefer scientific name for more accurate results
+      const scientificNameStr = Array.isArray(scientificName) 
+        ? scientificName[0] 
+        : scientificName;
+      
+      // Try scientific name first, fallback to common name
+      const searchTerms = [scientificNameStr, commonName].filter(Boolean);
+      
+      for (const searchTerm of searchTerms) {
+        // First, search for the page
+        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTerm)}&format=json&origin=*`;
+        const searchResp = await fetch(searchUrl);
+        const searchData = await searchResp.json();
+        
+        if (!searchData.query?.search?.length) continue;
+        
+        const pageTitle = searchData.query.search[0].title;
+        
+        // Fetch extract AND categories/templates for validation
+        const detailsUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(pageTitle)}&prop=extracts|categories|templates&exintro=true&explaintext=true&format=json&origin=*`;
+        const detailsResp = await fetch(detailsUrl);
+        const detailsData = await detailsResp.json();
+        
+        const pages = detailsData.query?.pages;
+        if (!pages) continue;
+        
+        const pageId = Object.keys(pages)[0];
+        const page = pages[pageId];
+        const extract = page?.extract;
+        
+        if (!extract) continue;
+        
+        // Validation checks
+        const isValid = validatePlantPage(page, extract, scientificNameStr);
+        
+        if (isValid) {
+          return extract;
+        }
+      }
+      
+      return null;
+    } catch (err) {
+      console.error("Error fetching Wikipedia description:", err);
+      return null;
+    }
+  };
+
+  // Validate that a Wikipedia page is actually about a plant
+  const validatePlantPage = (
+    page: any,
+    extract: string,
+    scientificName: string
+  ): boolean => {
+    // Check 1: Look for plant-related infobox templates
+    const templates = page.templates || [];
+    const hasPlantInfobox = templates.some((t: any) => {
+      const title = t.title.toLowerCase();
+      return title.includes('speciesbox') || 
+             title.includes('taxobox') || 
+             title.includes('automatic taxobox') ||
+             title.includes('plantbox');
+    });
+    
+    if (hasPlantInfobox) return true;
+    
+    // Check 2: Look for plant-related categories
+    const categories = page.categories || [];
+    const hasPlantCategory = categories.some((c: any) => {
+      const title = c.title.toLowerCase();
+      return title.includes('plants') || 
+             title.includes('flora') || 
+             title.includes('species') ||
+             title.includes('botanical');
+    });
+    
+    if (hasPlantCategory) return true;
+    
+    // Check 3: Content validation - look for plant-related keywords
+    const extractLower = extract.toLowerCase();
+    const plantKeywords = [
+      'species', 'plant', 'flower', 'genus', 'family', 
+      'botanical', 'cultivar', 'perennial', 'annual', 
+      'flowering', 'native', 'grows', 'cultivation'
+    ];
+    
+    const keywordCount = plantKeywords.filter(keyword => 
+      extractLower.includes(keyword)
+    ).length;
+    
+    // Require at least 2 plant keywords
+    if (keywordCount >= 2) return true;
+    
+    // Check 4: Scientific name appears in the extract
+    if (scientificName && extractLower.includes(scientificName.toLowerCase())) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Fetch care guides from Perenual API
+  const fetchCareGuides = async (careGuidesUrl: string): Promise<CareGuide[] | null> => {
+    try {
+      // Extract the species_id and key from the URL
+      const url = new URL(careGuidesUrl);
+      const speciesId = url.searchParams.get('species_id');
+      const key = url.searchParams.get('key');
+      
+      if (!speciesId || !key) return null;
+      
+      // Fetch through the proxy API
+      const resp = await fetch(`/api/perenual?species_id=${speciesId}&care_guides=true`);
+      if (!resp.ok) return null;
+      
+      const json = await resp.json();
+      return json.data || null;
+    } catch (err) {
+      console.error("Error fetching care guides:", err);
+      return null;
     }
   };
 
@@ -149,7 +296,34 @@ export default function PlantSearch() {
       if (!resp.ok) throw new Error(`API returned ${resp.status}`);
       const json = await resp.json();
       console.log("DETAIL RESPONSE:", json);
-      setSelectedPlant(json.data ?? json);
+      
+      const plantData = json.data ?? json;
+      
+      // Fetch Wikipedia description if Perenual doesn't have one
+      if (!plantData.description) {
+        const commonName = plantData.common_name || "";
+        const scientificName = plantData.scientific_name;
+        
+        const wikiDescription = await fetchWikipediaDescription(
+          commonName,
+          scientificName
+        );
+        
+        if (wikiDescription) {
+          plantData.description = wikiDescription;
+          plantData.descriptionSource = "Wikipedia";
+        }
+      }
+      
+      // Fetch care guides if available
+      if (plantData["care-guides"]) {
+        const careGuides = await fetchCareGuides(plantData["care-guides"]);
+        if (careGuides) {
+          plantData.careGuideData = careGuides;
+        }
+      }
+      
+      setSelectedPlant(plantData);
     } catch (err) {
       console.error("Error fetching plant details:", err);
       setSelectedPlant(plant); // fallback
@@ -303,9 +477,37 @@ export default function PlantSearch() {
 
               {/* DESCRIPTION */}
               {selectedPlant.description && (
-                <p className="text-sm text-gray-700 mb-4">
-                  {selectedPlant.description}
-                </p>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-700">
+                    {selectedPlant.description}
+                  </p>
+                  {selectedPlant.descriptionSource === "Wikipedia" && (
+                    <p className="text-xs text-gray-500 mt-1 italic">
+                      Source: Wikipedia
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* CARE GUIDES */}
+              {selectedPlant.careGuideData && selectedPlant.careGuideData.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold mb-2">Care Guide</h3>
+                  {selectedPlant.careGuideData.map((guide) => (
+                    <div key={guide.id} className="mb-3">
+                      {guide.section && guide.section.map((section) => (
+                        <div key={section.id} className="mb-2">
+                          <h4 className="font-medium text-sm capitalize mb-1">
+                            {section.type.replace(/_/g, ' ')}
+                          </h4>
+                          <p className="text-sm text-gray-700">
+                            {section.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               )}
 
               {/* DETAILS GRID */}
