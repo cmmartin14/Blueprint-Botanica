@@ -290,16 +290,17 @@ export default function CalendarWindow({
   return (
     <div
       data-testid="calendar-window"
-      className={`fixed z-50 overflow-hidden rounded-[32px] bg-[#F7FBF5] shadow-[0_20px_48px_rgba(25,64,41,0.2)] border border-[#d7e6d2] transition-all duration-300 ease-in-out ${
-        isFullscreen ? "inset-24" : "top-24 left-6 w-[980px] h-[620px]"
-      } ${isOpen ? "" : "hidden"}`}
+      className={`fixed z-50 overflow-hidden rounded-[32px] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.15)] border border-[#dce9d8] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        isFullscreen ? "inset-12 md:inset-20" : "top-24 left-6 w-[980px] h-[660px] max-w-[95vw]"
+      } ${isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
     >
-      <div className="flex items-center justify-between border-b border-[#d7e6d2] bg-[#ecf5e8] px-5 py-3.5">
+      {/* Header section */}
+      <div className="flex items-center justify-between border-b border-[#dce9d8] bg-[#ecf5e8]/80 backdrop-blur-md px-6 py-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-green-900">Calendar</h2>
+          <h2 className="text-xl font-bold text-green-900 tracking-tight">Calendar</h2>
           {weather?.city && (
-            <span className="text-sm text-green-700">
-              • Weather for <strong>{weather.city}</strong>
+            <span className="text-sm font-medium text-green-700 bg-white/60 px-3 py-1 rounded-full border border-[#dce9d8]">
+              Weather: <strong>{weather.city}</strong>
               {weather.country ? `, ${weather.country}` : ""}
             </span>
           )}
@@ -310,18 +311,10 @@ export default function CalendarWindow({
             <button
               type="button"
               onClick={onClose}
-              className="calendar-close-btn rounded-full p-2 text-green-700 hover:bg-green-100 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-green-300"
+              className="calendar-close-btn rounded-full p-2.5 text-green-700 transition-all duration-200 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
               aria-label="Close"
             >
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 6L6 18" />
                 <path d="M6 6l12 12" />
               </svg>
@@ -330,98 +323,69 @@ export default function CalendarWindow({
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="rounded-md p-1 text-green-700 transition-colors hover:bg-green-100 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-green-300"
+            className="rounded-full p-2.5 text-green-700 transition-all duration-200 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
             aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
           >
             {isFullscreen ? (
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M9 3H5a2 2 0 0 0-2 2v4" />
-                <path d="M15 21h4a2 2 0 0 0 2-2v-4" />
-                <path d="M21 9V5a2 2 0 0 0-2-2h-4" />
-                <path d="M3 15v4a2 2 0 0 0 2 2h4" />
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
               </svg>
             ) : (
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M15 3h6v6" />
-                <path d="M9 21H3v-6" />
-                <path d="M21 9l-7-7" />
-                <path d="M3 15l7 7" />
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
               </svg>
             )}
           </button>
         </div>
       </div>
 
-      <div className="flex h-[calc(100%-53px)] flex-col lg:flex-row bg-[#f3f8f1]">
-        <div className="lg:w-1/2 p-5 border-b lg:border-b-0 lg:border-r border-[#dce9d8]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+      <div className="flex h-[calc(100%-69px)] flex-col lg:flex-row bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea]">
+        
+        {/* Left Side: Calendar Grid */}
+        <div className="lg:w-1/2 p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-[#dce9d8] flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <div className="text-xl text-green-900 font-bold">{monthLabel}</div>
+            <div className="flex items-center gap-2 bg-white/60 p-1 rounded-full border border-[#dce9d8] shadow-sm">
               <button
-                onClick={() =>
-                  setMonthCursor(
-                    new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1)
-                  )
-                }
-                className="rounded-xl border border-[#d7e6d2] px-2.5 py-1 text-green-700 hover:bg-[#eef6ea]"
+                onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}
+                className="rounded-full w-8 h-8 flex items-center justify-center text-green-700 hover:bg-white hover:shadow-sm transition-all"
                 aria-label="Previous month"
               >
                 ‹
               </button>
               <button
                 onClick={() => setMonthCursor(new Date())}
-                className="rounded-xl border border-[#d7e6d2] px-2.5 py-1 text-green-700 hover:bg-[#eef6ea]"
+                className="rounded-full px-4 py-1 text-sm font-medium text-green-700 hover:bg-white hover:shadow-sm transition-all"
               >
                 Today
               </button>
               <button
-                onClick={() =>
-                  setMonthCursor(
-                    new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1)
-                  )
-                }
-                className="rounded-xl border border-[#d7e6d2] px-2.5 py-1 text-green-700 hover:bg-[#eef6ea]"
+                onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
+                className="rounded-full w-8 h-8 flex items-center justify-center text-green-700 hover:bg-white hover:shadow-sm transition-all"
                 aria-label="Next month"
               >
                 ›
               </button>
             </div>
-            <div className="text-green-900 font-semibold">{monthLabel}</div>
           </div>
 
-          <div className="mt-3 grid grid-cols-7 text-center text-xs text-green-700">
+          <div className="grid grid-cols-7 text-center text-sm font-medium text-green-800/60 mb-2">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-              <div key={d} className="py-1">
-                {d}
-              </div>
+              <div key={d} className="py-2">{d}</div>
             ))}
           </div>
 
-          <div className="mt-1 grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1.5 flex-1">
             {grid.map((cell, i) => {
               const inMonth = cell.inMonth;
               const isSelected = selectedDate ? isSameDay(cell.date, selectedDate) : false;
               const marker = markersByDate.get(toYmd(cell.date));
               const classes = [
-                "relative rounded-xl border px-2.5 py-2.5 text-center transition-all duration-150",
-                "border-[#d7e6d2]",
-                inMonth ? "text-green-900" : "text-gray-400",
-                isSelected ? "bg-[#eaf6e6] ring-1 ring-[#8cc69f]" : "hover:bg-[#eef6ea]",
+                "relative flex flex-col items-center justify-center rounded-[20px] border-2 transition-all duration-200 ease-out py-3",
+                inMonth ? "text-green-900 bg-white/40" : "text-green-900/30 bg-transparent border-transparent",
+                isSelected 
+                  ? "border-[#8cc69f] bg-white shadow-sm scale-105 z-10" 
+                  : "border-transparent hover:border-[#dce9d8] hover:bg-white hover:shadow-sm",
               ].join(" ");
               return (
                 <button
@@ -429,20 +393,17 @@ export default function CalendarWindow({
                   onClick={() => setSelectedDate(new Date(cell.date))}
                   className={classes}
                 >
-                  <div className="text-sm">
+                  <div className="text-[15px] font-medium flex flex-col items-center">
                     {cell.date.getDate()}
                     {cell.isToday && (
-                      <span className="ml-1 inline-block h-2 w-2 rounded-full bg-green-500 align-middle" />
+                      <span className="mt-1 block h-1.5 w-1.5 rounded-full bg-green-500" />
                     )}
                   </div>
                   {marker && marker.notes > 0 && (
-                    <div className="mt-1 flex items-center justify-center gap-1">
-                      {marker.notes > 0 && (
-                        <span
-                          className="inline-block h-2 w-2 rounded-full bg-amber-500"
-                          title={`${marker.notes} note(s)`}
-                        />
-                      )}
+                    <div className="absolute bottom-1.5 flex gap-0.5">
+                      {Array.from({ length: Math.min(marker.notes, 3) }).map((_, idx) => (
+                        <span key={idx} className="block h-1.5 w-1.5 rounded-full bg-amber-400" />
+                      ))}
                     </div>
                   )}
                 </button>
@@ -451,83 +412,78 @@ export default function CalendarWindow({
           </div>
         </div>
 
-        <div className="lg:w-1/2 p-5 overflow-y-auto space-y-5">
-          <section className="rounded-2xl border border-[#d7e6d2] bg-white/90 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-green-900">Weather</h3>
-            <div className="mt-2 flex gap-2">
+        {/* Right Side: Details & Forms */}
+        <div className="lg:w-1/2 p-6 lg:p-8 overflow-y-auto space-y-6 custom-scrollbar">
+          
+          {/* Weather Card */}
+          <section className="rounded-[28px] border border-[#dce9d8] bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
+            <h3 className="text-base font-bold text-green-900 flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
+              Weather
+            </h3>
+            <div className="mt-4 flex gap-2">
               <input
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="Search city (e.g., Denton, US)"
-                className="w-full rounded-xl border border-[#d7e6d2] bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-300"
+                className="w-full rounded-full border border-[#dce9d8] bg-white px-5 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] transition-all"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && city.trim()) fetchByCity(city.trim());
                 }}
               />
               <button
                 onClick={() => city.trim() && fetchByCity(city.trim())}
-                className="rounded-xl border border-[#d7e6d2] px-3 text-sm text-green-700 hover:bg-[#eef6ea]"
+                className="rounded-full bg-green-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors shadow-sm"
               >
                 Search
               </button>
             </div>
             <button
               onClick={useMyLocation}
-              className="mt-2 rounded-xl border border-[#d7e6d2] px-3 py-2 text-sm text-green-700 hover:bg-[#eef6ea]"
+              className="mt-3 w-full rounded-full border-2 border-dashed border-[#dce9d8] px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-white hover:border-[#8cc69f] transition-all"
             >
-              Use my location
+              Use my exact location
             </button>
 
-            {loading && <p className="mt-3 text-sm text-green-700">Loading weather…</p>}
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+            {loading && <p className="mt-4 text-sm text-green-700 animate-pulse">Loading weather data…</p>}
+            {error && <p className="mt-4 text-sm text-red-500 bg-red-50 p-3 rounded-2xl">{error}</p>}
 
             {!loading && !error && weather && (
-              <div className="mt-3 space-y-3">
+              <div className="mt-5 space-y-4">
                 {selectedForecast ? (
-                  <div className="rounded-2xl border border-[#d7e6d2] bg-[#f9fcf7] p-3.5">
-                    <div className="text-xs text-green-700">
-                      Forecast for {selectedYmd}
-                    </div>
-                    <div className="mt-1 flex items-center gap-3">
-                      <img
-                        src={`https://openweathermap.org/img/wn/${selectedForecast.icon}@2x.png`}
-                        alt=""
-                        className="h-10 w-10"
-                      />
-                      <div>
-                        <div className="text-sm font-medium text-green-900 capitalize">
-                          {selectedForecast.description}
-                        </div>
-                        <div className="text-sm text-green-800">
-                          {Math.round(selectedForecast.temp.min)}° /{" "}
-                          {Math.round(selectedForecast.temp.max)}°
-                        </div>
+                  <div className="rounded-[20px] bg-gradient-to-r from-[#eef6ea] to-[#f5fbf3] border border-[#dce9d8] p-4 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-1">
+                        Forecast for {selectedYmd}
+                      </div>
+                      <div className="text-lg font-bold text-green-900 capitalize">
+                        {selectedForecast.description}
+                      </div>
+                      <div className="text-sm font-medium text-green-800/80">
+                        {Math.round(selectedForecast.temp.min)}° / {Math.round(selectedForecast.temp.max)}°
                       </div>
                     </div>
+                    <img src={`https://openweathermap.org/img/wn/${selectedForecast.icon}@2x.png`} alt="" className="h-16 w-16 drop-shadow-sm" />
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-[#d7e6d2] bg-[#f9fcf7] p-3.5">
-                    <div className="text-xs text-green-700">Current</div>
-                    {weather.current ? (
-                      <div className="mt-1 flex items-center gap-3">
-                        <img
-                          src={`https://openweathermap.org/img/wn/${weather.current.icon}@2x.png`}
-                          alt=""
-                          className="h-10 w-10"
-                        />
-                        <div>
-                          <div className="text-sm font-medium text-green-900 capitalize">
+                  <div className="rounded-[20px] bg-gradient-to-r from-[#eef6ea] to-[#f5fbf3] border border-[#dce9d8] p-4 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-1">Current</div>
+                      {weather.current ? (
+                        <>
+                          <div className="text-lg font-bold text-green-900 capitalize">
                             {weather.current.description}
                           </div>
-                          <div className="text-sm text-green-800">
+                          <div className="text-sm font-medium text-green-800/80">
                             {Math.round(weather.current.temp)}°
                           </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-green-700">
-                        Select a date or search a city.
-                      </div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-green-700">Select a date or search a city.</div>
+                      )}
+                    </div>
+                    {weather.current && (
+                      <img src={`https://openweathermap.org/img/wn/${weather.current.icon}@2x.png`} alt="" className="h-16 w-16 drop-shadow-sm" />
                     )}
                   </div>
                 )}
@@ -535,27 +491,23 @@ export default function CalendarWindow({
             )}
 
             {!loading && !error && weather && nextFourDaysForecast.length > 0 && (
-              <div className="mt-3 rounded-2xl border border-[#d7e6d2] bg-[#f9fcf7] p-3.5">
-                <div className="text-xs font-semibold text-green-800">Next 4 days</div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="mt-4">
+                <div className="text-xs font-bold text-green-800 uppercase tracking-wider mb-2">Next 4 days</div>
+                <div className="grid grid-cols-2 gap-3">
                   {nextFourDaysForecast.map((day) => (
                     <button
                       key={day.date}
                       onClick={() => setSelectedDate(new Date(day.date))}
-                      className="rounded-xl border border-[#dce9d8] bg-white p-2 text-left hover:bg-[#eef6ea]"
+                      className="rounded-[16px] border border-[#dce9d8] bg-white p-3 text-left hover:border-[#8cc69f] hover:shadow-sm transition-all group"
                     >
-                      <div className="text-xs text-green-700">{day.date}</div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <img
-                          src={`https://openweathermap.org/img/wn/${day.icon}.png`}
-                          alt=""
-                          className="h-6 w-6"
-                        />
+                      <div className="text-xs font-semibold text-green-700 mb-1">{day.date}</div>
+                      <div className="flex items-center gap-2">
+                        <img src={`https://openweathermap.org/img/wn/${day.icon}.png`} alt="" className="h-8 w-8 group-hover:scale-110 transition-transform" />
                         <div>
-                          <div className="text-xs text-green-900 capitalize">
+                          <div className="text-xs font-medium text-green-900 capitalize truncate w-16">
                             {day.description}
                           </div>
-                          <div className="text-xs text-green-800">
+                          <div className="text-xs text-green-800/80">
                             {Math.round(day.temp.min)}° / {Math.round(day.temp.max)}°
                           </div>
                         </div>
@@ -565,78 +517,87 @@ export default function CalendarWindow({
                 </div>
               </div>
             )}
-
-            {!loading && !error && !weather && (
-              <p className="mt-3 text-sm text-green-700">
-                Search a city or use your location to see the forecast.
-              </p>
-            )}
           </section>
 
-          <section className="rounded-2xl border border-[#d7e6d2] bg-white/90 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-green-900">Notes & reminders</h3>
-            <p className="mt-1 text-xs text-green-700">
-              Selected date: {selectedYmd ?? "None"}
-            </p>
+          {/* Notes Card */}
+          <section className="rounded-[28px] border border-[#dce9d8] bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-green-900 flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                Notes & Reminders
+              </h3>
+              <span className="text-xs font-medium bg-[#eef6ea] text-green-800 px-3 py-1 rounded-full border border-[#dce9d8]">
+                {selectedYmd ?? "General"}
+              </span>
+            </div>
 
-            <form onSubmit={submitNote} className="mt-3 space-y-2">
+            <form onSubmit={submitNote} className="space-y-3">
               <textarea
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Write a reminder note..."
-                className="w-full rounded-xl border border-[#d7e6d2] bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-300"
-                rows={2}
+                placeholder="Jot down a reminder or observation..."
+                className="w-full rounded-[20px] border border-[#dce9d8] bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] transition-all resize-none"
+                rows={3}
               />
-              <input
-                type="datetime-local"
-                value={noteReminderAt}
-                onChange={(e) => setNoteReminderAt(e.target.value)}
-                className="w-full rounded-xl border border-[#d7e6d2] bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-300"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="datetime-local"
+                  value={noteReminderAt}
+                  onChange={(e) => setNoteReminderAt(e.target.value)}
+                  className="flex-1 rounded-full border border-[#dce9d8] bg-white px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={!noteText.trim()}
+                  className="rounded-full bg-green-800 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                >
+                  Save
+                </button>
+              </div>
               <input
                 type="email"
                 value={noteReminderEmail}
                 onChange={(e) => setNoteReminderEmail(e.target.value)}
-                placeholder="Reminder email override (optional)"
-                className="w-full rounded-xl border border-[#d7e6d2] bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-300"
+                placeholder="Send reminder to specific email (optional)"
+                className="w-full rounded-full border border-[#dce9d8] bg-white px-4 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] transition-all"
               />
-              <button
-                type="submit"
-                className="rounded-xl border border-[#d7e6d2] px-3 py-2 text-sm text-green-700 hover:bg-[#eef6ea]"
-              >
-                Add note
-              </button>
             </form>
 
-            <div className="mt-3">
-              <label className="text-xs text-green-800">Default reminder email</label>
+            <div className="mt-5 border-t border-[#dce9d8] pt-5">
+              <label className="block text-xs font-bold text-green-800 uppercase tracking-wider mb-2">Default Alert Email</label>
               <input
                 type="email"
                 value={notificationEmail}
                 onChange={(e) => setNotificationEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="mt-1 w-full rounded-xl border border-[#d7e6d2] bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-300"
+                className="w-full rounded-full border border-[#dce9d8] bg-white px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] transition-all"
               />
             </div>
 
-            <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+            <div className="mt-5 space-y-3 max-h-48 overflow-y-auto pr-1">
               {selectedNotes.length === 0 ? (
-                <p className="text-xs text-green-700">No notes for this date yet.</p>
+                <div className="text-center py-4 text-sm text-green-700/60 italic border-2 border-dashed border-[#dce9d8] rounded-[20px]">
+                  No notes for this date.
+                </div>
               ) : (
                 selectedNotes.map((note) => (
-                  <div key={note.id} className="rounded-xl border border-[#dce9d8] bg-[#f9fcf7] p-2.5">
-                    <p className="text-sm text-green-900">{note.content}</p>
-                    <p className="mt-1 text-xs text-green-700">
-                      {note.date ? `Date: ${note.date}` : "General note"}
-                      {note.reminderAt
-                        ? ` • Reminder: ${new Date(note.reminderAt).toLocaleString()}`
-                        : ""}
-                    </p>
+                  <div key={note.id} className="group rounded-[20px] border border-[#dce9d8] bg-white p-4 shadow-sm hover:shadow-md transition-all relative">
+                    <p className="text-sm font-medium text-green-900 pr-6">{note.content}</p>
+                    <div className="mt-2 flex flex-wrap gap-2 items-center text-xs text-green-700/80">
+                      {note.date && <span className="bg-[#f5fbf3] px-2 py-1 rounded-md">{note.date}</span>}
+                      {note.reminderAt && (
+                        <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          {new Date(note.reminderAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={() => removeNote(note.id)}
-                      className="mt-1 text-xs text-red-600 hover:underline"
+                      className="absolute top-3 right-3 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 rounded-full"
+                      title="Delete Note"
                     >
-                      Delete
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </div>
                 ))
@@ -644,18 +605,25 @@ export default function CalendarWindow({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-[#d7e6d2] bg-white/90 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-green-900">Alerts</h3>
-            <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
+          {/* Alerts Card */}
+          <section className="rounded-[28px] border border-[#dce9d8] bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
+            <h3 className="text-base font-bold text-green-900 flex items-center gap-2 mb-4">
+              <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+              Active Alerts
+            </h3>
+            
+            <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
               {alerts.length === 0 ? (
-                <p className="text-xs text-green-700">No active alerts.</p>
+                <div className="text-center py-3 text-sm text-green-700/60 italic border-2 border-dashed border-[#dce9d8] rounded-[20px]">
+                  All caught up!
+                </div>
               ) : (
                 alerts.map((alert) => (
-                  <div key={alert.id} className="rounded-xl border border-[#dce9d8] bg-[#f9fcf7] p-2.5">
-                    <p className="text-xs text-green-900">{alert.message}</p>
+                  <div key={alert.id} className="flex items-start justify-between rounded-[16px] border border-amber-200 bg-amber-50 p-3 shadow-sm">
+                    <p className="text-sm font-medium text-amber-900 mr-2">{alert.message}</p>
                     <button
                       onClick={() => dismissAlert(alert.id)}
-                      className="mt-1 text-xs text-green-700 hover:underline"
+                      className="text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-full transition-colors whitespace-nowrap"
                     >
                       Dismiss
                     </button>
@@ -663,19 +631,25 @@ export default function CalendarWindow({
                 ))
               )}
             </div>
+
             {upcomingReminders.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs font-semibold text-green-800">Upcoming reminders</p>
-                <ul className="mt-1 space-y-1">
+              <div className="mt-5 border-t border-[#dce9d8] pt-4">
+                <p className="text-xs font-bold text-green-800 uppercase tracking-wider mb-2">Upcoming</p>
+                <ul className="space-y-2">
                   {upcomingReminders.map((note) => (
-                    <li key={note.id} className="text-xs text-green-700">
-                      {new Date(note.reminderAt as string).toLocaleString()} • {note.content}
+                    <li key={note.id} className="flex items-center gap-2 text-sm text-green-800 bg-white border border-[#dce9d8] p-2 rounded-xl">
+                      <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                      <span className="font-medium truncate">{note.content}</span>
+                      <span className="text-xs text-green-600/80 ml-auto whitespace-nowrap">
+                        {new Date(note.reminderAt as string).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                      </span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
           </section>
+
         </div>
       </div>
     </div>
