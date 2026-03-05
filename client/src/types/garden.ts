@@ -8,12 +8,22 @@ export interface Bed {
   createdAt: number;
 }
 
+// Minimal plant entry — swap when perenual is integrated
+export interface PlantEntry {
+  id: number;
+  common_name: string | null;
+  scientific_name: string | string[];
+  image_url?: string;
+}
+
 export interface GardenState {
   id: string;
   name: string;
   editMode: boolean;
   shapes: Record<string, Shape>;
   beds: Record<string, Bed>;
+  // keyed by circle shape ID
+  bedPlants: Record<string, PlantEntry[]>;
 }
 
 type GardenActions = {
@@ -34,6 +44,10 @@ type GardenActions = {
   addShapeToBed: (bedId: string, shapeId: string) => void;
   removeShapeFromBed: (bedId: string, shapeId: string) => void;
 
+  // Bed plants
+  addPlantToBed: (shapeId: string, plant: PlantEntry) => void;
+  removePlantFromBed: (shapeId: string, plantId: number) => void;
+
   // Persistence
   loadGarden: (state: GardenState) => void;
   clearGarden: () => void;
@@ -45,6 +59,7 @@ const defaultState: GardenState = {
   editMode: false,
   shapes: {},
   beds: {},
+  bedPlants: {},
 };
 
 export const useGardenStore = create<GardenState & GardenActions>((set) => ({
@@ -123,6 +138,19 @@ export const useGardenStore = create<GardenState & GardenActions>((set) => ({
           [bedId]: { ...bed, shapeIds: bed.shapeIds.filter((id) => id !== shapeId) },
         },
       };
+    }),
+
+  addPlantToBed: (shapeId, plant) =>
+    set((state) => {
+      const existing = state.bedPlants[shapeId] ?? [];
+      if (existing.some((p) => p.id === plant.id)) return state;
+      return { bedPlants: { ...state.bedPlants, [shapeId]: [...existing, plant] } };
+    }),
+
+  removePlantFromBed: (shapeId, plantId) =>
+    set((state) => {
+      const existing = state.bedPlants[shapeId] ?? [];
+      return { bedPlants: { ...state.bedPlants, [shapeId]: existing.filter((p) => p.id !== plantId) } };
     }),
 
   loadGarden: (state) => set(state),

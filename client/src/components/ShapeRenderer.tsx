@@ -21,6 +21,9 @@ interface ShapeRendererProps {
 
   canEdit: boolean;
 
+  bedPlants?: Record<string, { id: number }[]>;
+  onOpenBedPanel?: (shapeId: string) => void;
+
   selectedShapeId: string | null;
 
   activeBedId: string | null;
@@ -155,6 +158,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   onShapeUpdate,
   onShapeSelect,
+  bedPlants = {},
+  onOpenBedPanel,
 }) => {
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
@@ -509,6 +514,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const handleX = centerX + radius;
       const handleY = centerY;
 
+      const plantCount = bedPlants[shape.id]?.length ?? 0;
+
       return (
         <div
           key={shape.id}
@@ -516,6 +523,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             onShapeSelect?.(shape.id);
+            onOpenBedPanel?.(shape.id);
           }}
         >
           <div
@@ -556,6 +564,30 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             Radius: {feet} ft
             <div style={{ fontSize: "10px", color: "#6b7280" }}>{meters} m</div>
           </div>
+
+          {/* Plant count badge */}
+          {plantCount > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                left: `${centerX}px`,
+                top: `${centerY + radius + 8}px`,
+                transform: "translate(-50%, 0)",
+                backgroundColor: "#4a7c59",
+                color: "#fff",
+                fontSize: "11px",
+                fontWeight: 700,
+                padding: "2px 8px",
+                borderRadius: "99px",
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+                zIndex: 6,
+                border: "1px solid rgba(255,255,255,0.4)",
+              }}
+            >
+              {plantCount} plant{plantCount !== 1 ? "s" : ""}
+            </div>
+          )}
 
           {/* Circle resize handle: only when selected AND edit mode is active */}
           {showShapeHandles && (

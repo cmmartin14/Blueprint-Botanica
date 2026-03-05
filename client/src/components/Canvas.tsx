@@ -12,6 +12,7 @@ import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
 import Calendar from "./Calendar";
 import GardenBedCreator from "./garden/GardenBedCreator";
+import FlowerBedPanel from "./FlowerBedPanel";
 import { useGardenStore } from "../types/garden";
 
 export type BedPath = {
@@ -59,6 +60,7 @@ const Canvas = () => {
 
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
   const [pendingBedShapeId, setPendingBedShapeId] = useState<string | null>(null);
+  const [bedPanelShapeId, setBedPanelShapeId] = useState<string | null>(null);
 
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
 
@@ -101,6 +103,7 @@ const Canvas = () => {
 
   const editMode = useGardenStore((state) => state.editMode);
   const setEditMode = useGardenStore((state) => state.setEditMode);
+  const bedPlants = useGardenStore((state) => state.bedPlants);
 
   useEffect(() => {
     shapesRef.current = shapes;
@@ -880,6 +883,9 @@ const Canvas = () => {
       <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
       <Calendar data-testid="calendar-window" isOpen={isCalendarOpen} onClose={() => setCalendarOpen(false)} />
+      {bedPanelShapeId && (
+        <FlowerBedPanel shapeId={bedPanelShapeId} onClose={() => setBedPanelShapeId(null)} />
+      )}
 
       <div
         ref={canvasRef}
@@ -907,6 +913,8 @@ const Canvas = () => {
             pan={pan}
             gridToUnit={1}
             canEdit={editMode}
+            bedPlants={bedPlants}
+            onOpenBedPanel={(shapeId) => setBedPanelShapeId((prev) => (prev === shapeId ? null : shapeId))}
             selectedShapeId={selectedShapeId}
             activeBedId={activeBedId}
             activeVertex={activeVertex}
