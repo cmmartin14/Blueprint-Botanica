@@ -36,7 +36,7 @@ describe("GET /api/perenual", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining(
-        "https://perenual.com/api/species-list"
+        "https://perenual.com/api/v2/species-list"
       )
     );
 
