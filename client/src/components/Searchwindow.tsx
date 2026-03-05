@@ -1,6 +1,7 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import PlantSearch from "../components/PlantSearch";
+import { LuBook, LuSprout, LuX } from "react-icons/lu";
 
 type SearchWindowProps = {
   isOpen: boolean;
@@ -8,47 +9,71 @@ type SearchWindowProps = {
 };
 
 const SearchWindow = ({ isOpen, onClose }: SearchWindowProps) => {
-  useEffect(() => {}, [isOpen]);
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
 
-  if (!isOpen) return null;
+  // Handle bouncy open/close animation mounting
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      setIsClosing(false);
+      return;
+    }
+
+    if (!shouldRender) return;
+    setIsClosing(true);
+    // Wait for the exit animation to finish before unmounting
+    const timeout = window.setTimeout(() => {
+      setShouldRender(false);
+      setIsClosing(false);
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
+  }, [isOpen, shouldRender]);
+
+  if (!shouldRender) return null;
+
+  const isVisible = isOpen && !isClosing;
 
   return (
     <div
       id="search-window"
-      className="
-        fixed z-50 rounded-2xl bg-white shadow-2xl 
-        border border-green-200 
-        top-45 left-4 w-[400px] h-[520px]
-        transition-all duration-300 ease-in-out
-      "
+      className={`
+        fixed z-50 top-20 left-6 md:left-24 w-[440px] max-w-[92vw] h-[640px] max-h-[85vh]
+        rounded-[32px] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.18)] 
+        border border-[#dce9d8] flex flex-col overflow-hidden font-sans
+        transition-all duration-500 origin-top-left
+        ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}
+      `}
+      style={{
+        transitionTimingFunction: isVisible
+          ? "cubic-bezier(0.34, 1.56, 0.64, 1)" // Custom bouncy spring curve
+          : "cubic-bezier(0.4, 0, 1, 1)",
+      }}
     >
-      <div className="flex items-center justify-between border-b border-green-200 px-4 py-3">
-        <h2 className="text-lg font-semibold text-green-900">Search</h2>
+      {/* Header */}
+      <div className="bg-[#ecf5e8]/90 backdrop-blur-md px-5 py-4 flex items-center justify-between border-b border-[#dce9d8]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#8cc69f] rounded-full flex items-center justify-center text-white shadow-sm ring-2 ring-white/50">
+            <LuBook size={22} />
+          </div>
+          <h2 className="text-lg font-bold text-green-900 tracking-tight">Plant Library</h2>
+        </div>
 
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-green-700 transition-colors hover:bg-green-100 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-green-300"
+            className="rounded-full p-2 text-green-700 transition-all duration-200 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
             aria-label="Close search"
           >
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 6L6 18" />
-              <path d="M6 6l12 12" />
-            </svg>
+            <LuX size={20} strokeWidth={2.5} />
           </button>
         )}
       </div>
 
-      <div className="h-[467px] flex-1 overflow-auto">
+      {/* Content Body */}
+      <div className="flex-1 overflow-hidden bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea]">
         <PlantSearch />
       </div>
     </div>
