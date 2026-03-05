@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const speciesId = searchParams.get("species_id");
   const careGuides = searchParams.get("care_guides");
   
-  const key = process.env.PERENUAL_KEY;
+  const key = process.env.PERENUAL_API_KEY;
 
   if (!key) {
     return NextResponse.json(
