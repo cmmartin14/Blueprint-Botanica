@@ -254,7 +254,9 @@ export default function CalendarWindow({
   }, [notes]);
 
   const selectedNotes = useMemo(() => {
-    if (!selectedYmd) return [];
+    if (!selectedYmd) {
+      return [...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
     return notes
       .filter((note) => note.date === selectedYmd || !note.date)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -290,7 +292,7 @@ export default function CalendarWindow({
   return (
     <div
       data-testid="calendar-window"
-      className={`fixed z-50 overflow-hidden rounded-[32px] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.15)] border border-[#dce9d8] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+      className={`fixed z-50 overflow-hidden rounded-[32px] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.15)] border border-[#dce9d8] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
         isFullscreen ? "inset-12 md:inset-20" : "top-24 left-6 w-[980px] h-[660px] max-w-[95vw]"
       } ${isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
     >
@@ -527,7 +529,7 @@ export default function CalendarWindow({
                 Notes & Reminders
               </h3>
               <span className="text-xs font-medium bg-[#eef6ea] text-green-800 px-3 py-1 rounded-full border border-[#dce9d8]">
-                {selectedYmd ?? "General"}
+                {selectedYmd ?? "All dates"}
               </span>
             </div>
 
@@ -577,7 +579,7 @@ export default function CalendarWindow({
             <div className="mt-5 space-y-3 max-h-48 overflow-y-auto pr-1">
               {selectedNotes.length === 0 ? (
                 <div className="text-center py-4 text-sm text-green-700/60 italic border-2 border-dashed border-[#dce9d8] rounded-[20px]">
-                  No notes for this date.
+                  No notes yet.
                 </div>
               ) : (
                 selectedNotes.map((note) => (

@@ -175,6 +175,57 @@ describe("POST /api/chat", () => {
     });
   });
 
+  it("infers reminder date from reminderAt in user timezone", async () => {
+    mockStartChat.mockReturnValue({
+      sendMessage: mockSendMessage,
+    });
+
+    mockSendMessage.mockResolvedValueOnce(
+      createMockResponse({
+        functionCalls: [
+          {
+            name: "add_calendar_note",
+            args: {
+              content: "Start seedlings",
+              reminderAtISO: "2026-03-06T01:00:00.000Z",
+            },
+          },
+        ],
+      })
+    );
+
+    mockSendMessage.mockResolvedValueOnce(
+      createMockResponse({
+        text: "Reminder added!",
+        functionCalls: [],
+      })
+    );
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "Remind me tonight" }],
+        context: {
+          timezone: "America/Chicago",
+        },
+      }),
+    });
+
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.actions).toHaveLength(1);
+    expect(json.actions[0]).toEqual({
+      type: "add_calendar_note",
+      payload: {
+        content: "Start seedlings",
+        date: "2026-03-05",
+        reminderAt: "2026-03-06T01:00:00.000Z",
+      },
+    });
+  });
+
   it("returns 500 if Gemini throws", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 

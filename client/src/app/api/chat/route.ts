@@ -150,6 +150,33 @@ const parseIsoDateArg = (
   return parsed.toISOString();
 };
 
+const isoToYmd = (iso: string, timeZone?: string): string | undefined => {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+
+  if (timeZone) {
+    try {
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const parts = formatter.formatToParts(parsed);
+      const year = parts.find((part) => part.type === "year")?.value;
+      const month = parts.find((part) => part.type === "month")?.value;
+      const day = parts.find((part) => part.type === "day")?.value;
+      if (year && month && day) {
+        return `${year}-${month}-${day}`;
+      }
+    } catch {
+      // Falls back to UTC date below if the time zone string is invalid.
+    }
+  }
+
+  return parsed.toISOString().slice(0, 10);
+};
+
 const runGardenTool = async (
   functionCall: FunctionCall,
   baseUrl: string,
@@ -287,7 +314,7 @@ const runGardenTool = async (
 
   if (functionCall.name === TOOL_NAMES.ADD_CALENDAR_NOTE) {
     const content = parseStringArg(args, "content");
-    const date = parseYmdArg(args, "date");
+    let date = parseYmdArg(args, "date");
     const reminderEmail = parseStringArg(args, "reminderEmail");
     let reminderAt = parseIsoDateArg(args, "reminderAtISO");
     const reminderMinutesFromNow = parseNumberArg(args, "reminderMinutesFromNow");
@@ -299,6 +326,9 @@ const runGardenTool = async (
         ? new Date(context.currentDateISO)
         : new Date();
       reminderAt = new Date(now.getTime() + reminderMinutesFromNow * 60_000).toISOString();
+    }
+    if (!date && reminderAt) {
+      date = isoToYmd(reminderAt, context?.timezone);
     }
 
     const action: ChatAction = {
@@ -428,7 +458,7 @@ export async function POST(request: Request) {
             {
               name: TOOL_NAMES.ADD_CALENDAR_EVENT,
               description:
-                "Queue creation of a calendar event for the user. Use only when user asks to create/add/schedule an event.",
+                "Queue creation of a calendar event for the user. Use for scheduling events/tasks, not reminder requests.",
               parameters: {
                 type: SchemaType.OBJECT,
                 properties: {
@@ -488,6 +518,7 @@ export async function POST(request: Request) {
 Help users plan gardens, select plants, troubleshoot issues, and make climate-aware recommendations.
 Use tools for weather, hardiness zone, and plant data when factual lookup is needed.
 When users ask to add events or notes/reminders to calendar, call the calendar tools.
+Use add_calendar_note for reminder requests ("remind me..."), and add_calendar_event for schedule-only events.
 Interpret relative time words like "tomorrow" using the provided current timestamp and timezone context.
 If a required value is missing, ask a concise clarifying question.
 Keep responses concise, practical, and specific.`,
