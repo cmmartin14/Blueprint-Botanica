@@ -21,6 +21,9 @@ interface ShapeRendererProps {
 
   canEdit: boolean;
 
+  bedPlants?: Record<string, { id: number }[]>;
+  onOpenBedPanel?: (shapeId: string) => void;
+
   selectedShapeId: string | null;
 
   activeBedId: string | null;
@@ -155,6 +158,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   onShapeUpdate,
   onShapeSelect,
+  bedPlants = {},
+  onOpenBedPanel,
 }) => {
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
@@ -509,6 +514,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const handleX = centerX + radius;
       const handleY = centerY;
 
+      const plantCount = bedPlants[shape.id]?.length ?? 0;
+
       return (
         <div
           key={shape.id}
@@ -516,6 +523,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             onShapeSelect?.(shape.id);
+            onOpenBedPanel?.(shape.id);
           }}
         >
           <div
@@ -556,6 +564,30 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             Radius: {feet} ft
             <div style={{ fontSize: "10px", color: "#6b7280" }}>{meters} m</div>
           </div>
+
+          {/* Plant count badge */}
+          {plantCount > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                left: `${centerX}px`,
+                top: `${centerY + radius + 8}px`,
+                transform: "translate(-50%, 0)",
+                backgroundColor: "#4a7c59",
+                color: "#fff",
+                fontSize: "11px",
+                fontWeight: 700,
+                padding: "2px 8px",
+                borderRadius: "99px",
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+                zIndex: 6,
+                border: "1px solid rgba(255,255,255,0.4)",
+              }}
+            >
+              {plantCount} plant{plantCount !== 1 ? "s" : ""}
+            </div>
+          )}
 
           {/* Circle resize handle: only when selected AND edit mode is active */}
           {showShapeHandles && (
@@ -718,6 +750,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             onShapeSelect?.(shape.id);
+            onOpenBedPanel?.(shape.id);
           }}
         />
       );
@@ -748,6 +781,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               onShapeSelect?.(shape.id);
+              onOpenBedPanel?.(shape.id);
             }}
           />
 
@@ -832,6 +866,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           const strokeWidth = isActive ? 4 : 3;
 
           const box = bboxOf(bed.vertices);
+          const plantCount = bedPlants[bed.id]?.length ?? 0;
 
           return (
             <g key={bed.id} style={{ pointerEvents: "auto" }} data-interactive="true" onClick={stop}>
@@ -848,8 +883,42 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectBed(bed.id);
+                  onOpenBedPanel?.(bed.id);
                 }}
               />
+
+              {plantCount > 0 && (
+              <foreignObject
+                x={(box.minX + box.maxX) / 2 - 50}
+                y={box.maxY + 8}
+                width="100"
+                height="30"
+                pointerEvents="none"
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: "#4a7c59",
+                      color: "#fff",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: "99px",
+                      whiteSpace: "nowrap",
+                      border: "1px solid rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    {plantCount} plant{plantCount !== 1 ? "s" : ""}
+                  </div>
+                </div>
+              </foreignObject>
+            )}
 
               {/* Bed resize handles + vertices: only when edit mode is active */}
               {showBedHandles && (
