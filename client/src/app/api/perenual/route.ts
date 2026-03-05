@@ -52,7 +52,7 @@ export async function GET(request: Request) {
         return NextResponse.json(plantCache.get(numericId));
       }
 
-      const apiUrl = `https://perenual.com/api/species/details/${numericId}?key=${key}`;
+      const apiUrl = `https://perenual.com/api/v2/species/details/${numericId}?key=${key}`;
       const resp = await fetch(apiUrl);
 
       if (!resp.ok) {
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 
     // Handle plant search by query
     if (query) {
-      const apiUrl = `https://perenual.com/api/species-list?key=${key}&q=${encodeURIComponent(
+      const apiUrl = `https://perenual.com/api/v2/species-list?key=${key}&q=${encodeURIComponent(
         query
       )}`;
       const resp = await fetch(apiUrl);

@@ -157,7 +157,16 @@ const Navbar = () => {
       const gardenName = prompt("Enter garden name:", "My Garden");
       if (!gardenName) return;
 
-      const { id: savedId } = await saveGarden(user.id, { id, name: gardenName, shapes, beds, editMode: false });
+      const state = useGardenStore.getState();
+
+      const { id: savedId } = await saveGarden(user.id, { 
+        id: state.id, 
+        name: gardenName, 
+        shapes: state.shapes, 
+        beds: state.beds, 
+        bedPlants: state.bedPlants, // Now included!
+        editMode: false 
+      });
       // Stamp the returned id onto the store so future saves update instead of insert
       useGardenStore.setState({ id: savedId });
   };

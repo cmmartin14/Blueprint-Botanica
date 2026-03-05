@@ -18,6 +18,7 @@ export async function saveGarden(
       name:      state.name,
       shapes:    state.shapes,
       beds:      state.beds,
+      bedPlants: state.bedPlants,
       updatedAt: now,
     },
     create: {
@@ -26,6 +27,7 @@ export async function saveGarden(
       userId,
       shapes:    state.shapes,
       beds:      state.beds,
+      bedPlants: state.bedPlants,
       updatedAt: now,
     },
   });
@@ -50,6 +52,7 @@ export async function loadGarden(
     editMode: false,
     shapes:   project.shapes as GardenState["shapes"],
     beds:     project.beds   as GardenState["beds"],
+    bedPlants: project.bedPlants as GardenState["bedPlants"],
   };
 }
 

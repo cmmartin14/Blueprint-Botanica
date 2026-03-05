@@ -14,6 +14,10 @@ export interface PlantEntry {
   common_name: string | null;
   scientific_name: string | string[];
   image_url?: string;
+  hardiness?: {
+    min?: string;
+    max?: string;
+  };
 }
 
 export interface GardenState {

@@ -11,6 +11,7 @@ export interface BaseShape {
   color: string;
   strokeWidth: number;
   isSelected: boolean;
+  name?: string;
 }
 
 export interface Rectangle extends BaseShape { type: 'rectangle'; }

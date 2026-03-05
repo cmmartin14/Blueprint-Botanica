@@ -9,6 +9,10 @@ interface SearchResult {
   scientific_name: string | string[];
   image_url?: string;
   default_image?: { thumbnail?: string; medium_url?: string };
+  hardiness?: {
+    min?: string;
+    max?: string;
+  };
 }
 
 interface FlowerBedPanelProps {
@@ -20,6 +24,31 @@ export default function FlowerBedPanel({ shapeId, onClose }: FlowerBedPanelProps
   const bedPlants = useGardenStore((s) => s.bedPlants[shapeId]) ?? [];
   const addPlantToBed = useGardenStore((s) => s.addPlantToBed);
   const removePlantFromBed = useGardenStore((s) => s.removePlantFromBed);
+  
+  // Get bed or shape to display name
+  const beds = useGardenStore((s) => s.beds);
+  const shapes = useGardenStore((s) => s.shapes);
+  const updateBed = useGardenStore((s) => s.updateBed);
+  const updateShape = useGardenStore((s) => s.updateShape);
+  
+  const bed = beds[shapeId];
+  const shape = shapes[shapeId];
+  
+  const [bedName, setBedName] = useState("");
+  const [isEditingName, setIsEditingName] = useState(false);
+
+  // Initialize bed name
+  useEffect(() => {
+  if (bed?.name) {
+    setBedName(bed.name);
+  } else if (shape?.name) {
+    setBedName(shape.name);
+  } else if (shape?.type === 'circle') {
+    setBedName("Circle Bed");
+  } else {
+    setBedName("Garden Bed");
+  }
+}, [bed, shape]);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -34,33 +63,75 @@ export default function FlowerBedPanel({ shapeId, onClose }: FlowerBedPanelProps
   }, [query]);
 
   const fetchResults = async (q: string) => {
-    setLoading(true);
-    try {
-      const resp = await fetch(`/api/perenual?q=${encodeURIComponent(q)}`);
-      if (!resp.ok) throw new Error();
-      const json = await resp.json();
-      const filtered = (json.data || []).filter((p: SearchResult) => p.id >= 1 && p.id <= 3000);
-      setResults(filtered.slice(0, 8));
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const resp = await fetch(`/api/perenual?q=${encodeURIComponent(q)}`);
+    if (!resp.ok) throw new Error();
+    const json = await resp.json();
+    const filtered = (json.data || []).filter((p: SearchResult) => p.id >= 1 && p.id <= 3000);
+    
+    // Fetch full details for each result to get hardiness zones
+    const withHardiness = await Promise.all(
+      filtered.slice(0, 8).map(async (plant) => {
+        try {
+          const detailResp = await fetch(`/api/perenual?id=${plant.id}`);
+          if (!detailResp.ok) return plant;
+          const details = await detailResp.json();
+          return {
+            ...plant,
+            hardiness: details.hardiness
+          };
+        } catch {
+          return plant;
+        }
+      })
+    );
+    
+    setResults(withHardiness);
+  } catch {
+    setResults([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getImage = (p: SearchResult) =>
     p.image_url || p.default_image?.medium_url || p.default_image?.thumbnail;
 
   const handleAdd = (p: SearchResult) => {
-    const entry: PlantEntry = {
-      id: p.id,
-      common_name: p.common_name,
-      scientific_name: p.scientific_name,
-      image_url: getImage(p),
-    };
-    addPlantToBed(shapeId, entry);
-    setQuery("");
-    setResults([]);
+  const entry: PlantEntry = {
+    id: p.id,
+    common_name: p.common_name,
+    scientific_name: p.scientific_name,
+    image_url: getImage(p),
+    hardiness: p.hardiness, // Include hardiness data
+  };
+  addPlantToBed(shapeId, entry);
+  setQuery("");
+  setResults([]);
+};
+
+  const handleSaveName = () => {
+    if (bed) {
+      updateBed(shapeId, { name: bedName });
+    } else if (shape) {
+      updateShape(shapeId, {name: bedName });
+    }
+    setIsEditingName(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveName();
+    } else if (e.key === 'Escape') {
+      setIsEditingName(false);
+      // Reset to original name
+      if (bed?.name) {
+        setBedName(bed.name);
+      }
+    } else if (e.key === 'Backspace' || e.key === 'Delete') {
+    e.stopPropagation();
+  }
   };
 
   return (
@@ -72,7 +143,29 @@ export default function FlowerBedPanel({ shapeId, onClose }: FlowerBedPanelProps
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
-        <h2 className="font-semibold text-green-800 text-sm">Flower Bed Plants</h2>
+        {isEditingName ? (
+          <input
+            type="text"
+            value={bedName}
+            onChange={(e) => {
+              e.stopPropagation();
+              setBedName(e.target.value);
+            }}
+            onBlur={handleSaveName}
+            onKeyDown={handleKeyDown}
+            className="font-semibold text-green-800 text-sm border-b-2 border-green-600 focus:outline-none bg-transparent"
+            autoFocus
+            onFocus={(e) => e.target.select()}
+          />
+        ) : (
+          <h2
+            className="font-semibold text-green-800 text-sm cursor-pointer hover:text-green-600"
+            onClick={() => setIsEditingName(true)}
+            title={bed ? "Click to edit name" : undefined}
+          >
+            {bedName}
+          </h2>
+        )}
         <button onClick={onClose} className="text-green-800 hover:opacity-70">
           <TbCircleXFilled size={22} />
         </button>

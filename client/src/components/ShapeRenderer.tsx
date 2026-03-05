@@ -750,6 +750,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             onShapeSelect?.(shape.id);
+            onOpenBedPanel?.(shape.id);
           }}
         />
       );
@@ -780,6 +781,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               onShapeSelect?.(shape.id);
+              onOpenBedPanel?.(shape.id);
             }}
           />
 
@@ -864,6 +866,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           const strokeWidth = isActive ? 4 : 3;
 
           const box = bboxOf(bed.vertices);
+          const plantCount = bedPlants[bed.id]?.length ?? 0;
 
           return (
             <g key={bed.id} style={{ pointerEvents: "auto" }} data-interactive="true" onClick={stop}>
@@ -880,8 +883,42 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectBed(bed.id);
+                  onOpenBedPanel?.(bed.id);
                 }}
               />
+
+              {plantCount > 0 && (
+              <foreignObject
+                x={(box.minX + box.maxX) / 2 - 50}
+                y={box.maxY + 8}
+                width="100"
+                height="30"
+                pointerEvents="none"
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: "#4a7c59",
+                      color: "#fff",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: "99px",
+                      whiteSpace: "nowrap",
+                      border: "1px solid rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    {plantCount} plant{plantCount !== 1 ? "s" : ""}
+                  </div>
+                </div>
+              </foreignObject>
+            )}
 
               {/* Bed resize handles + vertices: only when edit mode is active */}
               {showBedHandles && (
