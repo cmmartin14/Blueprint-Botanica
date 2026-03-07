@@ -922,10 +922,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               {edgeLabels.map((label) => (
                 <foreignObject
                   key={label.key}
-                  x={label.x - 32}
-                  y={label.y - 18}
-                  width="64"
-                  height="36"
+                  x={label.x - 40}
+                  y={label.y - 20}
+                  width="80"
+                  height="42"
                   pointerEvents="none"
                 >
                   <div
@@ -940,7 +940,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                     <div
                       style={{
                         backgroundColor: "rgba(255,255,255,0.95)",
-                        padding: "2px 6px",
+                        padding: "4px 8px",
                         borderRadius: "4px",
                         fontSize: "12px",
                         fontWeight: 600,
@@ -951,10 +951,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                         lineHeight: 1.1,
                       }}
                     >
-                      {label.feet}
+                      {label.feet} ft
+                      <div style={{ fontSize: "10px", color: "#6b7280" }}>
+                        {label.meters} m
+                      </div>
                     </div>
                   </div>
-              </foreignObject>
+                </foreignObject>
               ))}
 
               {plantCount > 0 && (
