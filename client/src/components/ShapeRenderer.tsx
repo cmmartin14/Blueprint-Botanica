@@ -488,6 +488,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     const { type, startPos, endPos, color, strokeWidth } = shape;
     const isSelected = selectedShapeId === shape.id;
     const showShapeHandles = canEdit && isSelected;
+    const glow = isSelected ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
 
     const width = Math.abs(endPos.x - startPos.x);
     const height = Math.abs(endPos.y - startPos.y);
@@ -526,22 +527,24 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             onOpenBedPanel?.(shape.id);
           }}
         >
-          <div
-            data-interactive="true"
-            style={{
-              position: "absolute",
-              width: radius * 2,
-              height: radius * 2,
-              borderRadius: "50%",
-              border: `${sw}px solid ${stroke}`,
-              backgroundColor: fill,
-              left: centerX - radius,
-              top: centerY - radius,
-              cursor: canEdit ? "move" : "pointer",
-              pointerEvents: "auto",
-            }}
-            onMouseDown={handleShapeMouseDown(shape.id)}
-          />
+        
+        <div
+          data-interactive="true"
+          style={{
+            position: "absolute",
+            width: radius * 2,
+            height: radius * 2,
+            borderRadius: "50%",
+            border: `${sw}px solid ${stroke}`,
+            backgroundColor: fill,
+            left: centerX - radius,
+            top: centerY - radius,
+            cursor: canEdit ? "move" : "pointer",
+            pointerEvents: "auto",
+            filter: glow,
+          }}
+          onMouseDown={handleShapeMouseDown(shape.id)}
+        />
 
           <div
             style={{
