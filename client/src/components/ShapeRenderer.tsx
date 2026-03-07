@@ -25,6 +25,7 @@ interface ShapeRendererProps {
   onOpenBedPanel?: (shapeId: string) => void;
 
   selectedShapeId: string | null;
+  showDimensions: boolean;
 
   activeBedId: string | null;
   activeVertex: { bedId: string; index: number } | null;
@@ -126,6 +127,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   gridToUnit = 1,
   canEdit,
   selectedShapeId,
+  showDimensions,
 
   activeBedId,
   activeVertex,
@@ -546,6 +548,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           onMouseDown={handleShapeMouseDown(shape.id)}
         />
 
+        {showDimensions && (
           <div
             style={{
               position: "absolute",
@@ -567,6 +570,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             Radius: {feet} ft
             <div style={{ fontSize: "10px", color: "#6b7280" }}>{meters} m</div>
           </div>
+        )}
 
           {/* Plant count badge */}
           {plantCount > 0 && (
@@ -918,8 +922,9 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                   onOpenBedPanel?.(bed.id);
                 }}
               />
-
-              {edgeLabels.map((label) => (
+            
+            {showDimensions &&
+              edgeLabels.map((label) => (
                 <foreignObject
                   key={label.key}
                   x={label.x - 40}
@@ -959,6 +964,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                   </div>
                 </foreignObject>
               ))}
+                    
 
               {plantCount > 0 && (
               <foreignObject
