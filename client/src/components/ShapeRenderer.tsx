@@ -871,6 +871,18 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           const box = bboxOf(bed.vertices);
           const plantCount = bedPlants[bed.id]?.length ?? 0;
 
+          const widthUnits = (box.maxX - box.minX) / GRID_SIZE;
+          const heightUnits = (box.maxY - box.minY) / GRID_SIZE;
+
+          const widthFeet = (widthUnits * gridToUnit).toFixed(1);
+          const heightFeet = (heightUnits * gridToUnit).toFixed(1);
+
+          const widthMeters = feetToMeters(parseFloat(widthFeet));
+          const heightMeters = feetToMeters(parseFloat(heightFeet));
+
+          const labelX = (box.minX + box.maxX) / 2;
+          const labelY = box.minY - 24;
+
           return (
             <g key={bed.id} style={{ pointerEvents: "auto" }} data-interactive="true" onClick={stop}>
               <path
@@ -889,6 +901,43 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                   onOpenBedPanel?.(bed.id);
                 }}
               />
+
+              <foreignObject
+                x={labelX - 55}
+                y={labelY - 18}
+                width="110"
+                height="40"
+                pointerEvents="none"
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    width: "100%",
+                    height: "100%",
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: "rgba(255,255,255,0.95)",
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#1f2937",
+                      border: "1px solid #d1d5db",
+                      whiteSpace: "nowrap",
+                      textAlign: "center",
+                    }}
+                  >
+                    {widthFeet} ft × {heightFeet} ft
+                    <div style={{ fontSize: "10px", color: "#6b7280" }}>
+                      {widthMeters} m × {heightMeters} m
+                    </div>
+                  </div>
+                </div>
+              </foreignObject>
 
               {plantCount > 0 && (
               <foreignObject
