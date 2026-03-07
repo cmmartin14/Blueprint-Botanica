@@ -871,17 +871,34 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           const box = bboxOf(bed.vertices);
           const plantCount = bedPlants[bed.id]?.length ?? 0;
 
-          const widthUnits = (box.maxX - box.minX) / GRID_SIZE;
-          const heightUnits = (box.maxY - box.minY) / GRID_SIZE;
-
-          const widthFeet = (widthUnits * gridToUnit).toFixed(1);
-          const heightFeet = (heightUnits * gridToUnit).toFixed(1);
-
-          const widthMeters = feetToMeters(parseFloat(widthFeet));
-          const heightMeters = feetToMeters(parseFloat(heightFeet));
-
-          const labelX = (box.minX + box.maxX) / 2;
-          const labelY = box.minY - 24;
+          const edgeLabels = bed.vertices.map((start, index) => {
+            const end = bed.vertices[(index + 1) % bed.vertices.length];
+          
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const lengthPx = Math.sqrt(dx * dx + dy * dy);
+          
+            const lengthUnits = lengthPx / GRID_SIZE;
+            const lengthFeet = (lengthUnits * gridToUnit).toFixed(1);
+            const lengthMeters = feetToMeters(parseFloat(lengthFeet));
+          
+            const midX = (start.x + end.x) / 2;
+            const midY = (start.y + end.y) / 2;
+          
+            const angle = Math.atan2(dy, dx);
+            const perpX = -Math.sin(angle);
+            const perpY = Math.cos(angle);
+          
+            const offset = 20;
+          
+            return {
+              key: `${bed.id}-edge-${index}`,
+              x: midX + perpX * offset,
+              y: midY + perpY * offset,
+              feet: lengthFeet,
+              meters: lengthMeters,
+            };
+          });
 
           return (
             <g key={bed.id} style={{ pointerEvents: "auto" }} data-interactive="true" onClick={stop}>
@@ -902,42 +919,43 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 }}
               />
 
-              <foreignObject
-                x={labelX - 55}
-                y={labelY - 18}
-                width="110"
-                height="40"
-                pointerEvents="none"
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    width: "100%",
-                    height: "100%",
-                  }}
+              {edgeLabels.map((label) => (
+                <foreignObject
+                  key={label.key}
+                  x={label.x - 32}
+                  y={label.y - 18}
+                  width="64"
+                  height="36"
+                  pointerEvents="none"
                 >
                   <div
                     style={{
-                      backgroundColor: "rgba(255,255,255,0.95)",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "#1f2937",
-                      border: "1px solid #d1d5db",
-                      whiteSpace: "nowrap",
-                      textAlign: "center",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      width: "100%",
+                      height: "100%",
                     }}
                   >
-                    {widthFeet} ft × {heightFeet} ft
-                    <div style={{ fontSize: "10px", color: "#6b7280" }}>
-                      {widthMeters} m × {heightMeters} m
+                    <div
+                      style={{
+                        backgroundColor: "rgba(255,255,255,0.95)",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: "#1f2937",
+                        border: "1px solid #d1d5db",
+                        whiteSpace: "nowrap",
+                        textAlign: "center",
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {label.feet}
                     </div>
                   </div>
-                </div>
               </foreignObject>
+              ))}
 
               {plantCount > 0 && (
               <foreignObject
