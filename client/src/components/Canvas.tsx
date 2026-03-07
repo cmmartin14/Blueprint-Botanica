@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt } from "react-icons/fa";
+import { FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt, FaRulerCombined } from "react-icons/fa";
 import { TbCircleXFilled } from "react-icons/tb";
 import { FaKey } from "react-icons/fa6";
 
@@ -63,6 +63,7 @@ const Canvas = () => {
   const [bedPanelShapeId, setBedPanelShapeId] = useState<string | null>(null);
 
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+  const [showDimensions, setShowDimensions] = useState(true);
 
   // Bed selection
   const [activeBedId, setActiveBedId] = useState<string | null>(null);
@@ -916,6 +917,7 @@ const Canvas = () => {
             bedPlants={bedPlants}
             onOpenBedPanel={(shapeId) => setBedPanelShapeId((prev) => (prev === shapeId ? null : shapeId))}
             selectedShapeId={selectedShapeId}
+            showDimensions={showDimensions}
             activeBedId={activeBedId}
             activeVertex={activeVertex}
             draftVertices={draft?.vertices ?? null}
@@ -1005,6 +1007,14 @@ const Canvas = () => {
                 title="Draw (lines + beds). Hold Shift to start. Click points. Click start to close into a bed."
               >
                 <FaDrawPolygon size={25} />
+              </button>
+
+              <button
+                onClick={() => setShowDimensions((prev) => !prev)}
+                className={`p-2 rounded text-green-800 ${showDimensions ? "bg-gray-200" : "bg-gray-100 hover:bg-gray-200"}`}
+                title={showDimensions ? "Hide Dimensions" : "Show Dimensions"}
+              >
+                <FaRulerCombined size={25} />
               </button>
 
               <button onClick={undo} className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800" title="Undo">
