@@ -891,6 +891,7 @@ const Canvas = () => {
       <div
         ref={canvasRef}
         data-canvas
+        data-testid="canvas"
         className="w-full h-full relative"
         style={{ ...gridStyle, cursor: canvasCursor }}
         onMouseDown={handleMouseDown}

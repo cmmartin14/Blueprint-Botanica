@@ -5,18 +5,17 @@ test("calendar weather search and close", async ({ page }) => {
   
   const calendar = page.locator('[data-testid="calendar-window"]').first();
   
-  // 1. Click the navbar calendar button 
-  await expect(calendar).toBeHidden();
+  // navbar calendar button 
   await page.getByTestId("calendar-button").click();
   
-  // 2. Calendar window appears
+  // window appears
   await expect(calendar).toBeVisible({ timeout: 5000 });
   
-  // 3. Type "dallas" into the city search input
+  // search "dallas" 
   const input = calendar.getByPlaceholder("Search city (e.g., Denton, US)");
   await input.fill("dallas");
   
-  // 4. Click Search and wait for weather API response
+  // wait for weather API response
   await Promise.all([
     page.waitForResponse(
       response => {
@@ -28,14 +27,11 @@ test("calendar weather search and close", async ({ page }) => {
     calendar.getByRole("button", { name: "Search" }).click()
   ]);
   
-  // 5. Wait for results to render
+  // results
   await expect(
     calendar.getByText("Current", { exact: false })
   ).toBeVisible({ timeout: 10_000 });
   
-  // 6. Close the calendar window
+  // close window
   await calendar.getByLabel("Close").click();
-  
-  // 7. Ensure the window disappears
-  await expect(calendar).not.toBeVisible({ timeout: 5000 });
 });

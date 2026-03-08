@@ -136,6 +136,7 @@ export default function FlowerBedPanel({ shapeId, onClose }: FlowerBedPanelProps
 
   return (
     <div
+      data-testid='bed-plant-window'
       className="absolute right-5 top-16 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col"
       style={{ width: 340, maxHeight: "70vh" }}
       data-interactive="true"

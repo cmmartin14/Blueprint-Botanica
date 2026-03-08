@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GET } from "../app/api/perenual/route";
 
-// Mock global fetch
 const mockFetch = vi.fn();
 
 beforeEach(() => {
   vi.stubGlobal("fetch", mockFetch);
-  vi.stubEnv("PERENUAL_KEY", "fake_key");
+  vi.stubEnv("PERENUAL_API_KEY", "fake_key");
 });
 
 afterEach(() => {
@@ -66,7 +65,7 @@ describe("GET /api/perenual", () => {
   });
 
   it("returns 500 if PERENUAL_KEY is missing", async () => {
-    vi.unstubAllEnvs(); // remove PERENUAL_KEY
+    vi.unstubAllEnvs(); 
 
     const req = new Request(
       `https://example.com/api/perenual?q=rose`
