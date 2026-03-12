@@ -104,6 +104,47 @@ const fetchJson = async (url: string) => {
   return { ok: true, status: response.status, data };
 };
 
+const getPlantImageUrl = (plant: any): string | null =>
+  plant?.image_url ||
+  plant?.default_image?.medium_url ||
+  plant?.default_image?.thumbnail ||
+  plant?.default_image?.original_url ||
+  null;
+
+const normalizePlantSummary = (plant: any) => ({
+  id: plant.id,
+  common_name: plant.common_name ?? null,
+  scientific_name: plant.scientific_name ?? null,
+  image_url: getPlantImageUrl(plant),
+});
+
+const normalizePlantDetails = (plant: any) => ({
+  id: plant.id,
+  common_name: plant.common_name ?? null,
+  scientific_name: plant.scientific_name ?? null,
+  image_url: getPlantImageUrl(plant),
+  cycle: plant.cycle ?? null,
+  watering:
+    plant.watering ??
+    plant.growth?.water ??
+    plant.main_species?.growth?.water ??
+    null,
+  sunlight:
+    plant.sunlight ??
+    plant.growth?.sunlight ??
+    plant.main_species?.growth?.sunlight ??
+    null,
+  hardiness:
+    plant.hardiness ??
+    plant.growth?.hardiness ??
+    plant.main_species?.growth?.hardiness ??
+    null,
+  care_level: plant.care_level ?? null,
+  description:
+    typeof plant.description === "string" ? plant.description : null,
+  growth: plant.growth || plant.main_species?.growth || null,
+});
+
 const buildContextPrompt = (context?: ChatContext) => {
   if (!context) return "";
 
@@ -238,18 +279,17 @@ const runGardenTool = async (
     if (!query) return { ok: false, error: "query is required." };
 
     const plants = await fetchJson(
-      `${baseUrl}/api/trefle?q=${encodeURIComponent(query)}`
+      `${baseUrl}/api/perenual?q=${encodeURIComponent(query)}`
     );
 
     if (!plants.ok) return plants;
 
-    const data = Array.isArray(plants.data?.data) ? plants.data.data : [];
-    const trimmed = data.slice(0, 8).map((plant: any) => ({
-      id: plant.id,
-      common_name: plant.common_name,
-      scientific_name: plant.scientific_name,
-      image_url: plant.image_url,
-    }));
+    const data = Array.isArray(plants.data?.data)
+      ? plants.data.data
+      : Array.isArray(plants.data)
+        ? plants.data
+        : [];
+    const trimmed = data.slice(0, 8).map(normalizePlantSummary);
 
     return {
       ok: true,
@@ -262,21 +302,26 @@ const runGardenTool = async (
     const plantId = parseNumberArg(args, "plantId");
     if (plantId == null) return { ok: false, error: "plantId is required." };
 
-    const details = await fetchJson(`${baseUrl}/api/trefle?id=${plantId}`);
+    const details = await fetchJson(`${baseUrl}/api/perenual?id=${plantId}`);
     if (!details.ok) return details;
 
-    const plant = details.data?.data;
-    if (!plant) return { ok: false, error: "Plant details not found." };
+    const directPlant =
+      details.data && typeof details.data === "object" && "id" in details.data
+        ? details.data
+        : null;
+    const wrappedPlant =
+      details.data && typeof details.data === "object" && "data" in details.data
+        ? details.data.data
+        : null;
+    const plant = directPlant ?? wrappedPlant;
+
+    if (!plant || typeof plant !== "object") {
+      return { ok: false, error: "Plant details not found." };
+    }
 
     return {
       ok: true,
-      plant: {
-        id: plant.id,
-        common_name: plant.common_name,
-        scientific_name: plant.scientific_name,
-        image_url: plant.image_url,
-        growth: plant.growth || plant.main_species?.growth || null,
-      },
+      plant: normalizePlantDetails(plant),
     };
   }
 

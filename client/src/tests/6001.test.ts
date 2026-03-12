@@ -4,6 +4,7 @@ import { POST } from "../app/api/chat/route";
 const mockSendMessage = vi.fn();
 const mockStartChat = vi.fn();
 const mockGetGenerativeModel = vi.fn();
+const mockFetch = vi.fn();
 
 vi.mock("@google/generative-ai", () => {
   class MockGoogleGenerativeAI {
@@ -26,6 +27,7 @@ vi.mock("@google/generative-ai", () => {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("GEMINI_API_KEY", "fake-key");
+  vi.stubGlobal("fetch", mockFetch);
 
   mockGetGenerativeModel.mockReturnValue({
     startChat: mockStartChat,
@@ -35,6 +37,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 const createMockResponse = ({
@@ -224,6 +227,184 @@ describe("POST /api/chat", () => {
         reminderAt: "2026-03-06T01:00:00.000Z",
       },
     });
+  });
+
+  it("uses the perenual plant source for plant search tool calls", async () => {
+    mockStartChat.mockReturnValue({
+      sendMessage: mockSendMessage,
+    });
+
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              id: 42,
+              common_name: "Basil",
+              scientific_name: ["Ocimum basilicum"],
+              default_image: {
+                medium_url: "https://images.example/basil.jpg",
+              },
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
+
+    mockSendMessage.mockResolvedValueOnce(
+      createMockResponse({
+        functionCalls: [
+          {
+            name: "search_plants",
+            args: {
+              query: "basil",
+            },
+          },
+        ],
+      })
+    );
+
+    mockSendMessage.mockResolvedValueOnce(
+      createMockResponse({
+        text: "Here are some basil options.",
+        functionCalls: [],
+      })
+    );
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "Find basil plants" }],
+      }),
+    });
+
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.message).toBe("Here are some basil options.");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://localhost/api/perenual?q=basil",
+      { cache: "no-store" }
+    );
+    expect(mockSendMessage).toHaveBeenNthCalledWith(
+      2,
+      expect.arrayContaining([
+        expect.objectContaining({
+          functionResponse: {
+            name: "search_plants",
+            response: {
+              ok: true,
+              results: [
+                {
+                  id: 42,
+                  common_name: "Basil",
+                  scientific_name: ["Ocimum basilicum"],
+                  image_url: "https://images.example/basil.jpg",
+                },
+              ],
+              totalShown: 1,
+            },
+          },
+        }),
+      ])
+    );
+  });
+
+  it("uses the perenual plant source for plant details tool calls", async () => {
+    mockStartChat.mockReturnValue({
+      sendMessage: mockSendMessage,
+    });
+
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: 42,
+          common_name: "Basil",
+          scientific_name: ["Ocimum basilicum"],
+          default_image: {
+            medium_url: "https://images.example/basil.jpg",
+          },
+          cycle: "Annual",
+          watering: "Average",
+          sunlight: ["Full Sun"],
+          hardiness: { min: "10", max: "11" },
+          care_level: "Low",
+          description: "A fragrant culinary herb.",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
+
+    mockSendMessage.mockResolvedValueOnce(
+      createMockResponse({
+        functionCalls: [
+          {
+            name: "get_plant_details",
+            args: {
+              plantId: 42,
+            },
+          },
+        ],
+      })
+    );
+
+    mockSendMessage.mockResolvedValueOnce(
+      createMockResponse({
+        text: "Basil prefers full sun and average watering.",
+        functionCalls: [],
+      })
+    );
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "Tell me about basil" }],
+      }),
+    });
+
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.message).toBe("Basil prefers full sun and average watering.");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://localhost/api/perenual?id=42",
+      { cache: "no-store" }
+    );
+    expect(mockSendMessage).toHaveBeenNthCalledWith(
+      2,
+      expect.arrayContaining([
+        expect.objectContaining({
+          functionResponse: {
+            name: "get_plant_details",
+            response: {
+              ok: true,
+              plant: {
+                id: 42,
+                common_name: "Basil",
+                scientific_name: ["Ocimum basilicum"],
+                image_url: "https://images.example/basil.jpg",
+                cycle: "Annual",
+                watering: "Average",
+                sunlight: ["Full Sun"],
+                hardiness: { min: "10", max: "11" },
+                care_level: "Low",
+                description: "A fragrant culinary herb.",
+                growth: null,
+              },
+            },
+          },
+        }),
+      ])
+    );
   });
 
   it("returns 500 if Gemini throws", async () => {
