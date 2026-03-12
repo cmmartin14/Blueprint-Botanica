@@ -10,7 +10,6 @@ import { TbHomeEdit } from "react-icons/tb";
 import { HiX } from "react-icons/hi";
 import { FaEdit, FaSearch } from "react-icons/fa";
 import { FaCalendarAlt } from "react-icons/fa";
-import { IoNotifications } from "react-icons/io5";
 import { RiDeleteBin6Line, RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { FaRegUser } from "react-icons/fa";
@@ -387,10 +386,6 @@ const Navbar = () => {
               <FaCalendarAlt size={25} className={navIconClass} />
             </button>
 
-            <button className={navIconButtonClass} title="Notifications">
-              <IoNotifications size={25} className={navIconClass} />
-            </button>
-
             <button onClick={handleSave} className={navIconButtonClass} title="Save">
               <RiSave3Line size={25} className={navIconClass} />
             </button>
@@ -406,11 +401,6 @@ const Navbar = () => {
               title="Gardening Assistant"
             >
               <LuSprout size={25} className={`${navIconClass} text-[#f4a45a] group-hover:text-[#ffc078]`} />
-            </button>
-
-
-            <button className={navIconButtonClass} title="Notifications">
-              <IoNotifications size={25} className={navIconClass} />
             </button>
 
             <Link href={user ? "/settings" : "/handler/sign-up"}>
@@ -440,7 +430,6 @@ const Navbar = () => {
                 { name: "Edit Mode", action: toggleEdit, icon: <FaEdit size={20} /> },
                 { name: "Search", action: toggleSearchWindow, icon: <FaSearch size={20} /> },
                 { name: "Calendar", action: toggleCalendarWindow, icon: <FaCalendarAlt size={20} /> },
-                { name: "Notifications", action: () => {}, icon: <IoNotifications size={20} /> },
                 { name: "Save", action: handleSave, icon: <RiSave3Line size={20} /> },
                 { name: "Saved Gardens", action: handleOpenFolder, icon: <IoFolderOutline size={20} /> },
                 { name: "Assistant", action: toggleChatWindow, icon: <LuSprout size={20} className="text-[#f4a45a]" /> },

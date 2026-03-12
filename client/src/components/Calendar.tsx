@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCalendarStore } from "../stores/calendarStore";
 
 type Props = {
@@ -23,6 +23,10 @@ type WeatherData = {
   daily: WeatherDay[];
 };
 
+const DEFAULT_WINDOW_POSITION = { x: 24, y: 96 };
+const WINDOW_MARGIN = 8;
+const WINDOW_MIN_TOP = 72;
+
 const toYmd = (d: Date) => {
   const y = d.getFullYear();
   const m = `${d.getMonth() + 1}`.padStart(2, "0");
@@ -44,7 +48,14 @@ export default function CalendarWindow({
   onClose,
   defaultFullscreen = false,
 }: Props) {
+  const windowRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(defaultFullscreen);
+  const [windowPosition, setWindowPosition] = useState(DEFAULT_WINDOW_POSITION);
+  const [dragState, setDragState] = useState<{
+    pointerId: number;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
   const [monthCursor, setMonthCursor] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -72,9 +83,16 @@ export default function CalendarWindow({
     setNotificationEmail,
   } = useCalendarStore();
 
+  const isDragging = dragState !== null;
+
   useEffect(() => {
     if (!isOpen) setIsFullscreen(false);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && !isFullscreen) return;
+    setDragState(null);
+  }, [isOpen, isFullscreen]);
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -132,7 +150,78 @@ export default function CalendarWindow({
     return () => window.clearInterval(timer);
   }, [notes, notificationEmail, addAlert, markReminderSent]);
 
+  useEffect(() => {
+    if (isFullscreen) return;
+
+    const keepWindowVisible = () => {
+      const rect = windowRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const maxX = Math.max(WINDOW_MARGIN, window.innerWidth - rect.width - WINDOW_MARGIN);
+      const maxY = Math.max(WINDOW_MIN_TOP, window.innerHeight - rect.height - WINDOW_MARGIN);
+
+      setWindowPosition((current) => ({
+        x: Math.min(Math.max(current.x, WINDOW_MARGIN), maxX),
+        y: Math.min(Math.max(current.y, WINDOW_MIN_TOP), maxY),
+      }));
+    };
+
+    keepWindowVisible();
+    window.addEventListener("resize", keepWindowVisible);
+    return () => window.removeEventListener("resize", keepWindowVisible);
+  }, [isFullscreen]);
+
   const toggleFullscreen = () => setIsFullscreen((v) => !v);
+
+  const clampWindowPosition = (nextX: number, nextY: number) => {
+    const rect = windowRef.current?.getBoundingClientRect();
+    if (!rect) return { x: nextX, y: nextY };
+
+    const maxX = Math.max(WINDOW_MARGIN, window.innerWidth - rect.width - WINDOW_MARGIN);
+    const maxY = Math.max(WINDOW_MIN_TOP, window.innerHeight - rect.height - WINDOW_MARGIN);
+
+    return {
+      x: Math.min(Math.max(nextX, WINDOW_MARGIN), maxX),
+      y: Math.min(Math.max(nextY, WINDOW_MIN_TOP), maxY),
+    };
+  };
+
+  const handleHeaderPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (isFullscreen) return;
+    if ((event.target as HTMLElement).closest("button")) return;
+
+    const rect = windowRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragState({
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    });
+  };
+
+  const handleHeaderPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+
+    setWindowPosition(
+      clampWindowPosition(
+        event.clientX - dragState.offsetX,
+        event.clientY - dragState.offsetY
+      )
+    );
+  };
+
+  const handleHeaderPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    setDragState(null);
+  };
 
   const monthLabel = useMemo(
     () =>
@@ -291,13 +380,26 @@ export default function CalendarWindow({
 
   return (
     <div
+      ref={windowRef}
       data-testid="calendar-window"
-      className={`fixed z-50 overflow-hidden rounded-[32px] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.15)] border border-[#dce9d8] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-        isFullscreen ? "inset-12 md:inset-20" : "top-24 left-6 w-[980px] h-[660px] max-w-[95vw]"
+      className={`fixed z-50 overflow-hidden rounded-[32px] border border-[#dce9d8] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.15)] ${
+        isDragging ? "transition-none" : "transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      } ${
+        isFullscreen ? "inset-12 md:inset-20" : "w-[980px] h-[660px] max-w-[95vw]"
       } ${isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
+      style={isFullscreen ? undefined : { left: `${windowPosition.x}px`, top: `${windowPosition.y}px` }}
     >
       {/* Header section */}
-      <div className="flex items-center justify-between border-b border-[#dce9d8] bg-[#ecf5e8]/80 backdrop-blur-md px-6 py-4">
+      <div
+        className={`flex items-center justify-between border-b border-[#dce9d8] bg-[#ecf5e8]/80 px-6 py-4 backdrop-blur-md ${
+          isFullscreen ? "" : isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+        }`}
+        onPointerDown={handleHeaderPointerDown}
+        onPointerMove={handleHeaderPointerMove}
+        onPointerUp={handleHeaderPointerUp}
+        onPointerCancel={handleHeaderPointerUp}
+        style={isFullscreen ? undefined : { touchAction: "none" }}
+      >
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold text-green-900 tracking-tight">Calendar</h2>
           {weather?.city && (
