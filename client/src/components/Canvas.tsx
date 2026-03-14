@@ -968,6 +968,7 @@ const Canvas = () => {
               setSelectedShapeId(shapeId);
               setActiveBedId(null);
               setActiveVertex(null);
+              setBedPanelShapeId(null);
             }}
           />
         </div>

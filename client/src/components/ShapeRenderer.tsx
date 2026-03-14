@@ -13,14 +13,58 @@ type BedPath = {
 
 type Box = { minX: number; minY: number; maxX: number; maxY: number };
 
-type ContextInfoButtonProps = {
+type HtmlContextInfoButtonProps = {
   x: number;
   y: number;
   title?: string;
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
 };
 
-const ContextInfoButton: React.FC<ContextInfoButtonProps> = ({
+const HtmlContextInfoButton: React.FC<HtmlContextInfoButtonProps> = ({
+  x,
+  y,
+  title = "Open details",
+  onClick,
+}) => {
+  return (
+    <button
+      type="button"
+      data-interactive="true"
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={onClick}
+      title={title}
+      style={{
+        position: "absolute",
+        left: `${x}px`,
+        top: `${y}px`,
+        width: "32px",
+        height: "32px",
+        borderRadius: "9999px",
+        border: "1px solid #d1d5db",
+        backgroundColor: "rgba(255,255,255,0.96)",
+        color: "#2f4f2f",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+        pointerEvents: "auto",
+        zIndex: 12,
+      }}
+    >
+      <FaInfoCircle size={16} />
+    </button>
+  );
+};
+
+type SvgContextInfoButtonProps = {
+  x: number;
+  y: number;
+  title?: string;
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+};
+
+const SvgContextInfoButton: React.FC<SvgContextInfoButtonProps> = ({
   x,
   y,
   title = "Open details",
@@ -568,6 +612,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const handleY = centerY;
 
       const plantCount = bedPlants[shape.id]?.length ?? 0;
+      const showCircleInfoButton = isSelected;
 
       return (
         <div
@@ -576,51 +621,49 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             onShapeSelect?.(shape.id);
-            onOpenBedPanel?.(shape.id);
           }}
         >
-        
-        <div
-          data-interactive="true"
-          style={{
-            position: "absolute",
-            width: radius * 2,
-            height: radius * 2,
-            borderRadius: "50%",
-            border: `${sw}px solid ${stroke}`,
-            backgroundColor: fill,
-            left: centerX - radius,
-            top: centerY - radius,
-            cursor: canEdit ? "move" : "pointer",
-            pointerEvents: "auto",
-            filter: glow,
-          }}
-          onMouseDown={handleShapeMouseDown(shape.id)}
-        />
-
-        {showDimensions && (
           <div
+            data-interactive="true"
             style={{
               position: "absolute",
-              left: `${labelX}px`,
-              top: `${labelY}px`,
-              transform: "translate(-50%, -50%)",
-              backgroundColor: "rgba(255,255,255,0.95)",
-              padding: "4px 8px",
-              borderRadius: "4px",
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "#1f2937",
-              border: "1px solid #d1d5db",
-              whiteSpace: "nowrap",
-              pointerEvents: "none",
-              zIndex: 5,
+              width: radius * 2,
+              height: radius * 2,
+              borderRadius: "50%",
+              border: `${sw}px solid ${stroke}`,
+              backgroundColor: fill,
+              left: centerX - radius,
+              top: centerY - radius,
+              cursor: canEdit ? "move" : "pointer",
+              pointerEvents: "auto",
+              filter: glow,
             }}
-          >
-            Radius: {feet} ft
-            <div style={{ fontSize: "10px", color: "#6b7280" }}>{meters} m</div>
-          </div>
-        )}
+            onMouseDown={handleShapeMouseDown(shape.id)}
+          />
+
+          {showDimensions && (
+            <div
+              style={{
+                position: "absolute",
+                left: `${labelX}px`,
+                top: `${labelY}px`,
+                transform: "translate(-50%, -50%)",
+                backgroundColor: "rgba(255,255,255,0.95)",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#1f2937",
+                border: "1px solid #d1d5db",
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+                zIndex: 5,
+              }}
+            >
+              Radius: {feet} ft
+              <div style={{ fontSize: "10px", color: "#6b7280" }}>{meters} m</div>
+            </div>
+          )}
 
           {/* Plant count badge */}
           {plantCount > 0 && (
@@ -644,6 +687,18 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             >
               {plantCount} plant{plantCount !== 1 ? "s" : ""}
             </div>
+          )}
+
+          {showCircleInfoButton && (
+            <HtmlContextInfoButton
+              x={centerX + radius - 10}
+              y={centerY - radius - 10}
+              title="Open bed details"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenBedPanel?.(shape.id);
+              }}
+            />
           )}
 
           {/* Circle resize handle: only when selected AND edit mode is active */}
@@ -788,34 +843,54 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     if (type === "rectangle") {
       const left = Math.min(startPos.x, endPos.x);
       const top = Math.min(startPos.y, endPos.y);
+      const showRectangleInfoButton = isSelected;
+
       return (
         <div
           key={shape.id}
           data-interactive="true"
-          style={{
-            position: "absolute",
-            left,
-            top,
-            width,
-            height,
-            border: `${strokeWidth ?? 2}px solid ${color}`,
-            backgroundColor: "transparent",
-            cursor: canEdit ? "move" : "pointer",
-            pointerEvents: "auto",
-          }}
-          onMouseDown={handleShapeMouseDown(shape.id)}
           onClick={(e) => {
             e.stopPropagation();
             onShapeSelect?.(shape.id);
-            onOpenBedPanel?.(shape.id);
           }}
-        />
+        >
+          <div
+            data-interactive="true"
+            style={{
+              position: "absolute",
+              left,
+              top,
+              width,
+              height,
+              border: `${strokeWidth ?? 2}px solid ${color}`,
+              backgroundColor: "transparent",
+              cursor: canEdit ? "move" : "pointer",
+              pointerEvents: "auto",
+              filter: glow,
+            }}
+            onMouseDown={handleShapeMouseDown(shape.id)}
+            onClick={stop}
+          />
+
+          {showRectangleInfoButton && (
+            <HtmlContextInfoButton
+              x={left + width - 10}
+              y={top - 10}
+              title="Open bed details"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenBedPanel?.(shape.id);
+              }}
+            />
+          )}
+        </div>
       );
     }
 
     if (type === "freehand" && (shape as any).points && (shape as any).points.length > 1) {
       const pts = (shape as any).points as Position[];
       const box = bboxOfPoints(pts);
+      const showFreehandInfoButton = isSelected;
 
       return (
         <svg
@@ -833,14 +908,25 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             strokeLinecap="round"
             strokeLinejoin="round"
             pointerEvents="auto"
-            style={{ cursor: canEdit ? "move" : "pointer" }}
+            style={{ cursor: canEdit ? "move" : "pointer", filter: glow }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onClick={(e) => {
               e.stopPropagation();
               onShapeSelect?.(shape.id);
-              onOpenBedPanel?.(shape.id);
             }}
           />
+
+          {showFreehandInfoButton && (
+            <SvgContextInfoButton
+              x={box.maxX + 10}
+              y={box.minY - 10}
+              title="Open bed details"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenBedPanel?.(shape.id);
+              }}
+            />
+          )}
 
           {/* Freehand resize handles: only when selected AND edit mode is active */}
           {showShapeHandles &&
@@ -928,24 +1014,24 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
           const edgeLabels = bed.vertices.map((start, index) => {
             const end = bed.vertices[(index + 1) % bed.vertices.length];
-          
+
             const dx = end.x - start.x;
             const dy = end.y - start.y;
             const lengthPx = Math.sqrt(dx * dx + dy * dy);
-          
+
             const lengthUnits = lengthPx / GRID_SIZE;
             const lengthFeet = (lengthUnits * gridToUnit).toFixed(1);
             const lengthMeters = feetToMeters(parseFloat(lengthFeet));
-          
+
             const midX = (start.x + end.x) / 2;
             const midY = (start.y + end.y) / 2;
-          
+
             const angle = Math.atan2(dy, dx);
             const perpX = -Math.sin(angle);
             const perpY = Math.cos(angle);
-          
+
             const offset = 20;
-          
+
             return {
               key: `${bed.id}-edge-${index}`,
               x: midX + perpX * offset,
@@ -972,48 +1058,48 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                   onSelectBed(bed.id);
                 }}
               />
-            
-            {showDimensions &&
-              edgeLabels.map((label) => (
-                <foreignObject
-                  key={label.key}
-                  x={label.x - 40}
-                  y={label.y - 20}
-                  width="80"
-                  height="42"
-                  pointerEvents="none"
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      width: "100%",
-                      height: "100%",
-                    }}
+
+              {showDimensions &&
+                edgeLabels.map((label) => (
+                  <foreignObject
+                    key={label.key}
+                    x={label.x - 40}
+                    y={label.y - 20}
+                    width="80"
+                    height="42"
+                    pointerEvents="none"
                   >
                     <div
                       style={{
-                        backgroundColor: "rgba(255,255,255,0.95)",
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "#1f2937",
-                        border: "1px solid #d1d5db",
-                        whiteSpace: "nowrap",
-                        textAlign: "center",
-                        lineHeight: 1.1,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        width: "100%",
+                        height: "100%",
                       }}
                     >
-                      {label.feet} ft
-                      <div style={{ fontSize: "10px", color: "#6b7280" }}>
-                        {label.meters} m
+                      <div
+                        style={{
+                          backgroundColor: "rgba(255,255,255,0.95)",
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          color: "#1f2937",
+                          border: "1px solid #d1d5db",
+                          whiteSpace: "nowrap",
+                          textAlign: "center",
+                          lineHeight: 1.1,
+                        }}
+                      >
+                        {label.feet} ft
+                        <div style={{ fontSize: "10px", color: "#6b7280" }}>
+                          {label.meters} m
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </foreignObject>
-              ))}                    
+                  </foreignObject>
+                ))}
 
               {plantCount > 0 && (
                 <foreignObject
@@ -1049,7 +1135,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               )}
 
               {showBedInfoButton && (
-                <ContextInfoButton
+                <SvgContextInfoButton
                   x={box.maxX + 10}
                   y={box.minY - 10}
                   title="Open bed details"
