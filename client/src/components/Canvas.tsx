@@ -61,6 +61,7 @@ const Canvas = () => {
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
   const [pendingBedShapeId, setPendingBedShapeId] = useState<string | null>(null);
   const [bedPanelShapeId, setBedPanelShapeId] = useState<string | null>(null);
+  const [isBedPanelLocked, setIsBedPanelLocked] = useState(false);
 
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(true);
@@ -433,22 +434,25 @@ const Canvas = () => {
     (e: React.MouseEvent) => {
       pointerDownRef.current = { x: e.clientX, y: e.clientY };
       didDragRef.current = false;
-  
+
       const clickedInteractive = isInteractiveTarget(e.target);
-  
+
       if (!clickedInteractive) {
         setSelectedShapeId(null);
         setActiveBedId(null);
         setActiveVertex(null);
-        setBedPanelShapeId(null);
+
+        if (!isBedPanelLocked) {
+          setBedPanelShapeId(null);
+        }
       }
-  
+
       if (editMode && clickedInteractive) return;
-  
+
       setIsPanning(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     },
-    [editMode, isInteractiveTarget, pan.x, pan.y]
+    [editMode, isBedPanelLocked, isInteractiveTarget, pan.x, pan.y]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -893,7 +897,15 @@ const Canvas = () => {
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
       <Calendar data-testid="calendar-window" isOpen={isCalendarOpen} onClose={() => setCalendarOpen(false)} />
       {bedPanelShapeId && (
-        <FlowerBedPanel shapeId={bedPanelShapeId} onClose={() => setBedPanelShapeId(null)} />
+        <FlowerBedPanel
+          shapeId={bedPanelShapeId}
+          isLocked={isBedPanelLocked}
+          onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
+          onClose={() => {
+            setBedPanelShapeId(null);
+            setIsBedPanelLocked(false);
+          }}
+        />
       )}
 
       <div
@@ -936,13 +948,23 @@ const Canvas = () => {
               setActiveBedId(id);
               setActiveVertex(null);
               setSelectedShapeId(null);
-              setBedPanelShapeId((prev) => (prev === id ? prev : null));
+
+              if (isBedPanelLocked) {
+                setBedPanelShapeId(id);
+              } else {
+                setBedPanelShapeId((prev) => (prev === id ? prev : null));
+              }
             }}
             onSelectVertex={(bedId, index) => {
               setActiveBedId(bedId);
               setActiveVertex({ bedId, index });
               setSelectedShapeId(null);
-              setBedPanelShapeId((prev) => (prev === bedId ? prev : null));
+
+              if (isBedPanelLocked) {
+                setBedPanelShapeId(bedId);
+              } else {
+                setBedPanelShapeId((prev) => (prev === bedId ? prev : null));
+              }
             }}
             onMoveBedBy={moveBedBy}
             onMoveVertexTo={moveVertexTo}
@@ -968,7 +990,10 @@ const Canvas = () => {
               setSelectedShapeId(shapeId);
               setActiveBedId(null);
               setActiveVertex(null);
-              setBedPanelShapeId(null);
+
+              if (!isBedPanelLocked) {
+                setBedPanelShapeId(null);
+              }
             }}
           />
         </div>

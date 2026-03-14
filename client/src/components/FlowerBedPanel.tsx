@@ -17,10 +17,17 @@ interface SearchResult {
 
 interface FlowerBedPanelProps {
   shapeId: string;
+  isLocked: boolean;
+  onToggleLock: () => void;
   onClose: () => void;
 }
 
-export default function FlowerBedPanel({ shapeId, onClose }: FlowerBedPanelProps) {
+export default function FlowerBedPanel({
+  shapeId,
+  isLocked,
+  onToggleLock,
+  onClose,
+}: FlowerBedPanelProps) {
   const bedPlants = useGardenStore((s) => s.bedPlants[shapeId]) ?? [];
   const addPlantToBed = useGardenStore((s) => s.addPlantToBed);
   const removePlantFromBed = useGardenStore((s) => s.removePlantFromBed);
@@ -167,9 +174,25 @@ export default function FlowerBedPanel({ shapeId, onClose }: FlowerBedPanelProps
             {bedName}
           </h2>
         )}
-        <button onClick={onClose} className="text-green-800 hover:opacity-70">
-          <TbCircleXFilled size={22} />
-        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleLock}
+            className={`text-xs font-semibold px-2 py-1 rounded border ${
+              isLocked
+                ? "bg-green-100 text-green-800 border-green-300"
+                : "bg-gray-100 text-green-800 border-gray-300 hover:bg-gray-200"
+            }`}
+            title={isLocked ? "Unlock window" : "Lock window"}
+          >
+            {isLocked ? "Locked" : "Lock"}
+          </button>
+
+          <button onClick={onClose} className="text-green-800 hover:opacity-70">
+            <TbCircleXFilled size={22} />
+          </button>
+        </div>
       </div>
 
       {/* Plant table */}
