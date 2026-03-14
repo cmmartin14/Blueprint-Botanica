@@ -1168,7 +1168,15 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     return (
       <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
         {verts.length >= 2 && (
-          <path d={d} fill="none" stroke="#ffffff" strokeWidth={2} strokeDasharray="10 8" opacity={0.9} />
+          <path
+            d={d}
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth={2}
+            strokeDasharray="10 8"
+            opacity={0.9}
+            pointerEvents="none"
+          />
         )}
 
         {preview && (
@@ -1181,6 +1189,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             strokeWidth={2}
             strokeDasharray="8 6"
             opacity={0.9}
+            pointerEvents="none"
           />
         )}
 
@@ -1554,8 +1563,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   return (
     <div style={{ position: "absolute", width: "100%", height: "100%", top: 0, left: 0, pointerEvents: "none" }}>
       {renderBeds()}
-      {renderDraft()}
       {shapes.map(renderShape)}
+      {renderDraft()}
       {renderBedHoverTooltip()}
     </div>
   );
