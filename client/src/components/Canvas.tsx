@@ -944,6 +944,10 @@ const Canvas = () => {
             draftVertices={draft?.vertices ?? null}
             draftPreviewEnd={previewEnd}
             drawModeActive={toolMode === "draw"}
+            onCloseDraftAtStart={() => {
+              if (!draft || draft.vertices.length < 3) return;
+              closeDraftIntoBed(draft.vertices[0]);
+            }}
             onSelectBed={(id) => {
               setActiveBedId(id);
               setActiveVertex(null);

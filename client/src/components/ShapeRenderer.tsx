@@ -134,6 +134,7 @@ interface ShapeRendererProps {
   drawModeActive: boolean;
   draftVertices: Position[] | null;
   draftPreviewEnd: Position | null;
+  onCloseDraftAtStart?: () => void;
 
   onSelectBed: (bedId: string) => void;
   onSelectVertex: (bedId: string, index: number) => void;
@@ -310,6 +311,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   drawModeActive,
   draftVertices,
   draftPreviewEnd,
+  onCloseDraftAtStart,
 
   onSelectBed,
   onSelectVertex,
@@ -1182,8 +1184,48 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           />
         )}
 
-        <circle cx={verts[0].x} cy={verts[0].y} r={7} fill="#111" stroke="#B7C398" strokeWidth={3} opacity={0.95} />
-        <circle cx={last.x} cy={last.y} r={6} fill="#111" stroke="white" strokeWidth={2} opacity={0.95} />
+        {/* Visible start vertex */}
+        <circle
+          cx={verts[0].x}
+          cy={verts[0].y}
+          r={7}
+          fill="#111"
+          stroke="#B7C398"
+          strokeWidth={3}
+          opacity={0.95}
+          pointerEvents="none"
+        />
+
+        {/* Larger invisible close target on top of the start vertex */}
+        {verts.length >= 3 && (
+          <circle
+            data-interactive="true"
+            cx={verts[0].x}
+            cy={verts[0].y}
+            r={18}
+            fill="rgba(0,0,0,0.001)"
+            stroke="none"
+            pointerEvents="all"
+            style={{ cursor: "pointer" }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onCloseDraftAtStart?.();
+            }}
+          />
+        )}
+
+        {/* Current endpoint */}
+        <circle
+          cx={last.x}
+          cy={last.y}
+          r={6}
+          fill="#111"
+          stroke="white"
+          strokeWidth={2}
+          opacity={0.95}
+          pointerEvents="none"
+        />
       </svg>
     );
   };
