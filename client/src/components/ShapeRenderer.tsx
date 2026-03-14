@@ -281,6 +281,26 @@ const withAlpha = (color: string, alpha: number) => {
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
 
+  const hslMatch = color.match(
+    /^hsl\(\s*([0-9.]+)(deg)?[\s,]+([0-9.]+)%[\s,]+([0-9.]+)%\s*\)$/i
+  );
+  if (hslMatch) {
+    const h = Number(hslMatch[1]);
+    const s = Number(hslMatch[3]);
+    const l = Number(hslMatch[4]);
+    return `hsla(${h}, ${s}%, ${l}%, ${a})`;
+  }
+
+  const hslaMatch = color.match(
+    /^hsla\(\s*([0-9.]+)(deg)?[\s,]+([0-9.]+)%[\s,]+([0-9.]+)%[\s,\/]+([0-9.]+)\s*\)$/i
+  );
+  if (hslaMatch) {
+    const h = Number(hslaMatch[1]);
+    const s = Number(hslaMatch[3]);
+    const l = Number(hslaMatch[4]);
+    return `hsla(${h}, ${s}%, ${l}%, ${a})`;
+  }
+
   return color;
 };
 
