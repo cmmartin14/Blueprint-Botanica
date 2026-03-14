@@ -433,19 +433,20 @@ const Canvas = () => {
     (e: React.MouseEvent) => {
       pointerDownRef.current = { x: e.clientX, y: e.clientY };
       didDragRef.current = false;
-
-      if (editMode && isInteractiveTarget(e.target)) return;
-
-      setIsPanning(true);
-      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-
-      if (!editMode) return;
-      if (!isInteractiveTarget(e.target)) {
+  
+      const clickedInteractive = isInteractiveTarget(e.target);
+  
+      if (!clickedInteractive) {
         setSelectedShapeId(null);
         setActiveBedId(null);
         setActiveVertex(null);
-        setBedPanelShapeId(null);        
+        setBedPanelShapeId(null);
       }
+  
+      if (editMode && clickedInteractive) return;
+  
+      setIsPanning(true);
+      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     },
     [editMode, isInteractiveTarget, pan.x, pan.y]
   );
