@@ -115,7 +115,14 @@ interface ShapeRendererProps {
 
   canEdit: boolean;
 
-  bedPlants?: Record<string, { id: number }[]>;
+  bedPlants?: Record<
+    string,
+    {
+      id: number;
+      common_name?: string | null;
+      scientific_name?: string | string[];
+    }[]
+  >;
   onOpenBedPanel?: (shapeId: string) => void;
 
   selectedShapeId: string | null;
@@ -258,6 +265,36 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   onOpenBedPanel,
 }) => {
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+
+  const [hoveredBedId, setHoveredBedId] = React.useState<string | null>(null);
+  const [hoveredBedAnchor, setHoveredBedAnchor] = React.useState<Position | null>(null);
+
+  const getPlantDisplayName = (plant: {
+    common_name?: string | null;
+    scientific_name?: string | string[];
+  }) => {
+    if (plant.common_name && plant.common_name.trim()) {
+      return plant.common_name;
+    }
+
+    if (Array.isArray(plant.scientific_name)) {
+      return plant.scientific_name[0] ?? "Unnamed plant";
+    }
+
+    return plant.scientific_name ?? "Unnamed plant";
+  };
+
+  const showBedHover = (bedId: string, anchor: Position) => {
+    setHoveredBedId(bedId);
+    setHoveredBedAnchor(anchor);
+  };
+
+  const hideBedHover = () => {
+    setHoveredBedId(null);
+    setHoveredBedAnchor(null);
+  };
+
+  const hoveredPlants = hoveredBedId ? bedPlants[hoveredBedId] ?? [] : [];
 
   const snapToGrid = (x: number, y: number) => ({
     x: Math.round(x / GRID_SIZE) * GRID_SIZE,
@@ -639,6 +676,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               filter: glow,
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
+            onMouseEnter={() =>
+              showBedHover(shape.id, {
+                x: centerX,
+                y: centerY - radius,
+              })
+            }
+            onMouseLeave={hideBedHover}
           />
 
           {showDimensions && (
@@ -870,6 +914,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onClick={stop}
+            onMouseEnter={() =>
+              showBedHover(shape.id, {
+                x: left + width / 2,
+                y: top,
+              })
+            }
+            onMouseLeave={hideBedHover}
           />
 
           {showRectangleInfoButton && (
@@ -910,6 +961,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             pointerEvents="auto"
             style={{ cursor: canEdit ? "move" : "pointer", filter: glow }}
             onMouseDown={handleShapeMouseDown(shape.id)}
+            onMouseEnter={() =>
+              showBedHover(shape.id, {
+                x: (box.minX + box.maxX) / 2,
+                y: box.minY,
+              })
+            }
+            onMouseLeave={hideBedHover}
             onClick={(e) => {
               e.stopPropagation();
               onShapeSelect?.(shape.id);
@@ -994,6 +1052,88 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     );
   };
 
+  const renderBedHoverTooltip = () => {
+    if (!hoveredBedId || !hoveredBedAnchor) return null;
+
+    const plantNames = hoveredPlants.map(getPlantDisplayName).slice(0, 8);
+    const extraCount = Math.max(0, hoveredPlants.length - plantNames.length);
+
+    return (
+      <div
+        style={{
+          position: "absolute",
+          left: hoveredBedAnchor.x,
+          top: hoveredBedAnchor.y,
+          transform: `translate(-50%, calc(-100% - 12px)) scale(${1 / Math.max(scale, 0.0001)})`,
+          transformOrigin: "bottom center",
+          backgroundColor: "rgba(255,255,255,0.97)",
+          border: "1px solid #d1d5db",
+          borderRadius: "10px",
+          boxShadow: "0 8px 20px rgba(0,0,0,0.16)",
+          padding: "10px 12px",
+          minWidth: "140px",
+          maxWidth: "220px",
+          color: "#1f2937",
+          pointerEvents: "none",
+          zIndex: 30,
+        }}
+      >
+        <div
+          style={{
+            fontSize: "12px",
+            fontWeight: 700,
+            color: "#166534",
+            marginBottom: "6px",
+          }}
+        >
+          {hoveredPlants.length > 0
+            ? `${hoveredPlants.length} plant${hoveredPlants.length !== 1 ? "s" : ""}`
+            : "Empty Bed"}
+        </div>
+
+        {hoveredPlants.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+            {plantNames.map((name, index) => (
+              <div
+                key={`${hoveredBedId}-plant-${index}`}
+                style={{
+                  fontSize: "12px",
+                  lineHeight: 1.25,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {name}
+              </div>
+            ))}
+
+            {extraCount > 0 && (
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: "#6b7280",
+                  marginTop: "2px",
+                }}
+              >
+                +{extraCount} more
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
+            style={{
+              fontSize: "12px",
+              color: "#6b7280",
+            }}
+          >
+            No plants added yet
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderBeds = () => {
     return (
       <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
@@ -1053,6 +1193,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 strokeLinecap="round"
                 style={{ cursor: canEdit ? "move" : "pointer", filter: glow }}
                 onMouseDown={handleBedMouseDown(bed.id)}
+                onMouseEnter={() =>
+                  showBedHover(bed.id, {
+                    x: (box.minX + box.maxX) / 2,
+                    y: box.minY,
+                  })
+                }
+                onMouseLeave={hideBedHover}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectBed(bed.id);
@@ -1219,6 +1366,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       {renderBeds()}
       {renderDraft()}
       {shapes.map(renderShape)}
+      {renderBedHoverTooltip()}
     </div>
   );
 };
