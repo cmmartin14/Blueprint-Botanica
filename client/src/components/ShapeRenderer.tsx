@@ -233,7 +233,7 @@ const renderStripePattern = (patternId: string, colors: string[]) => {
           y={-totalWidth}
           width={STRIPE_WIDTH}
           height={totalWidth * 3}
-          fill={withAlpha(color, 0.32)}
+          fill={withAlpha(color, 0.55)}
         />
       ))}
     </pattern>
@@ -425,16 +425,16 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       solidColor,
       svgFill: isMixed
         ? `url(#${patternId})`
-        : withAlpha(solidColor ?? "#4a7c59", 0.28),
+        : withAlpha(solidColor ?? "#4a7c59", 0.55),
       htmlFill: isMixed
         ? `repeating-linear-gradient(135deg, ${visibleColors
             .map((color, index) => {
               const start = index * STRIPE_WIDTH;
               const end = start + STRIPE_WIDTH;
-              return `${withAlpha(color, 0.32)} ${start}px ${end}px`;
+              return `${withAlpha(color, 0.55)} ${start}px ${end}px`;
             })
             .join(", ")})`
-        : withAlpha(solidColor ?? "#4a7c59", 0.28),
+        : withAlpha(solidColor ?? "#4a7c59", 0.55),
       stroke: "#ffffff",
       strokeDasharray: undefined as string | undefined,
       patternId,
