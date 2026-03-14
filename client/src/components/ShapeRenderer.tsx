@@ -383,7 +383,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         svgFill: EMPTY_BED_FILL,
         htmlFill: EMPTY_BED_FILL,
         stroke: EMPTY_BED_STROKE,
-        strokeDasharray: "10 8",
+        strokeDasharray: undefined as string | undefined,
         patternId: null as string | null,
       };
     }
@@ -799,7 +799,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
               filter: glow,
-              borderStyle: visual.isEmpty ? "dashed" : "solid",
+              borderStyle: "solid",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onMouseEnter={() =>
@@ -1038,7 +1038,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
               filter: glow,
-              borderStyle: visual.isEmpty ? "dashed" : "solid",
+              borderStyle: "solid",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onClick={stop}
