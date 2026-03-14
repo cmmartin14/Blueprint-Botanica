@@ -990,8 +990,16 @@ const Canvas = () => {
               setSelectedShapeId(shapeId);
               setActiveBedId(null);
               setActiveVertex(null);
-
-              if (!isBedPanelLocked) {
+            
+              const selectedShape = shapesRef.current.find((s) => s.id === shapeId);
+              const isBedLikeShape =
+                selectedShape?.type === "circle" ||
+                selectedShape?.type === "rectangle" ||
+                selectedShape?.type === "freehand";
+            
+              if (isBedPanelLocked && isBedLikeShape) {
+                setBedPanelShapeId(shapeId);
+              } else if (!isBedPanelLocked) {
                 setBedPanelShapeId(null);
               }
             }}
