@@ -165,6 +165,80 @@ interface ShapeRendererProps {
 
 const GRID_SIZE = 20;
 
+const EMPTY_BED_FILL = "rgba(229, 231, 235, 0.55)";
+const EMPTY_BED_STROKE = "#d1d5db";
+const STRIPE_WIDTH = 14;
+const MAX_VISIBLE_SPECIES_IN_FILL = 5;
+
+type BedPlantEntry = {
+  id: number;
+  common_name?: string | null;
+  scientific_name?: string | string[];
+};
+
+const normalizeSpeciesKey = (plant: BedPlantEntry) => {
+  const scientific = Array.isArray(plant.scientific_name)
+    ? plant.scientific_name[0]
+    : plant.scientific_name;
+
+  const raw = scientific || plant.common_name || `plant-${plant.id}`;
+  return raw.trim().toLowerCase();
+};
+
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = value.charCodeAt(i) + ((hash << 5) - hash);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const getSpeciesColor = (speciesKey: string) => {
+  const hash = hashString(speciesKey);
+  const hue = hash % 360;
+  const saturation = 62 + (hash % 10);
+  const lightness = 48 + ((hash >> 3) % 10);
+  return `hsl(${hue} ${saturation}% ${lightness}%)`;
+};
+
+const getStripePatternId = (shapeId: string, speciesKeys: string[]) => {
+  const safeSpecies = speciesKeys
+    .join("-")
+    .replace(/[^a-z0-9-_]/gi, "-")
+    .toLowerCase();
+
+  return `bed-stripes-${shapeId}-${safeSpecies}`;
+};
+
+const renderStripePattern = (patternId: string, colors: string[]) => {
+  if (colors.length <= 1) return null;
+
+  const totalWidth = colors.length * STRIPE_WIDTH;
+
+  return (
+    <pattern
+      key={patternId}
+      id={patternId}
+      patternUnits="userSpaceOnUse"
+      width={totalWidth}
+      height={totalWidth}
+      patternTransform="rotate(45)"
+    >
+      {colors.map((color, index) => (
+        <rect
+          key={`${patternId}-${index}`}
+          x={index * STRIPE_WIDTH}
+          y={-totalWidth}
+          width={STRIPE_WIDTH}
+          height={totalWidth * 3}
+          fill={withAlpha(color, 0.32)}
+        />
+      ))}
+    </pattern>
+  );
+};
+
 const withAlpha = (color: string, alpha: number) => {
   const a = Math.max(0, Math.min(1, alpha));
 
@@ -295,6 +369,55 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   };
 
   const hoveredPlants = hoveredBedId ? bedPlants[hoveredBedId] ?? [] : [];
+
+  const getBedVisual = (shapeId: string) => {
+    const plants = (bedPlants[shapeId] ?? []) as BedPlantEntry[];
+
+    if (plants.length === 0) {
+      return {
+        isEmpty: true,
+        isMixed: false,
+        visibleSpeciesKeys: [] as string[],
+        visibleColors: [] as string[],
+        solidColor: null as string | null,
+        svgFill: EMPTY_BED_FILL,
+        htmlFill: EMPTY_BED_FILL,
+        stroke: EMPTY_BED_STROKE,
+        strokeDasharray: "10 8",
+        patternId: null as string | null,
+      };
+    }
+
+    const uniqueSpeciesKeys = Array.from(new Set(plants.map(normalizeSpeciesKey)));
+    const visibleSpeciesKeys = uniqueSpeciesKeys.slice(0, MAX_VISIBLE_SPECIES_IN_FILL);
+    const visibleColors = visibleSpeciesKeys.map(getSpeciesColor);
+    const solidColor = visibleColors[0] ?? null;
+    const isMixed = uniqueSpeciesKeys.length > 1;
+    const patternId = isMixed ? getStripePatternId(shapeId, visibleSpeciesKeys) : null;
+
+    return {
+      isEmpty: false,
+      isMixed,
+      visibleSpeciesKeys,
+      visibleColors,
+      solidColor,
+      svgFill: isMixed
+        ? `url(#${patternId})`
+        : withAlpha(solidColor ?? "#4a7c59", 0.28),
+      htmlFill: isMixed
+        ? `repeating-linear-gradient(135deg, ${visibleColors
+            .map((color, index) => {
+              const start = index * STRIPE_WIDTH;
+              const end = start + STRIPE_WIDTH;
+              return `${withAlpha(color, 0.32)} ${start}px ${end}px`;
+            })
+            .join(", ")})`
+        : withAlpha(solidColor ?? "#4a7c59", 0.28),
+      stroke: "#ffffff",
+      strokeDasharray: undefined as string | undefined,
+      patternId,
+    };
+  };
 
   const snapToGrid = (x: number, y: number) => ({
     x: Math.round(x / GRID_SIZE) * GRID_SIZE,
@@ -634,9 +757,11 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const centerX = startPos.x;
       const centerY = startPos.y;
 
-      const stroke = (shape as any).color ?? color ?? "#ffffff";
+      const visual = getBedVisual(shape.id);
+      const stroke = visual.isEmpty
+        ? EMPTY_BED_STROKE
+        : (shape as any).color ?? color ?? "#ffffff";
       const sw = (shape as any).strokeWidth ?? strokeWidth ?? 2;
-      const fill = withAlpha(stroke, 0.18);
 
       const gridUnits = radius / GRID_SIZE;
       const feet = (gridUnits * gridToUnit).toFixed(1);
@@ -668,12 +793,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               height: radius * 2,
               borderRadius: "50%",
               border: `${sw}px solid ${stroke}`,
-              backgroundColor: fill,
+              background: visual.htmlFill,
               left: centerX - radius,
               top: centerY - radius,
               cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
               filter: glow,
+              borderStyle: visual.isEmpty ? "dashed" : "solid",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onMouseEnter={() =>
@@ -888,6 +1014,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const left = Math.min(startPos.x, endPos.x);
       const top = Math.min(startPos.y, endPos.y);
       const showRectangleInfoButton = isSelected;
+      const visual = getBedVisual(shape.id);
 
       return (
         <div
@@ -906,11 +1033,12 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               top,
               width,
               height,
-              border: `${strokeWidth ?? 2}px solid ${color}`,
-              backgroundColor: "transparent",
+              border: `${strokeWidth ?? 2}px solid ${visual.stroke}`,
+              background: visual.htmlFill,
               cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
               filter: glow,
+              borderStyle: visual.isEmpty ? "dashed" : "solid",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onClick={stop}
@@ -942,6 +1070,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const pts = (shape as any).points as Position[];
       const box = bboxOfPoints(pts);
       const showFreehandInfoButton = isSelected;
+      const visual = getBedVisual(shape.id);
 
       return (
         <svg
@@ -950,14 +1079,21 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           onClick={stop}
           style={{ position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none" }}
         >
-          <polyline
+          <defs>
+            {visual.isMixed && visual.patternId
+              ? renderStripePattern(visual.patternId, visual.visibleColors)
+              : null}
+          </defs>
+
+          <polygon
             data-interactive="true"
             points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
-            fill="none"
-            stroke={(shape as any).color}
+            fill={visual.svgFill}
+            stroke={visual.stroke}
             strokeWidth={(shape as any).strokeWidth ?? 2}
             strokeLinecap="round"
             strokeLinejoin="round"
+            strokeDasharray={visual.strokeDasharray}
             pointerEvents="auto"
             style={{ cursor: canEdit ? "move" : "pointer", filter: glow }}
             onMouseDown={handleShapeMouseDown(shape.id)}
@@ -1135,8 +1271,18 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   };
 
   const renderBeds = () => {
+    const mixedBedPatterns = normBeds
+      .map((bed) => {
+        const visual = getBedVisual(bed.id);
+        if (!visual.isMixed || !visual.patternId) return null;
+        return renderStripePattern(visual.patternId, visual.visibleColors);
+      })
+      .filter(Boolean);
+
     return (
       <svg className="absolute inset-0" style={{ overflow: "visible", pointerEvents: "none" }}>
+        <defs>{mixedBedPatterns}</defs>
+
         {normBeds.map((bed) => {
           if (!bed.isClosed || bed.vertices.length < 3) return null;
 
@@ -1146,7 +1292,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
           const glow = isActive ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
 
-          const fill = "rgba(255,255,255,0.22)";
+          const visual = getBedVisual(bed.id);
+          const fill = visual.svgFill;
           const strokeWidth = isActive ? 4 : 3;
 
           const box = bboxOf(bed.vertices);
@@ -1187,10 +1334,11 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 data-interactive="true"
                 d={bedPathD(bed.vertices)}
                 fill={fill}
-                stroke="#ffffff"
+                stroke={visual.stroke}
                 strokeWidth={strokeWidth}
                 strokeLinejoin="round"
                 strokeLinecap="round"
+                strokeDasharray={visual.strokeDasharray}
                 style={{ cursor: canEdit ? "move" : "pointer", filter: glow }}
                 onMouseDown={handleBedMouseDown(bed.id)}
                 onMouseEnter={() =>
