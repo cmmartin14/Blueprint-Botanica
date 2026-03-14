@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { TbCircleXFilled } from "react-icons/tb";
+import { TbCircleXFilled, TbLock, TbLockOpen } from "react-icons/tb";
+import { FaLock, FaLockOpen } from "react-icons/fa";
 import { PlantEntry, useGardenStore } from "../types/garden";
 
 interface SearchResult {
@@ -179,14 +180,14 @@ export default function FlowerBedPanel({
           <button
             type="button"
             onClick={onToggleLock}
-            className={`text-xs font-semibold px-2 py-1 rounded border ${
+            className={`p-1.5 rounded ${
               isLocked
-                ? "bg-green-100 text-green-800 border-green-300"
-                : "bg-gray-100 text-green-800 border-gray-300 hover:bg-gray-200"
+                ? "text-green-800 hover:bg-gray-200"
+                : "text-green-800 hover:bg-gray-200"
             }`}
             title={isLocked ? "Unlock window" : "Lock window"}
           >
-            {isLocked ? "Locked" : "Lock"}
+            {isLocked ? <FaLock size={18} /> : <FaLockOpen size={18} />}
           </button>
 
           <button onClick={onClose} className="text-green-800 hover:opacity-70">
