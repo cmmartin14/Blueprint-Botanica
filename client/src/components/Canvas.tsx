@@ -488,6 +488,12 @@ const Canvas = () => {
         return;
       }
 
+      // Toggle dimension labels with "D"
+      if (e.key.toLowerCase() === "d") {
+        setShowDimensions((prev) => !prev);
+        return;
+      }
+
       if (e.key !== "Backspace" && e.key !== "Delete") return;
 
       if (activeVertex) {
@@ -913,7 +919,7 @@ const Canvas = () => {
             beds={beds as any}
             scale={scale}
             pan={pan}
-            gridToUnit={1}
+            gridToUnit={0.25}
             canEdit={editMode}
             bedPlants={bedPlants}
             onOpenBedPanel={(shapeId) => setBedPanelShapeId((prev) => (prev === shapeId ? null : shapeId))}
