@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import { FaInfoCircle } from "react-icons/fa";
 import { Shape, Position } from "../types/shapes";
 
 type BedPath = {
@@ -11,6 +12,55 @@ type BedPath = {
 };
 
 type Box = { minX: number; minY: number; maxX: number; maxY: number };
+
+type ContextInfoButtonProps = {
+  x: number;
+  y: number;
+  title?: string;
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+};
+
+const ContextInfoButton: React.FC<ContextInfoButtonProps> = ({
+  x,
+  y,
+  title = "Open details",
+  onClick,
+}) => {
+  return (
+    <foreignObject
+      x={x}
+      y={y}
+      width="32"
+      height="32"
+      style={{ overflow: "visible" }}
+      pointerEvents="auto"
+    >
+      <button
+        type="button"
+        data-interactive="true"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={onClick}
+        title={title}
+        style={{
+          width: "32px",
+          height: "32px",
+          borderRadius: "9999px",
+          border: "1px solid #d1d5db",
+          backgroundColor: "rgba(255,255,255,0.96)",
+          color: "#2f4f2f",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+          pointerEvents: "auto",
+        }}
+      >
+        <FaInfoCircle size={16} />
+      </button>
+    </foreignObject>
+  );
+};
 
 interface ShapeRendererProps {
   shapes: Shape[];
@@ -866,6 +916,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
           const isActive = bed.id === activeBedId;
           const showBedHandles = canEdit && isActive;
+          const showBedInfoButton = isActive;
 
           const glow = isActive ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
 
@@ -919,7 +970,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectBed(bed.id);
-                  onOpenBedPanel?.(bed.id);
                 }}
               />
             
@@ -963,41 +1013,52 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                     </div>
                   </div>
                 </foreignObject>
-              ))}
-                    
+              ))}                    
 
               {plantCount > 0 && (
-              <foreignObject
-                x={(box.minX + box.maxX) / 2 - 50}
-                y={box.maxY + 8}
-                width="100"
-                height="30"
-                pointerEvents="none"
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
+                <foreignObject
+                  x={(box.minX + box.maxX) / 2 - 50}
+                  y={box.maxY + 8}
+                  width="100"
+                  height="30"
+                  pointerEvents="none"
                 >
                   <div
                     style={{
-                      backgroundColor: "#4a7c59",
-                      color: "#fff",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      padding: "2px 8px",
-                      borderRadius: "99px",
-                      whiteSpace: "nowrap",
-                      border: "1px solid rgba(255,255,255,0.4)",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
                     }}
                   >
-                    {plantCount} plant{plantCount !== 1 ? "s" : ""}
+                    <div
+                      style={{
+                        backgroundColor: "#4a7c59",
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "99px",
+                        whiteSpace: "nowrap",
+                        border: "1px solid rgba(255,255,255,0.4)",
+                      }}
+                    >
+                      {plantCount} plant{plantCount !== 1 ? "s" : ""}
+                    </div>
                   </div>
-                </div>
-              </foreignObject>
-            )}
+                </foreignObject>
+              )}
+
+              {showBedInfoButton && (
+                <ContextInfoButton
+                  x={box.maxX + 10}
+                  y={box.minY - 10}
+                  title="Open bed details"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenBedPanel?.(bed.id);
+                  }}
+                />
+              )}
 
               {/* Bed resize handles + vertices: only when edit mode is active */}
               {showBedHandles && (

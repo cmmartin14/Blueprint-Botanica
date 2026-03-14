@@ -444,6 +444,7 @@ const Canvas = () => {
         setSelectedShapeId(null);
         setActiveBedId(null);
         setActiveVertex(null);
+        setBedPanelShapeId(null);        
       }
     },
     [editMode, isInteractiveTarget, pan.x, pan.y]
