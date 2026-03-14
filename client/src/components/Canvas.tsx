@@ -936,11 +936,13 @@ const Canvas = () => {
               setActiveBedId(id);
               setActiveVertex(null);
               setSelectedShapeId(null);
+              setBedPanelShapeId((prev) => (prev === id ? prev : null));
             }}
             onSelectVertex={(bedId, index) => {
               setActiveBedId(bedId);
               setActiveVertex({ bedId, index });
               setSelectedShapeId(null);
+              setBedPanelShapeId((prev) => (prev === bedId ? prev : null));
             }}
             onMoveBedBy={moveBedBy}
             onMoveVertexTo={moveVertexTo}
