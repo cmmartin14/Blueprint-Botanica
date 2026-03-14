@@ -467,6 +467,19 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   const normBeds: BedPath[] = beds.map(normalizeBed).filter(Boolean) as BedPath[];
 
+  const hoverTargetExists = (id: string) => {
+    const bedExists = normBeds.some((bed) => bed.id === id);
+    if (bedExists) return true;
+
+    const shapeExists = shapes.some(
+      (shape) =>
+        shape.id === id &&
+        (shape.type === "circle" || shape.type === "rectangle" || shape.type === "freehand")
+    );
+
+    return shapeExists;
+  };
+
   const bedPathD = (verts: Position[]) => {
     if (verts.length === 0) return "";
     const [first, ...rest] = verts;
@@ -1241,6 +1254,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   const renderBedHoverTooltip = () => {
     if (!hoveredBedId || !hoveredBedAnchor) return null;
+    if (!hoverTargetExists(hoveredBedId)) return null;
 
     const plantNames = hoveredPlants.map(getPlantDisplayName).slice(0, 8);
     const extraCount = Math.max(0, hoveredPlants.length - plantNames.length);
