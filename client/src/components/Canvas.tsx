@@ -1051,7 +1051,17 @@ const Canvas = () => {
               </button>
 
               <button
-                onClick={startDrawMode}
+                onClick={() => {
+                  if (toolMode === "draw") {
+                    setToolMode("none");
+                    setDraft(null);
+                    setPreviewEnd(null);
+                    setActiveBedId(null);
+                    setActiveVertex(null);
+                  } else {
+                    startDrawMode();
+                  }
+                }}
                 className={`p-2 rounded text-green-800 ${toolMode === "draw" ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"}`}
                 title="Draw (lines + beds). Hold Shift to start. Click points. Click start to close into a bed."
               >
