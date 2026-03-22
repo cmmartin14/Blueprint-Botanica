@@ -49,6 +49,140 @@ const dist = (a: Position, b: Position) => {
   return Math.sqrt(dx * dx + dy * dy);
 };
 
+type MapKeyPlant = {
+  id: number;
+  common_name?: string | null;
+  scientific_name?: string | string[];
+};
+
+type MapKeyEntry = {
+  speciesKey: string;
+  label: string;
+  color: string;
+  count: number;
+};
+
+const getMapKeySpeciesKey = (plant: MapKeyPlant) => {
+  const scientific = Array.isArray(plant.scientific_name)
+    ? plant.scientific_name[0]
+    : plant.scientific_name;
+
+  const raw = scientific || plant.common_name || `plant-${plant.id}`;
+  return raw.trim().toLowerCase();
+};
+
+const getMapKeyLabel = (plant: MapKeyPlant) => {
+  const scientific = Array.isArray(plant.scientific_name)
+    ? plant.scientific_name[0]
+    : plant.scientific_name;
+
+  const common = plant.common_name?.trim();
+  const sci = scientific?.trim();
+
+  if (common && sci && common.toLowerCase() !== sci.toLowerCase()) {
+    return `${common}`;
+  }
+
+  return common || sci || `Plant ${plant.id}`;
+};
+
+const hashSpeciesKey = (value: string) => {
+  let hash = 0;
+
+  for (let i = 0; i < value.length; i += 1) {
+    hash = value.charCodeAt(i) + ((hash << 5) - hash);
+    hash |= 0;
+  }
+
+  return Math.abs(hash);
+};
+
+const getMapKeyColor = (speciesKey: string) => {
+  const hash = hashSpeciesKey(speciesKey);
+  const hue = hash % 360;
+  const saturation = 62 + (hash % 10);
+  const lightness = 48 + ((hash >> 3) % 10);
+  return `hsl(${hue} ${saturation}% ${lightness}%)`;
+};
+
+type MapKeyPanelProps = {
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  bedPlants: Record<string, MapKeyPlant[]>;
+};
+
+const MapKeyPanel = ({ isOpen, onOpen, onClose, bedPlants }: MapKeyPanelProps) => {
+  const entries = useMemo<MapKeyEntry[]>(() => {
+    const legendMap = new Map<string, MapKeyEntry>();
+
+    Object.values(bedPlants).forEach((plants) => {
+      plants.forEach((plant) => {
+        const speciesKey = getMapKeySpeciesKey(plant);
+        const existing = legendMap.get(speciesKey);
+
+        if (existing) {
+          existing.count += 1;
+          return;
+        }
+
+        legendMap.set(speciesKey, {
+          speciesKey,
+          label: getMapKeyLabel(plant),
+          color: getMapKeyColor(speciesKey),
+          count: 1,
+        });
+      });
+    });
+
+    return Array.from(legendMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [bedPlants]);
+
+  if (!isOpen) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-2 z-40 text-green-800 hover:bg-gray-100 font-bold"
+        title="Open map key"
+      >
+        <FaKey size={25} />
+      </button>
+    );
+  }
+
+  return (
+    <div className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-4 border z-50 w-72 max-h-[28rem] overflow-y-auto">
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-semibold text-green-800">Key</h3>
+        <button type="button" onClick={onClose} title="Close map key">
+          <TbCircleXFilled size={28} className="text-green-800" />
+        </button>
+      </div>
+
+      {entries.length === 0 ? (
+        <p className="text-sm text-gray-500">No planted species yet.</p>
+      ) : (
+        <ul className="space-y-2">
+          {entries.map((entry) => (
+            <li key={entry.speciesKey} className="flex items-center gap-3 text-green-800">
+              <span
+                aria-hidden="true"
+                className="h-5 w-5 rounded border border-black/15 shrink-0"
+                style={{ backgroundColor: entry.color }}
+              />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold leading-tight break-words">{entry.label}</div>
+                <div className="text-xs text-green-700/80">{entry.count} plant{entry.count !== 1 ? "s" : ""}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 const Canvas = () => {
   const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -1011,27 +1145,12 @@ const Canvas = () => {
         </div>
       </div>
 
-      {!isMapKeyOpen ? (
-        <button
-          onClick={() => setIsMapKeyOpen(true)}
-          className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-2 z-40 text-green-800 hover:bg-gray-100 font-bold"
-        >
-          <FaKey size={25} />
-        </button>
-      ) : (
-        <div className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-4 border z-50 w-64">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-green-800">Key</h3>
-            <button onClick={() => setIsMapKeyOpen(false)}>
-              <TbCircleXFilled size={28} className="text-green-800" />
-            </button>
-          </div>
-
-          <ul className="text-sm space-y-1 text-green-800 font-semibold">
-            <li>Coming soon...</li>
-          </ul>
-        </div>
-      )}
+      <MapKeyPanel
+        isOpen={isMapKeyOpen}
+        onOpen={() => setIsMapKeyOpen(true)}
+        onClose={() => setIsMapKeyOpen(false)}
+        bedPlants={bedPlants}
+      />
 
       {editMode && (
         <div className="absolute top-0 left-4 mt-5 bg-white rounded-lg shadow-lg p-3 border z-40" data-testid="edit-window">
