@@ -1034,6 +1034,7 @@ const Canvas = () => {
         <FlowerBedPanel
           shapeId={bedPanelShapeId}
           isLocked={isBedPanelLocked}
+          topOffset={isMapKeyOpen ? 340 : 96}
           onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
           onClose={() => {
             setBedPanelShapeId(null);

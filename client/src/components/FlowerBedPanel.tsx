@@ -19,6 +19,7 @@ interface SearchResult {
 interface FlowerBedPanelProps {
   shapeId: string;
   isLocked: boolean;
+  topOffset?: number;
   onToggleLock: () => void;
   onClose: () => void;
 }
@@ -26,6 +27,7 @@ interface FlowerBedPanelProps {
 export default function FlowerBedPanel({
   shapeId,
   isLocked,
+  topOffset = 96,
   onToggleLock,
   onClose,
 }: FlowerBedPanelProps) {
@@ -145,8 +147,8 @@ export default function FlowerBedPanel({
   return (
     <div
       data-testid='bed-plant-window'
-      className="absolute right-5 top-16 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col"
-      style={{ width: 340, maxHeight: "70vh" }}
+      className="absolute right-5 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col"
+      style={{ width: 340, maxHeight: "70vh", top: `${topOffset}px` }}
       data-interactive="true"
       onClick={(e) => e.stopPropagation()}
     >
