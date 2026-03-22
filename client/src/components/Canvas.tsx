@@ -152,33 +152,37 @@ const MapKeyPanel = ({ isOpen, onOpen, onClose, bedPlants }: MapKeyPanelProps) =
   }
 
   return (
-    <div className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-4 border z-50 w-72 max-h-[28rem] overflow-y-auto">
-      <div className="flex justify-between items-center mb-3">
+    <div className="absolute right-5 top-5 bg-white rounded-lg shadow-lg border z-50 w-72 h-[160px] flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
         <h3 className="font-semibold text-green-800">Key</h3>
         <button type="button" onClick={onClose} title="Close map key">
           <TbCircleXFilled size={28} className="text-green-800" />
         </button>
       </div>
 
-      {entries.length === 0 ? (
-        <p className="text-sm text-gray-500">No planted species yet.</p>
-      ) : (
-        <ul className="space-y-2">
-          {entries.map((entry) => (
-            <li key={entry.speciesKey} className="flex items-center gap-3 text-green-800">
-              <span
-                aria-hidden="true"
-                className="h-5 w-5 rounded border border-black/15 shrink-0"
-                style={{ backgroundColor: entry.color }}
-              />
-              <div className="min-w-0">
-                <div className="text-sm font-semibold leading-tight break-words">{entry.label}</div>
-                <div className="text-xs text-green-700/80">{entry.count} plant{entry.count !== 1 ? "s" : ""}</div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="flex-1 overflow-y-auto px-4 py-3 pr-2">
+        {entries.length === 0 ? (
+          <p className="text-sm text-gray-500">No planted species yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {entries.map((entry) => (
+              <li key={entry.speciesKey} className="flex items-center gap-3 text-green-800">
+                <span
+                  aria-hidden="true"
+                  className="h-5 w-5 rounded border border-black/15 shrink-0"
+                  style={{ backgroundColor: entry.color }}
+                />
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold leading-tight break-words">{entry.label}</div>
+                  <div className="text-xs text-green-700/80">
+                    {entry.count} plant{entry.count !== 1 ? "s" : ""}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 };
@@ -1034,7 +1038,7 @@ const Canvas = () => {
         <FlowerBedPanel
           shapeId={bedPanelShapeId}
           isLocked={isBedPanelLocked}
-          topOffset={isMapKeyOpen ? 230 : 96}
+          topOffset={isMapKeyOpen ? 195 : 75}
           onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
           onClose={() => {
             setBedPanelShapeId(null);
@@ -1129,13 +1133,13 @@ const Canvas = () => {
               setSelectedShapeId(shapeId);
               setActiveBedId(null);
               setActiveVertex(null);
-            
+
               const selectedShape = shapesRef.current.find((s) => s.id === shapeId);
               const isBedLikeShape =
                 selectedShape?.type === "circle" ||
                 selectedShape?.type === "rectangle" ||
                 selectedShape?.type === "freehand";
-            
+
               if (isBedPanelLocked && isBedLikeShape) {
                 setBedPanelShapeId(shapeId);
               } else if (!isBedPanelLocked) {
@@ -1182,7 +1186,9 @@ const Canvas = () => {
                     startDrawMode();
                   }
                 }}
-                className={`p-2 rounded text-green-800 ${toolMode === "draw" ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"}`}
+                className={`p-2 rounded text-green-800 ${
+                  toolMode === "draw" ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"
+                }`}
                 title="Draw (lines + beds). Hold Shift to start. Click points. Click start to close into a bed."
               >
                 <FaDrawPolygon size={25} />
@@ -1190,7 +1196,9 @@ const Canvas = () => {
 
               <button
                 onClick={() => setShowDimensions((prev) => !prev)}
-                className={`p-2 rounded text-green-800 ${showDimensions ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"}`}
+                className={`p-2 rounded text-green-800 ${
+                  showDimensions ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"
+                }`}
                 title={showDimensions ? "Hide Dimensions" : "Show Dimensions"}
               >
                 <FaRulerCombined size={25} />
