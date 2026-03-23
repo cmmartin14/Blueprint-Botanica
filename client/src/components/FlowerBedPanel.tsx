@@ -64,7 +64,9 @@ export default function FlowerBedPanel({
   const updateBed = useGardenStore((s) => s.updateBed);
   const updateShape = useGardenStore((s) => s.updateShape);
 
-  const bed = Object.values(beds).find((entry) => entry.shapeIds.includes(shapeId));
+  const bed = Object.values(beds).find(
+    (entry) => Array.isArray(entry.shapeIds) && entry.shapeIds.includes(shapeId)
+  );
   const shape = shapes[shapeId];
 
   const [bedName, setBedName] = useState("");
