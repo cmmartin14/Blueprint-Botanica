@@ -221,7 +221,7 @@ const MapKeyPanel = ({
                   >
                     <div className="text-sm font-semibold text-green-800">{bed.label}</div>
                     <div className="text-xs text-green-700/80">
-                      {bed.speciesCount} species • {bed.plantCount} plant{bed.plantCount !== 1 ? "s" : ""}
+                      {bed.plantCount} plant{bed.plantCount !== 1 ? "s" : ""}
                     </div>
                   </button>
                 </li>
