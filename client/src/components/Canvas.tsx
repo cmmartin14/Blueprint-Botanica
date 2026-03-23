@@ -176,30 +176,32 @@ const MapKeyPanel = ({
   return (
     <div className="absolute right-5 top-5 bg-white rounded-lg shadow-lg border z-50 w-72 h-[180px] flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-green-800">Key</h3>
+        <h3 className="font-semibold text-green-800">Key</h3>
 
+        <div className="flex items-center gap-2">
+          {/* Toggle button */}
           <button
             type="button"
             onClick={onToggleView}
             className="text-green-800 hover:opacity-70"
             title={view === "beds" ? "Show species list" : "Show bed list"}
           >
-            {view === "beds" ? <FaLeaf size={18} /> : <FaListUl size={18} />}
+            {view === "beds" ? <FaLeaf size={20} /> : <FaListUl size={18} />}
+          </button>
+
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={() => {
+              onHoverBed(null);
+              onClose();
+            }}
+            title="Close map key"
+            className="text-green-800 hover:opacity-70"
+          >
+            <TbCircleXFilled size={25} className="text-green-800" />
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            onHoverBed(null);
-            onClose();
-          }}
-          title="Close map key"
-          className="text-green-800 hover:opacity-70"
-        >
-          <TbCircleXFilled size={28} className="text-green-800" />
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 pr-2">
