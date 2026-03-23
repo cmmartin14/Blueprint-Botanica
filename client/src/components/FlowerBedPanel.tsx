@@ -1,3 +1,4 @@
+// FlowerBedPanel.tsx
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { TbCircleXFilled, TbLock, TbLockOpen } from "react-icons/tb";
@@ -18,6 +19,7 @@ interface SearchResult {
 
 interface FlowerBedPanelProps {
   shapeId: string;
+  bedLabel?: string;
   isLocked: boolean;
   topOffset?: number;
   onToggleLock: () => void;
@@ -26,6 +28,7 @@ interface FlowerBedPanelProps {
 
 export default function FlowerBedPanel({
   shapeId,
+  bedLabel,
   isLocked,
   topOffset = 96,
   onToggleLock,
@@ -47,18 +50,17 @@ export default function FlowerBedPanel({
   const [bedName, setBedName] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
 
-  // Initialize bed name
   useEffect(() => {
-  if (bed?.name) {
-    setBedName(bed.name);
-  } else if (shape?.name) {
-    setBedName(shape.name);
-  } else if (shape?.type === 'circle') {
-    setBedName("Circle Bed");
-  } else {
-    setBedName("Garden Bed");
-  }
-}, [bed, shape]);
+    if (bed?.name) {
+      setBedName(bed.name);
+    } else if (shape?.name) {
+      setBedName(shape.name);
+    } else if (bedLabel) {
+      setBedName(bedLabel);
+    } else {
+      setBedName("Garden Bed");
+    }
+  }, [bed, shape, bedLabel]);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);

@@ -62,6 +62,13 @@ type MapKeyEntry = {
   count: number;
 };
 
+type GardenBedListEntry = {
+  id: string;
+  label: string;
+  speciesCount: number;
+  plantCount: number;
+};
+
 const getMapKeySpeciesKey = (plant: MapKeyPlant) => {
   const scientific = Array.isArray(plant.scientific_name)
     ? plant.scientific_name[0]
@@ -80,7 +87,7 @@ const getMapKeyLabel = (plant: MapKeyPlant) => {
   const sci = scientific?.trim();
 
   if (common && sci && common.toLowerCase() !== sci.toLowerCase()) {
-    return `${common}`;
+    return `${common} (${sci})`;
   }
 
   return common || sci || `Plant ${plant.id}`;
@@ -110,9 +117,24 @@ type MapKeyPanelProps = {
   onOpen: () => void;
   onClose: () => void;
   bedPlants: Record<string, MapKeyPlant[]>;
+  bedEntries: GardenBedListEntry[];
+  view: "beds" | "species";
+  onToggleView: () => void;
+  onHoverBed: (bedId: string | null) => void;
+  onSelectBed: (bedId: string) => void;
 };
 
-const MapKeyPanel = ({ isOpen, onOpen, onClose, bedPlants }: MapKeyPanelProps) => {
+const MapKeyPanel = ({
+  isOpen,
+  onOpen,
+  onClose,
+  bedPlants,
+  bedEntries,
+  view,
+  onToggleView,
+  onHoverBed,
+  onSelectBed,
+}: MapKeyPanelProps) => {
   const entries = useMemo<MapKeyEntry[]>(() => {
     const legendMap = new Map<string, MapKeyEntry>();
 
@@ -152,16 +174,59 @@ const MapKeyPanel = ({ isOpen, onOpen, onClose, bedPlants }: MapKeyPanelProps) =
   }
 
   return (
-    <div className="absolute right-5 top-5 bg-white rounded-lg shadow-lg border z-50 w-72 h-[160px] flex flex-col overflow-hidden">
+    <div className="absolute right-5 top-5 bg-white rounded-lg shadow-lg border z-50 w-72 h-[180px] flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
-        <h3 className="font-semibold text-green-800">Key</h3>
-        <button type="button" onClick={onClose} title="Close map key">
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-green-800">Key</h3>
+          <button
+            type="button"
+            onClick={onToggleView}
+            className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-green-800 font-semibold"
+            title={view === "beds" ? "Show species list" : "Show bed list"}
+          >
+            {view === "beds" ? "Show Species" : "Show Beds"}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            onHoverBed(null);
+            onClose();
+          }}
+          title="Close map key"
+        >
           <TbCircleXFilled size={28} className="text-green-800" />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 pr-2">
-        {entries.length === 0 ? (
+        {view === "beds" ? (
+          bedEntries.length === 0 ? (
+            <p className="text-sm text-gray-500">No garden beds yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {bedEntries.map((bed) => (
+                <li key={bed.id}>
+                  <button
+                    type="button"
+                    onMouseEnter={() => onHoverBed(bed.id)}
+                    onMouseLeave={() => onHoverBed(null)}
+                    onFocus={() => onHoverBed(bed.id)}
+                    onBlur={() => onHoverBed(null)}
+                    onClick={() => onSelectBed(bed.id)}
+                    className="w-full text-left rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50"
+                  >
+                    <div className="text-sm font-semibold text-green-800">{bed.label}</div>
+                    <div className="text-xs text-green-700/80">
+                      {bed.speciesCount} species • {bed.plantCount} plant{bed.plantCount !== 1 ? "s" : ""}
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : entries.length === 0 ? (
           <p className="text-sm text-gray-500">No planted species yet.</p>
         ) : (
           <ul className="space-y-2">
@@ -174,9 +239,7 @@ const MapKeyPanel = ({ isOpen, onOpen, onClose, bedPlants }: MapKeyPanelProps) =
                 />
                 <div className="min-w-0">
                   <div className="text-sm font-semibold leading-tight break-words">{entry.label}</div>
-                  <div className="text-xs text-green-700/80">
-                    {entry.count} plant{entry.count !== 1 ? "s" : ""}
-                  </div>
+                  <div className="text-xs text-green-700/80">{entry.count} plant{entry.count !== 1 ? "s" : ""}</div>
                 </div>
               </li>
             ))}
@@ -222,6 +285,8 @@ const Canvas = () => {
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
+  const [mapKeyView, setMapKeyView] = useState<"beds" | "species">("beds");
+  const [hoveredMapKeyBedId, setHoveredMapKeyBedId] = useState<string | null>(null);
 
   // Drag-suppress (prevents accidental click actions after drag)
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
@@ -244,6 +309,41 @@ const Canvas = () => {
   const editMode = useGardenStore((state) => state.editMode);
   const setEditMode = useGardenStore((state) => state.setEditMode);
   const bedPlants = useGardenStore((state) => state.bedPlants);
+
+  const gardenBedEntries = useMemo<GardenBedListEntry[]>(() => {
+    const bedLikeShapes = shapes
+      .filter((shape) => shape.type === "circle" || shape.type === "rectangle" || shape.type === "freehand")
+      .map((shape) => ({
+        id: shape.id,
+        sortValue: Number(shape.id) || 0,
+      }));
+
+    const drawnBeds = beds.map((bed) => ({
+      id: bed.id,
+      sortValue: Number(bed.id) || 0,
+    }));
+
+    const seenIds = new Set<string>();
+    const combined = [...bedLikeShapes, ...drawnBeds]
+      .filter((bed) => {
+        if (seenIds.has(bed.id)) return false;
+        seenIds.add(bed.id);
+        return true;
+      })
+      .sort((a, b) => a.sortValue - b.sortValue);
+
+    return combined.map((bed, index) => {
+      const plants = bedPlants[bed.id] ?? [];
+      const speciesKeys = new Set(plants.map((plant) => getMapKeySpeciesKey(plant)));
+
+      return {
+        id: bed.id,
+        label: `Garden Bed ${index + 1}`,
+        speciesCount: speciesKeys.size,
+        plantCount: plants.length,
+      };
+    });
+  }, [beds, shapes, bedPlants]);
 
   useEffect(() => {
     shapesRef.current = shapes;
@@ -1037,8 +1137,9 @@ const Canvas = () => {
       {bedPanelShapeId && (
         <FlowerBedPanel
           shapeId={bedPanelShapeId}
+          bedLabel={gardenBedEntries.find((bed) => bed.id === bedPanelShapeId)?.label}
           isLocked={isBedPanelLocked}
-          topOffset={isMapKeyOpen ? 195 : 75}
+          topOffset={isMapKeyOpen ? 210 : 96}
           onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
           onClose={() => {
             setBedPanelShapeId(null);
@@ -1079,6 +1180,7 @@ const Canvas = () => {
             selectedShapeId={selectedShapeId}
             showDimensions={showDimensions}
             activeBedId={activeBedId}
+            hoveredMapKeyBedId={hoveredMapKeyBedId}
             activeVertex={activeVertex}
             draftVertices={draft?.vertices ?? null}
             draftPreviewEnd={previewEnd}
@@ -1133,13 +1235,13 @@ const Canvas = () => {
               setSelectedShapeId(shapeId);
               setActiveBedId(null);
               setActiveVertex(null);
-
+            
               const selectedShape = shapesRef.current.find((s) => s.id === shapeId);
               const isBedLikeShape =
                 selectedShape?.type === "circle" ||
                 selectedShape?.type === "rectangle" ||
                 selectedShape?.type === "freehand";
-
+            
               if (isBedPanelLocked && isBedLikeShape) {
                 setBedPanelShapeId(shapeId);
               } else if (!isBedPanelLocked) {
@@ -1155,6 +1257,17 @@ const Canvas = () => {
         onOpen={() => setIsMapKeyOpen(true)}
         onClose={() => setIsMapKeyOpen(false)}
         bedPlants={bedPlants}
+        bedEntries={gardenBedEntries}
+        view={mapKeyView}
+        onToggleView={() => setMapKeyView((prev) => (prev === "beds" ? "species" : "beds"))}
+        onHoverBed={setHoveredMapKeyBedId}
+        onSelectBed={(bedId) => {
+          setHoveredMapKeyBedId(null);
+          setBedPanelShapeId(bedId);
+          setActiveBedId(bedId);
+          setActiveVertex(null);
+          setSelectedShapeId(bedId);
+        }}
       />
 
       {editMode && (
@@ -1186,9 +1299,7 @@ const Canvas = () => {
                     startDrawMode();
                   }
                 }}
-                className={`p-2 rounded text-green-800 ${
-                  toolMode === "draw" ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"
-                }`}
+                className={`p-2 rounded text-green-800 ${toolMode === "draw" ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"}`}
                 title="Draw (lines + beds). Hold Shift to start. Click points. Click start to close into a bed."
               >
                 <FaDrawPolygon size={25} />
@@ -1196,9 +1307,7 @@ const Canvas = () => {
 
               <button
                 onClick={() => setShowDimensions((prev) => !prev)}
-                className={`p-2 rounded text-green-800 ${
-                  showDimensions ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"
-                }`}
+                className={`p-2 rounded text-green-800 ${showDimensions ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"}`}
                 title={showDimensions ? "Hide Dimensions" : "Show Dimensions"}
               >
                 <FaRulerCombined size={25} />

@@ -129,6 +129,7 @@ interface ShapeRendererProps {
   showDimensions: boolean;
 
   activeBedId: string | null;
+  hoveredMapKeyBedId?: string | null;
   activeVertex: { bedId: string; index: number } | null;
 
   drawModeActive: boolean;
@@ -326,6 +327,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   showDimensions,
 
   activeBedId,
+  hoveredMapKeyBedId,
   activeVertex,
 
   drawModeActive,
@@ -777,7 +779,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   const renderShape = (shape: Shape) => {
     const { type, startPos, endPos, color, strokeWidth } = shape;
-    const isSelected = selectedShapeId === shape.id;
+    const isSelected =
+      selectedShapeId === shape.id || hoveredMapKeyBedId === shape.id;
     const showShapeHandles = canEdit && isSelected;
     const glow = isSelected ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
 
@@ -1371,7 +1374,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         {normBeds.map((bed) => {
           if (!bed.isClosed || bed.vertices.length < 3) return null;
 
-          const isActive = bed.id === activeBedId;
+          const isActive = bed.id === activeBedId || bed.id === hoveredMapKeyBedId;
           const showBedHandles = canEdit && isActive;
           const showBedInfoButton = isActive;
 
