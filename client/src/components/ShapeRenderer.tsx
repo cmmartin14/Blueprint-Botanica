@@ -779,10 +779,11 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   const renderShape = (shape: Shape) => {
     const { type, startPos, endPos, color, strokeWidth } = shape;
-    const isSelected =
-      selectedShapeId === shape.id || hoveredMapKeyBedId === shape.id;
+    const isSelected = selectedShapeId === shape.id;
+    const isHoveredFromKey = hoveredMapKeyBedId === shape.id;
+    const isVisuallyActive = isSelected || isHoveredFromKey;
     const showShapeHandles = canEdit && isSelected;
-    const glow = isSelected ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
+    const glow = isVisuallyActive ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
 
     const width = Math.abs(endPos.x - startPos.x);
     const height = Math.abs(endPos.y - startPos.y);
@@ -1374,11 +1375,17 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         {normBeds.map((bed) => {
           if (!bed.isClosed || bed.vertices.length < 3) return null;
 
-          const isActive = bed.id === activeBedId || bed.id === hoveredMapKeyBedId;
+          const isSelected = bed.id === activeBedId;
+          const isHoveredFromKey = bed.id === hoveredMapKeyBedId;
+          const isActive = isSelected || isHoveredFromKey;
           const showBedHandles = canEdit && isActive;
           const showBedInfoButton = isActive;
 
-          const glow = isActive ? "drop-shadow(0 0 6px rgba(183,195,152,0.9))" : "none";
+          const glow = isSelected
+            ? "drop-shadow(0 0 8px rgba(183,195,152,1))"
+            : isHoveredFromKey
+            ? "drop-shadow(0 0 6px rgba(183,195,152,0.6))"
+            : "none";
 
           const visual = getBedVisual(bed.id);
           const fill = visual.svgFill;
