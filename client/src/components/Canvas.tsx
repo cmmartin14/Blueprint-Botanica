@@ -289,7 +289,7 @@ const Canvas = () => {
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
-  const [mapKeyView, setMapKeyView] = useState<"beds" | "species">("beds");
+  const [mapKeyView, setMapKeyView] = useState<"beds" | "species">("species");
   const [hoveredMapKeyBedId, setHoveredMapKeyBedId] = useState<string | null>(null);
 
   // Drag-suppress (prevents accidental click actions after drag)
