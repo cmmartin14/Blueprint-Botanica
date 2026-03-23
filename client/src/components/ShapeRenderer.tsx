@@ -1378,8 +1378,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           const isSelected = bed.id === activeBedId;
           const isHoveredFromKey = bed.id === hoveredMapKeyBedId;
           const isActive = isSelected || isHoveredFromKey;
-          const showBedHandles = canEdit && isActive;
-          const showBedInfoButton = isActive;
+          const showBedHandles = canEdit && isSelected;
+          const showBedInfoButton = isSelected;
 
           const glow = isSelected
             ? "drop-shadow(0 0 8px rgba(183,195,152,1))"
