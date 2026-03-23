@@ -26,6 +26,26 @@ interface FlowerBedPanelProps {
   onClose: () => void;
 }
 
+type GardenBedAttributes = {
+  soilType: string;
+  sunExposure: string;
+  soilDepth: string;
+  drainage: string;
+  moisture: string;
+  soilPh: string;
+  notes: string;
+};
+
+const emptyAttributes: GardenBedAttributes = {
+  soilType: "",
+  sunExposure: "",
+  soilDepth: "",
+  drainage: "",
+  moisture: "",
+  soilPh: "",
+  notes: "",
+};
+
 export default function FlowerBedPanel({
   shapeId,
   bedLabel,
@@ -49,6 +69,7 @@ export default function FlowerBedPanel({
   
   const [bedName, setBedName] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
+  const [attributes, setAttributes] = useState<GardenBedAttributes>(emptyAttributes);
 
   useEffect(() => {
     if (bed?.name) {
@@ -60,6 +81,18 @@ export default function FlowerBedPanel({
     } else {
       setBedName("Garden Bed");
     }
+  
+    const sourceAttributes = bed?.attributes || shape?.attributes;
+  
+    setAttributes({
+      soilType: sourceAttributes?.soilType ?? "",
+      sunExposure: sourceAttributes?.sunExposure ?? "",
+      soilDepth: sourceAttributes?.soilDepth ?? "",
+      drainage: sourceAttributes?.drainage ?? "",
+      moisture: sourceAttributes?.moisture ?? "",
+      soilPh: sourceAttributes?.soilPh ?? "",
+      notes: sourceAttributes?.notes ?? "",
+    });
   }, [bed, shape, bedLabel]);
 
   const [query, setQuery] = useState("");
@@ -132,6 +165,24 @@ export default function FlowerBedPanel({
     setIsEditingName(false);
   };
 
+  const handleAttributeChange = (
+    field: keyof GardenBedAttributes,
+    value: string
+  ) => {
+    const nextAttributes = {
+      ...attributes,
+      [field]: value,
+    };
+  
+    setAttributes(nextAttributes);
+  
+    if (bed) {
+      updateBed(shapeId, { attributes: nextAttributes });
+    } else if (shape) {
+      updateShape(shapeId, { attributes: nextAttributes });
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSaveName();
@@ -150,7 +201,7 @@ export default function FlowerBedPanel({
     <div
       data-testid='bed-plant-window'
       className="absolute right-5 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col"
-      style={{ width: 340, maxHeight: "70vh", top: `${topOffset}px` }}
+      style={{ width: 380, maxHeight: "70vh", top: `${topOffset}px` }}
       data-interactive="true"
       onClick={(e) => e.stopPropagation()}
     >
@@ -199,6 +250,110 @@ export default function FlowerBedPanel({
           </button>
         </div>
       </div>
+
+      {/* Bed attributes */}
+      <div className="px-4 py-3 border-b space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Bed Attributes
+        </h3>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Soil type</label>
+            <select
+              value={attributes.soilType}
+              onChange={(e) => handleAttributeChange("soilType", e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-600"
+            >
+              <option value="">Select</option>
+              <option value="Clay">Clay</option>
+              <option value="Loam">Loam</option>
+              <option value="Sandy">Sandy</option>
+              <option value="Silty">Silty</option>
+              <option value="Chalky">Chalky</option>
+              <option value="Mixed">Mixed</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Sun exposure</label>
+            <select
+              value={attributes.sunExposure}
+              onChange={(e) => handleAttributeChange("sunExposure", e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-600"
+            >
+              <option value="">Select</option>
+              <option value="Full Sun">Full Sun</option>
+              <option value="Part Sun">Part Sun</option>
+              <option value="Part Shade">Part Shade</option>
+              <option value="Full Shade">Full Shade</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Soil depth</label>
+            <input
+              type="text"
+              value={attributes.soilDepth}
+              onChange={(e) => handleAttributeChange("soilDepth", e.target.value)}
+              placeholder='ex. 12"'
+              className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-600"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Drainage</label>
+            <select
+              value={attributes.drainage}
+              onChange={(e) => handleAttributeChange("drainage", e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-600"
+            >
+              <option value="">Select</option>
+              <option value="Poor">Poor</option>
+              <option value="Moderate">Moderate</option>
+              <option value="Well-drained">Well-drained</option>
+              <option value="Very fast-draining">Very fast-draining</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Moisture</label>
+            <select
+              value={attributes.moisture}
+              onChange={(e) => handleAttributeChange("moisture", e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-600"
+            >
+              <option value="">Select</option>
+              <option value="Dry">Dry</option>
+              <option value="Average">Average</option>
+              <option value="Moist">Moist</option>
+              <option value="Wet">Wet</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Soil pH</label>
+            <input
+              type="text"
+              value={attributes.soilPh}
+              onChange={(e) => handleAttributeChange("soilPh", e.target.value)}
+              placeholder="ex. 6.0-7.0"
+              className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-600"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Notes</label>
+          <textarea
+            value={attributes.notes}
+            onChange={(e) => handleAttributeChange("notes", e.target.value)}
+            rows={3}
+            placeholder="Add bed notes..."
+            className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-black focus:outline-none focus:ring-1 focus:ring-green-600 resize-none"
+          />
+        </div>
+      </div>            
 
       {/* Plant table */}
       <div className="overflow-y-auto flex-1 px-4 py-2">

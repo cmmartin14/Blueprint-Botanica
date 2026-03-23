@@ -12,6 +12,15 @@ export interface BaseShape {
   strokeWidth: number;
   isSelected: boolean;
   name?: string;
+  attributes?: {
+    soilType?: string;
+    sunExposure?: string;
+    soilDepth?: string;
+    drainage?: string;
+    moisture?: string;
+    soilPh?: string;
+    notes?: string;
+  };
 }
 
 export interface Rectangle extends BaseShape { type: 'rectangle'; }

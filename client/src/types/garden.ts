@@ -6,7 +6,18 @@ export interface Bed {
   name: string;
   shapeIds: string[];
   createdAt: number;
+  attributes?: GardenBedAttributes;
 }
+
+export type GardenBedAttributes = {
+  soilType?: string;
+  sunExposure?: string;
+  soilDepth?: string;
+  drainage?: string;
+  moisture?: string;
+  soilPh?: string;
+  notes?: string;
+};
 
 // Minimal plant entry — swap when perenual is integrated
 export interface PlantEntry {

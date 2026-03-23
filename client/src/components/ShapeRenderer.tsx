@@ -9,6 +9,16 @@ type BedPath = {
   id: string;
   vertices: Position[];
   isClosed: boolean;
+  name?: string;
+  attributes?: {
+    soilType?: string;
+    sunExposure?: string;
+    soilDepth?: string;
+    drainage?: string;
+    moisture?: string;
+    soilPh?: string;
+    notes?: string;
+  };
 };
 
 type Box = { minX: number; minY: number; maxX: number; maxY: number };
