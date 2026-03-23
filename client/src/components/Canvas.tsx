@@ -332,15 +332,24 @@ const Canvas = () => {
       })
       .sort((a, b) => a.sortValue - b.sortValue);
 
-    return combined.map((bed, index) => {
-      const plants = bedPlants[bed.id] ?? [];
+    return combined.map((bedEntry, index) => {
+      const plants = bedPlants[bedEntry.id] ?? [];
       const speciesKeys = new Set(plants.map((plant) => getMapKeySpeciesKey(plant)));
-
+      
+      const matchingBed = beds.find((bed) => bed.id === bedEntry.id);
+      const matchingShape = shapes.find((shape) => shape.id === bedEntry.id);
+      
+      const savedName =
+        matchingBed?.name?.trim() ||
+        matchingShape?.name?.trim() ||
+        "";
+      
       return {
-        id: bed.id,
-        label: `Garden Bed ${index + 1}`,
+        id: bedEntry.id,
+        label: savedName || `Garden Bed ${index + 1}`,
         speciesCount: speciesKeys.size,
         plantCount: plants.length,
+        kind: bedEntry.kind,
       };
     });
   }, [beds, shapes, bedPlants]);
