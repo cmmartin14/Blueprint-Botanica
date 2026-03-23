@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt, FaRulerCombined } from "react-icons/fa";
+import { FaRegCircle, FaDrawPolygon, FaUndoAlt, FaRedoAlt, FaTrashAlt, FaRulerCombined, FaListUl, FaLeaf } from "react-icons/fa";
 import { TbCircleXFilled } from "react-icons/tb";
 import { FaKey } from "react-icons/fa6";
 
@@ -178,13 +178,14 @@ const MapKeyPanel = ({
       <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-green-800">Key</h3>
+
           <button
             type="button"
             onClick={onToggleView}
-            className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-green-800 font-semibold"
+            className="text-green-800 hover:opacity-70"
             title={view === "beds" ? "Show species list" : "Show bed list"}
           >
-            {view === "beds" ? "Show Species" : "Show Beds"}
+            {view === "beds" ? <FaLeaf size={18} /> : <FaListUl size={18} />}
           </button>
         </div>
 
@@ -195,6 +196,7 @@ const MapKeyPanel = ({
             onClose();
           }}
           title="Close map key"
+          className="text-green-800 hover:opacity-70"
         >
           <TbCircleXFilled size={28} className="text-green-800" />
         </button>
