@@ -213,7 +213,7 @@ export default function FlowerBedPanel({
     <div
       data-testid='bed-plant-window'
       className="absolute right-5 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
-      style={{ width: 380, height: "70vh", top: `${topOffset}px` }}
+      style={{ width: 380, height: "60vh", top: `${topOffset}px` }}
       data-interactive="true"
       onClick={(e) => e.stopPropagation()}
     >
@@ -263,9 +263,50 @@ export default function FlowerBedPanel({
         </div>
       </div>
 
-      {/* Scrollable middle content */}
+      {/* Search to add */}
+      <div className="px-4 py-3 border-b shrink-0 bg-white">
+        <input
+          type="text"
+          placeholder="Search plants to add..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-600 text-black"
+        />
+        {loading && <p className="text-xs text-gray-400 mt-1">Searching...</p>}
+        {results.length > 0 && (
+          <ul className="mt-1 border rounded-md bg-white shadow-md max-h-48 overflow-y-auto">
+            {results.map((p) => {
+              const alreadyAdded = bedPlants.some((b) => b.id === p.id);
+              return (
+                <li
+                  key={p.id}
+                  onClick={() => !alreadyAdded && handleAdd(p)}
+                  className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
+                    alreadyAdded
+                      ? "opacity-40 cursor-default"
+                      : "cursor-pointer hover:bg-gray-100"
+                  }`}
+                >
+                  {getImage(p) && (
+                    <img src={getImage(p)} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                  )}
+                  <div>
+                    <p className="font-medium text-gray-800 leading-tight">
+                      {p.common_name ?? (Array.isArray(p.scientific_name) ? p.scientific_name[0] : p.scientific_name)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {Array.isArray(p.scientific_name) ? p.scientific_name[0] : p.scientific_name}
+                    </p>
+                  </div>
+                  {alreadyAdded && <span className="ml-auto text-xs text-green-600">Added</span>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {/* Bed attributes */}
         <div className="border-b">
           <button
             type="button"
@@ -383,7 +424,7 @@ export default function FlowerBedPanel({
         </div>
 
         {/* Plant table */}
-        <div className="px-4 py-3">
+        <div className="px-4 py-2">
           {bedPlants.length === 0 ? (
             <p className="text-xs text-gray-400 py-2">No plants added yet. Search below to add one.</p>
           ) : (
@@ -426,49 +467,6 @@ export default function FlowerBedPanel({
             </table>
           )}
         </div>
-      </div>
-
-      {/* Search to add */}
-      <div className="border-t px-4 py-3 shrink-0 bg-white">
-        <input
-          type="text"
-          placeholder="Search plants to add..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-600 text-black"
-        />
-        {loading && <p className="text-xs text-gray-400 mt-1">Searching...</p>}
-        {results.length > 0 && (
-          <ul className="mt-1 border rounded-md bg-white shadow-md max-h-48 overflow-y-auto">
-            {results.map((p) => {
-              const alreadyAdded = bedPlants.some((b) => b.id === p.id);
-              return (
-                <li
-                  key={p.id}
-                  onClick={() => !alreadyAdded && handleAdd(p)}
-                  className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
-                    alreadyAdded
-                      ? "opacity-40 cursor-default"
-                      : "cursor-pointer hover:bg-gray-100"
-                  }`}
-                >
-                  {getImage(p) && (
-                    <img src={getImage(p)} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                  )}
-                  <div>
-                    <p className="font-medium text-gray-800 leading-tight">
-                      {p.common_name ?? (Array.isArray(p.scientific_name) ? p.scientific_name[0] : p.scientific_name)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {Array.isArray(p.scientific_name) ? p.scientific_name[0] : p.scientific_name}
-                    </p>
-                  </div>
-                  {alreadyAdded && <span className="ml-auto text-xs text-green-600">Added</span>}
-                </li>
-              );
-            })}
-          </ul>
-        )}
       </div>
     </div>
   );
