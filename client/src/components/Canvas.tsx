@@ -1150,7 +1150,7 @@ const Canvas = () => {
           shapeId={bedPanelShapeId}
           bedLabel={gardenBedEntries.find((bed) => bed.id === bedPanelShapeId)?.label}
           isLocked={isBedPanelLocked}
-          topOffset={isMapKeyOpen ? 210 : 96}
+          topOffset={isMapKeyOpen ? 210 : 70}
           onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
           onClose={() => {
             setBedPanelShapeId(null);
