@@ -721,11 +721,37 @@ const Canvas = () => {
     pointerDownRef.current = null;
   }, []);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.95 : 1.05;
+  const applyZoomDelta = useCallback((deltaY: number) => {
+    const delta = deltaY > 0 ? 0.95 : 1.05;
     setScale((prev) => Math.min(Math.max(prev * delta, 0.75), 2));
   }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Use native non-passive listeners so browser page zoom does not scale fixed UI like the navbar.
+    const handleNativeWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      applyZoomDelta(event.deltaY);
+    };
+
+    const preventGestureZoom = (event: Event) => {
+      event.preventDefault();
+    };
+
+    canvas.addEventListener("wheel", handleNativeWheel, { passive: false });
+    canvas.addEventListener("gesturestart", preventGestureZoom);
+    canvas.addEventListener("gesturechange", preventGestureZoom);
+    canvas.addEventListener("gestureend", preventGestureZoom);
+
+    return () => {
+      canvas.removeEventListener("wheel", handleNativeWheel);
+      canvas.removeEventListener("gesturestart", preventGestureZoom);
+      canvas.removeEventListener("gesturechange", preventGestureZoom);
+      canvas.removeEventListener("gestureend", preventGestureZoom);
+    };
+  }, [applyZoomDelta]);
 
   const gridStyle = useMemo(() => {
     const safeScale = scale || 1;
@@ -1178,11 +1204,10 @@ const Canvas = () => {
         data-canvas
         data-testid="canvas"
         className="w-full h-full relative"
-        style={{ ...gridStyle, cursor: canvasCursor }}
+        style={{ ...gridStyle, cursor: canvasCursor, touchAction: "none" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
         onClick={handleCanvasClick}
       >
         <div
