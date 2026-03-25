@@ -175,7 +175,7 @@ const MapKeyPanel = ({
       <button
         type="button"
         onClick={onOpen}
-        className="absolute right-5 top-5 bg-white rounded-lg shadow-lg p-2 z-40 text-green-800 hover:bg-gray-100 font-bold"
+        className="absolute right-5 top-24 bg-white rounded-lg shadow-lg p-2 z-40 text-green-800 hover:bg-gray-100 font-bold"
         title="Open map key"
       >
         <FaKey size={25} />
@@ -184,7 +184,7 @@ const MapKeyPanel = ({
   }
 
   return (
-    <div className="absolute right-5 top-5 bg-white rounded-lg shadow-lg border z-50 w-72 h-[180px] flex flex-col overflow-hidden">
+    <div className="absolute right-5 top-24 bg-white rounded-lg shadow-lg border z-50 w-72 h-[180px] flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
         <h3 className="font-semibold text-green-800">Key</h3>
 
@@ -1277,7 +1277,6 @@ const Canvas = () => {
         </div>
       </div>
 
-<<<<<<< Updated upstream
       <MapKeyPanel
         isOpen={isMapKeyOpen}
         onOpen={() => setIsMapKeyOpen(true)}
@@ -1295,31 +1294,6 @@ const Canvas = () => {
           setSelectedShapeId(bedId);
         }}
       />
-=======
-      {!isMapKeyOpen ? (
-        // MOVED from top-5 to top-24 to clear navbar
-        <button
-          onClick={() => setIsMapKeyOpen(true)}
-          className="absolute right-5 top-24 bg-white rounded-lg shadow-lg p-2 z-40 text-green-800 hover:bg-gray-100 font-bold"
-        >
-          <FaKey size={25} />
-        </button>
-      ) : (
-        // MOVED from top-5 to top-24 to clear navbar
-        <div className="absolute right-5 top-24 bg-white rounded-lg shadow-lg p-4 border z-50 w-64">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-green-800">Key</h3>
-            <button onClick={() => setIsMapKeyOpen(false)}>
-              <TbCircleXFilled size={28} className="text-green-800" />
-            </button>
-          </div>
-
-          <ul className="text-sm space-y-1 text-green-800 font-semibold">
-            <li>Coming soon...</li>
-          </ul>
-        </div>
-      )}
->>>>>>> Stashed changes
 
       {editMode && (
         // MOVED from top-0 (with mt-5) to top-24 to clear floating navbar
