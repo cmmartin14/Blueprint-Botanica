@@ -8,11 +8,9 @@ import Calendar from "./Calendar";
 import { GiOakLeaf } from "react-icons/gi";
 import { TbHomeEdit } from "react-icons/tb";
 import { HiX } from "react-icons/hi";
-import { FaEdit, FaSearch } from "react-icons/fa";
-import { FaCalendarAlt } from "react-icons/fa";
+import { FaEdit, FaSearch, FaCalendarAlt, FaRegUser } from "react-icons/fa";
 import { RiDeleteBin6Line, RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
-import { FaRegUser } from "react-icons/fa";
 import { saveGarden, listGardens, loadGarden, deleteGarden } from "../actions/gardenActions";
 import { useGardenStore } from "../types/garden";
 import { useUser } from "@stackframe/stack";
@@ -54,100 +52,42 @@ const Navbar = () => {
     return `${((tempC * 9) / 5 + 32).toFixed(0)}°F`;
   };
 
-
-
   const getStateAbbreviation = (stateName: string): string | null => {
     const states: Record<string, string> = {
-      Alabama: "AL",
-      Alaska: "AK",
-      Arizona: "AZ",
-      Arkansas: "AR",
-      California: "CA",
-      Colorado: "CO",
-      Connecticut: "CT",
-      Delaware: "DE",
-      Florida: "FL",
-      Georgia: "GA",
-      Hawaii: "HI",
-      Idaho: "ID",
-      Illinois: "IL",
-      Indiana: "IN",
-      Iowa: "IA",
-      Kansas: "KS",
-      Kentucky: "KY",
-      Louisiana: "LA",
-      Maine: "ME",
-      Maryland: "MD",
-      Massachusetts: "MA",
-      Michigan: "MI",
-      Minnesota: "MN",
-      Mississippi: "MS",
-      Missouri: "MO",
-      Montana: "MT",
-      Nebraska: "NE",
-      Nevada: "NV",
-      "New Hampshire": "NH",
-      "New Jersey": "NJ",
-      "New Mexico": "NM",
-      "New York": "NY",
-      "North Carolina": "NC",
-      "North Dakota": "ND",
-      Ohio: "OH",
-      Oklahoma: "OK",
-      Oregon: "OR",
-      Pennsylvania: "PA",
-      "Rhode Island": "RI",
-      "South Carolina": "SC",
-      "South Dakota": "SD",
-      Tennessee: "TN",
-      Texas: "TX",
-      Utah: "UT",
-      Vermont: "VT",
-      Virginia: "VA",
-      Washington: "WA",
-      "West Virginia": "WV",
-      Wisconsin: "WI",
-      Wyoming: "WY",
+      Alabama: "AL", Alaska: "AK", Arizona: "AZ", Arkansas: "AR", California: "CA",
+      Colorado: "CO", Connecticut: "CT", Delaware: "DE", Florida: "FL", Georgia: "GA",
+      Hawaii: "HI", Idaho: "ID", Illinois: "IL", Indiana: "IN", Iowa: "IA",
+      Kansas: "KS", Kentucky: "KY", Louisiana: "LA", Maine: "ME", Maryland: "MD",
+      Massachusetts: "MA", Michigan: "MI", Minnesota: "MN", Mississippi: "MS",
+      Missouri: "MO", Montana: "MT", Nebraska: "NE", Nevada: "NV", "New Hampshire": "NH",
+      "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY", "North Carolina": "NC",
+      "North Dakota": "ND", Ohio: "OH", Oklahoma: "OK", Oregon: "OR", Pennsylvania: "PA",
+      "Rhode Island": "RI", "South Carolina": "SC", "South Dakota": "SD", Tennessee: "TN",
+      Texas: "TX", Utah: "UT", Vermont: "VT", Virginia: "VA", Washington: "WA",
+      "West Virginia": "WV", Wisconsin: "WI", Wyoming: "WY",
     };
     return states[stateName] || null;
   };
 
   const weatherDescriptions: Record<number, string> = {
-    0: "Clear sky",
-    1: "Mainly clear",
-    2: "Partly cloudy",
-    3: "Overcast",
-    45: "Fog",
-    48: "Depositing rime fog",
-    51: "Light drizzle",
-    53: "Moderate drizzle",
-    55: "Dense drizzle",
-    56: "Freezing drizzle",
-    57: "Freezing drizzle",
-    61: "Slight rain",
-    63: "Moderate rain",
-    65: "Heavy rain",
-    66: "Freezing rain",
-    67: "Freezing rain",
-    71: "Slight snow",
-    73: "Moderate snow",
-    75: "Heavy snow",
-    80: "Rain showers",
-    81: "Moderate showers",
-    82: "Violent showers",
-    95: "Thunderstorm",
-    99: "Hailstorm",
+    0: "Clear", 1: "Mostly Clear", 2: "Partly Cloudy", 3: "Overcast",
+    45: "Foggy", 48: "Rime Fog", 51: "Light Drizzle", 53: "Drizzle",
+    55: "Dense Drizzle", 56: "Freezing Drizzle", 57: "Freezing Drizzle",
+    61: "Light Rain", 63: "Rain", 65: "Heavy Rain", 66: "Freezing Rain",
+    67: "Freezing Rain", 71: "Light Snow", 73: "Snow", 75: "Heavy Snow",
+    80: "Showers", 81: "Heavy Showers", 82: "Violent Showers",
+    95: "Thunderstorms", 99: "Hail",
   };
 
   const getWeatherIcon = (condition: string) => {
     const lower = condition.toLowerCase();
     if (lower.includes("clear")) return "☀️";
-    if (lower.includes("cloud")) return "☁️";
-    if (lower.includes("rain")) return "🌧️";
+    if (lower.includes("cloud") || lower.includes("overcast")) return "☁️";
+    if (lower.includes("rain") || lower.includes("shower")) return "🌧️";
     if (lower.includes("drizzle")) return "🌦️";
-    if (lower.includes("snow")) return "❄️";
+    if (lower.includes("snow") || lower.includes("hail")) return "❄️";
     if (lower.includes("thunder")) return "⛈️";
-    if (lower.includes("fog") || lower.includes("mist")) return "🌫️";
+    if (lower.includes("fog")) return "🌫️";
     return "🌤️";
   };
   
@@ -163,10 +103,9 @@ const Navbar = () => {
         name: gardenName, 
         shapes: state.shapes, 
         beds: state.beds, 
-        bedPlants: state.bedPlants, // Now included!
+        bedPlants: state.bedPlants,
         editMode: false 
       });
-      // Stamp the returned id onto the store so future saves update instead of insert
       useGardenStore.setState({ id: savedId });
   };
 
@@ -192,19 +131,16 @@ const Navbar = () => {
     try {
       await deleteGarden(user.id, gardenId);
       setSavedList((prev) => prev.filter((garden) => garden.id !== gardenId));
-
-      if (id === gardenId) {
-        useGardenStore.setState({ id: "" });
-      }
+      if (id === gardenId) useGardenStore.setState({ id: "" });
     } catch (error) {
       console.error("Failed to delete garden:", error);
       window.alert("Could not delete this garden. Please try again.");
     }
   };
-  const navIconButtonClass =
-    "group p-3 rounded-xl text-[#B7C398] transition-all duration-200 ease-out hover:bg-[#004b34] hover:text-[#d9e8bc] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7C398]/60";
-  const navIconClass =
-    "transition-transform duration-200 ease-out group-hover:scale-110 group-hover:-translate-y-0.5";
+
+  // Compact, Modern Playful Button Styles
+  const iconBtnClass =
+    "relative flex items-center justify-center w-10 h-10 rounded-2xl text-slate-500 bg-transparent transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:bg-emerald-100 hover:text-emerald-700 hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400";
 
   // ====== EFFECTS ======
   useEffect(() => setMounted(true), []);
@@ -212,294 +148,222 @@ const Navbar = () => {
   useEffect(() => {
     if (!mounted) return;
     const now = new Date();
-    setDate(
-      now.toLocaleDateString(undefined, {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
-    );
+    setDate(now.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }));
   }, [mounted]);
 
   useEffect(() => {
     if (!mounted) return;
-
     const fetchWeather = (latitude: number, longitude: number) => {
-      fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code`
-      )
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code`)
         .then((res) => res.json())
         .then((data) => {
           if (data.current) {
-            if (data.current.temperature_2m !== undefined)
-              setTemp(data.current.temperature_2m);
-            if (data.current.weather_code !== undefined) {
-              const code = data.current.weather_code;
-              setWeatherCondition(weatherDescriptions[code] || "Unknown");
-            }
+            if (data.current.temperature_2m !== undefined) setTemp(data.current.temperature_2m);
+            if (data.current.weather_code !== undefined) setWeatherCondition(weatherDescriptions[data.current.weather_code] || "Unknown");
           }
-        })
-        .catch((err) => console.error("Weather fetch error:", err));
+        }).catch((err) => console.error(err));
 
-      fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-      )
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
         .then((res) => res.json())
         .then((geoData) => {
           if (geoData.address) {
-            const cityName =
-              geoData.address.city ||
-              geoData.address.town ||
-              geoData.address.village ||
-              geoData.address.county ||
-              "Unknown location";
-            const stateName = geoData.address.state || "";
-            const stateAbbr = getStateAbbreviation(stateName);
+            const cityName = geoData.address.city || geoData.address.town || geoData.address.village || "Unknown";
+            const stateAbbr = getStateAbbreviation(geoData.address.state || "");
             setCity(stateAbbr ? `${cityName}, ${stateAbbr}` : cityName);
           }
-        })
-        .catch((err) => console.error("Reverse geocoding error:", err));
+        }).catch((err) => console.error(err));
     };
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          fetchWeather(latitude, longitude);
-          const interval = setInterval(
-            () => fetchWeather(latitude, longitude),
-            600000
-          );
-          return () => clearInterval(interval);
+        (pos) => {
+          fetchWeather(pos.coords.latitude, pos.coords.longitude);
+          const int = setInterval(() => fetchWeather(pos.coords.latitude, pos.coords.longitude), 600000);
+          return () => clearInterval(int);
         },
         () => fetchWeather(30.27, -97.74)
       );
-    } else console.error("Geolocation not supported by this browser.");
+    }
   }, [mounted]);
 
-  if (!mounted) {
-    return (
-      <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50 h-16 flex items-center justify-center">
-        <span className="text-[#B7C398] text-sm">Loading...</span>
-      </nav>
-    );
-  }
-
-  if (!mounted) {
-    return (
-      <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50 h-16 flex items-center justify-center">
-        <span className="text-[#B7C398] text-sm">Loading...</span>
-      </nav>
-    );
-  }
+  if (!mounted) return null;
 
   // ====== RENDER ======
   return (
-    <nav className="bg-[#00563B] shadow-xl sticky top-0 z-50 relative">
-      <div className="flex justify-between items-center h-16 max-w-full px-4 sm:px-6 lg:px-8 mx-auto">
-        {/* ====== Left: Logo, Variable, Weather ===== */}
-        <div className="flex items-center gap-3 relative">
-          <GiOakLeaf size={45} style={{ color: "#B7C398" }} />
-          <div className="flex flex-col relative">
-            <Link
-              href="/"
-              className="text-xl font-bold hover:text-green-600 transition-colors flex flex-row"
-              style={{ color: "#B7C398" }}
-            >
-              Blueprint Botanica
-            </Link>
-            <div
-              className="text-sm font-medium ml-0.5"
-              style={{ color: "#B7C398" }}
-            >
-              {date}
-            </div>
-          </div>
-
-          {/* Variable toggle */}
-          <button
-            onClick={toggleVariableWindow}
-            className={navIconButtonClass}
-            title="Variable / Zipcode"
-          >
-            <TbHomeEdit size={27} className={navIconClass} />
-          </button>
-
-          {/* Weather info */}
-          <div
-            className="hidden sm:flex items-center gap-2 font-medium"
-            style={{ color: "#B7C398" }}
-          >
-            {city ? `${city} | ` : ""}
-            {weatherCondition && (
-              <span className="flex items-center gap-1">
-                <span>{getWeatherIcon(weatherCondition)}</span>
-                <span>{weatherCondition}</span>
-              </span>
-            )}
-
-            <div className="mt-2">
-              {temp !== null ? formatTemperature(temp) : "Fetching..."}
-              <div className="relative w-8 h-2 rounded-full bg-[#DDE4C1] shadow-inner overflow-hidden border border-[#B7C398]/60">
-                <div
-                  onClick={() => setUnit(unit === "C" ? "F" : "C")}
-                  className={`absolute top-0 left-0 h-full w-1/2 bg-[#003326] rounded-full shadow-md transform transition-transform duration-300 ease-in-out cursor-pointer ${
-                    unit === "F"
-                      ? "translate-x-full"
-                      : "translate-x-0"
-                  }`}
-                ></div>
+    <>
+      <header className="fixed top-4 left-0 right-0 z-50 flex justify-center w-full px-4 pointer-events-none">
+        
+        {/* COMPACT Floating Island Navbar */}
+        <nav className="pointer-events-auto flex justify-between items-center w-fit max-w-[95%] bg-white/80 backdrop-blur-xl border border-white shadow-[0_12px_36px_-12px_rgba(0,0,0,0.15)] rounded-[2rem] px-2 py-1.5 transition-all gap-3 md:gap-5">
+          
+          {/* ====== Left: Logo & Weather ===== */}
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2.5 group px-1.5">
+              <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-emerald-400 to-emerald-600 text-white rounded-2xl shadow-emerald-500/30 shadow-md group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                <GiOakLeaf size={24} />
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ====== Right: Icons + Menu ===== */}
-        <div className="relative flex items-center">
-          {/* Desktop icons */}
-          <div className="hidden md:flex items-center">           
-            <button
-              data-testid="edit-button"
-              onClick={toggleEdit}
-              className={navIconButtonClass}
-              title="Edit Mode"
-            >
-              <FaEdit size={25} className={navIconClass} />
-            </button>                
-
-            <button
-              data-testid="search-button"
-              onClick={toggleSearchWindow}
-              className={navIconButtonClass}
-              title="Search"
-            >
-              <FaSearch size={25} className={navIconClass} />
-            </button>
-
-            <button
-              data-testid="calendar-button"
-              onClick={toggleCalendarWindow}
-              className={navIconButtonClass}
-              title="Calendar"
-            >
-              <FaCalendarAlt size={25} className={navIconClass} />
-            </button>
-
-            <button onClick={handleSave} className={navIconButtonClass} title="Save">
-              <RiSave3Line size={25} className={navIconClass} />
-            </button>
-
-            <button onClick={handleOpenFolder} className={navIconButtonClass} title="Saved Gardens">
-              <IoFolderOutline size={25} />
-            </button>
-
-            <button
-              data-testid="chatbot-button"
-              onClick={toggleChatWindow}
-              className={`${navIconButtonClass} ${isChatOpen ? "bg-[#004b34]" : ""}`}
-              title="Gardening Assistant"
-            >
-              <LuSprout size={25} className={`${navIconClass} text-[#f4a45a] group-hover:text-[#ffc078]`} />
-            </button>
-
-            <Link href={user ? "/settings" : "/handler/sign-up"}>
-              <button className={navIconButtonClass} title={user ? "Settings" : "Profile"}>
-                <FaRegUser size={25} />
-              </button>
+              <div className="hidden sm:flex flex-col">
+                <span className="text-lg font-black text-slate-800 tracking-tight group-hover:text-emerald-600 transition-colors leading-none">
+                  Blueprint
+                </span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 leading-none">
+                  Botanica
+                </span>
+              </div>
             </Link>
+
+            {/* Compact Weather Widget */}
+            <div className="hidden lg:flex items-center bg-slate-100/80 rounded-full p-1 pr-3 shadow-inner border border-slate-200/50">
+              <div className="flex items-center justify-center bg-white rounded-full h-7 px-2.5 shadow-sm text-xs font-bold text-slate-700">
+                {city || "Locating..."}
+              </div>
+              
+              {weatherCondition && (
+                <div className="flex items-center gap-1.5 ml-2.5 text-xs font-bold text-slate-600">
+                  <span className="text-base animate-bounce" style={{ animationDuration: '3s' }}>{getWeatherIcon(weatherCondition)}</span>
+                  <span>{weatherCondition}</span>
+                </div>
+              )}
+
+              {temp !== null && (
+                <div className="flex items-center gap-2 ml-2.5 pl-2.5 border-l-2 border-slate-200">
+                  <span className="text-xs font-black text-slate-700">{formatTemperature(temp)}</span>
+                  <button
+                    onClick={() => setUnit(unit === "C" ? "F" : "C")}
+                    className="relative flex items-center w-8 h-5 bg-slate-200 rounded-full transition-colors hover:bg-slate-300 focus:outline-none"
+                    title="Toggle °C/°F"
+                  >
+                    <div className={`absolute w-3.5 h-3.5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${unit === "F" ? "translate-x-4" : "translate-x-0.5"}`} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 rounded-md hover:bg-[#003326] transition-colors ml-2"
-            title="Menu"
-          >
-            {isMenuOpen ? (
-              <HiX size={30} style={{ color: "#B7C398" }} />
-            ) : (
-              <LuMenu size={30} style={{ color: "#B7C398" }} />
-            )}
-          </button>
+          {/* ====== Right: Icons + Menu ===== */}
+          <div className="flex items-center pr-1">
+            
+            {/* Desktop Toolbar - Changed to gap-2 for perfectly even spacing across all elements */}
+            <div className="hidden md:flex items-center gap-2">           
+              <button onClick={toggleEdit} className={iconBtnClass} title="Edit Mode">
+                <FaEdit size={18} />
+              </button>                
+              <button onClick={toggleVariableWindow} className={iconBtnClass} title="Plant Settings">
+                <TbHomeEdit size={20} />
+              </button>
+              <button onClick={toggleSearchWindow} className={iconBtnClass} title="Search">
+                <FaSearch size={18} />
+              </button>
+              <button onClick={toggleCalendarWindow} className={iconBtnClass} title="Calendar">
+                <FaCalendarAlt size={18} />
+              </button>
 
-          {/* Mobile dropdown */}
-          {isMenuOpen && (
-            <div className="absolute right-0 top-14 w-52 bg-[#003326] rounded-xl shadow-lg border border-[#B7C398]/40 overflow-hidden z-50 md:hidden">
-              {[
-                { name: "Edit Mode", action: toggleEdit, icon: <FaEdit size={20} /> },
-                { name: "Search", action: toggleSearchWindow, icon: <FaSearch size={20} /> },
-                { name: "Calendar", action: toggleCalendarWindow, icon: <FaCalendarAlt size={20} /> },
-                { name: "Save", action: handleSave, icon: <RiSave3Line size={20} /> },
-                { name: "Saved Gardens", action: handleOpenFolder, icon: <IoFolderOutline size={20} /> },
-                { name: "Assistant", action: toggleChatWindow, icon: <LuSprout size={20} className="text-[#f4a45a]" /> },
-                { name: "Profile", action: () => {}, icon: <FaRegUser size={20} /> },
-              ].map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => {
-                    item.action();
-                    setIsMenuOpen(false);
-                  }}
-                  className="group w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-[#004b34] transition-colors text-left"
-                  style={{ color: "#B7C398" }}
-                >
-                  <span className={navIconClass}>{item.icon}</span>
-                  {item.name}
+              {/* Removed mx-1.5 margin, Flexbox gap-2 will handle the spacing */}
+              <div className="w-1 h-1 rounded-full bg-slate-200" />
+
+              <button onClick={handleSave} className={iconBtnClass} title="Save">
+                <RiSave3Line size={20} />
+              </button>
+              <button onClick={handleOpenFolder} className={iconBtnClass} title="Saved Gardens">
+                <IoFolderOutline size={20} />
+              </button>
+
+              <div className="w-1 h-1 rounded-full bg-slate-200" />
+
+              <Link href={user ? "/settings" : "/handler/sign-up"}>
+                <button className={iconBtnClass} title={user ? "Settings" : "Profile"}>
+                  <FaRegUser size={18} />
                 </button>
-              ))}
+              </Link>
+
+              {/* Compact Bouncy Chatbot Button - Removed ml-1.5 margin */}
+              <button
+                onClick={toggleChatWindow}
+                className={`group relative flex items-center gap-2 px-4 py-2 rounded-[14px] text-sm font-bold transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-orange-500/30 ${
+                  isChatOpen 
+                    ? "bg-orange-500 text-white shadow-md shadow-orange-500/40" 
+                    : "bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white hover:shadow-md hover:shadow-orange-500/30"
+                }`}
+              >
+                <LuSprout size={18} className="group-hover:animate-pulse" />
+                <span>Clementine</span>
+              </button>
             </div>
-          )}
+
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden flex items-center justify-center w-10 h-10 bg-slate-100 text-slate-700 rounded-2xl active:scale-95 transition-all ml-2"
+            >
+              {isMenuOpen ? <HiX size={22} /> : <LuMenu size={22} />}
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      {/* ====== Mobile Dropdown Menu ====== */}
+      {isMenuOpen && (
+        <div className="fixed top-24 left-4 right-4 bg-white/90 backdrop-blur-xl border border-slate-100 rounded-3xl shadow-2xl z-40 p-2 md:hidden animate-in slide-in-from-top-4 fade-in duration-300">
+          {[
+            { name: "Edit Mode", action: toggleEdit, icon: <FaEdit size={16} /> },
+            { name: "Plant Settings", action: toggleVariableWindow, icon: <TbHomeEdit size={16} /> },
+            { name: "Search", action: toggleSearchWindow, icon: <FaSearch size={16} /> },
+            { name: "Calendar", action: toggleCalendarWindow, icon: <FaCalendarAlt size={16} /> },
+            { name: "Save Garden", action: handleSave, icon: <RiSave3Line size={16} /> },
+            { name: "Load Garden", action: handleOpenFolder, icon: <IoFolderOutline size={16} /> },
+            { name: "Ask Clementine", action: toggleChatWindow, icon: <LuSprout size={16} className="text-orange-500" /> },
+            { name: "Profile Settings", action: () => {}, icon: <FaRegUser size={16} /> },
+          ].map((item) => (
+            <button
+              key={item.name}
+              onClick={() => { item.action(); setIsMenuOpen(false); }}
+              className="flex items-center gap-3 w-full p-3.5 rounded-2xl text-slate-700 text-sm font-bold hover:bg-slate-100 active:scale-95 transition-all"
+            >
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200/50 text-slate-500">
+                {item.icon}
+              </div>
+              {item.name}
+            </button>
+          ))}
         </div>
+      )}
 
-        {showSavedList && (
-  <div className="absolute right-0 top-14 w-64 bg-[#003326] rounded-xl shadow-lg border border-[#B7C398]/40 z-50">
-    <div className="p-2 text-[#B7C398] font-semibold border-b border-[#B7C398]/20 px-4 flex justify-between items-center">
-      <span>Saved Gardens</span>
-      <button
-        onClick={() => setShowSavedList(false)}
-        className="hover:bg-[#004b34] rounded p-1"
-        title="Close"
-      >
-        <HiX size={20} className="text-[#B7C398]" />
-      </button>
-    </div>
-    {savedList.length === 0 && (
-      <div className="px-4 py-3 text-sm text-[#B7C398]/60">No saved gardens yet.</div>
-    )}
-    {savedList.map((g) => (
-      <div
-        key={g.id}
-        className="w-full px-4 py-2 text-sm text-[#B7C398] flex items-center justify-between hover:bg-[#004b34]"
-      >
-        <button
-          onClick={() => handleLoad(g.id)}
-          className="min-w-0 flex-1 text-left"
-          title={`Load ${g.name}`}
-        >
-          <div className="truncate">{g.name}</div>
-          <div className="text-xs opacity-50">{new Date(g.updatedAt).toLocaleDateString()}</div>
-        </button>
-        <button
-          onClick={() => handleDelete(g.id, g.name)}
-          className="ml-3 p-1 rounded hover:bg-[#00563B]"
-          title={`Delete ${g.name}`}
-          aria-label={`Delete ${g.name}`}
-        >
-          <RiDeleteBin6Line size={16} />
-        </button>
-      </div>
-    ))}
-  </div>
-)}
+      {/* ====== Saved Gardens Modal ====== */}
+      {showSavedList && (
+        <div className="fixed top-24 right-4 md:right-8 w-72 bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-slate-100 z-50 p-2 animate-in zoom-in-95 duration-300">
+          <div className="flex justify-between items-center px-4 py-3 mb-2 bg-slate-50 rounded-2xl">
+            <span className="font-black text-slate-800 text-xs uppercase tracking-widest">Your Gardens</span>
+            <button onClick={() => setShowSavedList(false)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1.5 rounded-full transition-all">
+              <HiX size={18} />
+            </button>
+          </div>
+          <div className="max-h-60 overflow-y-auto p-1.5 space-y-1.5">
+            {savedList.length === 0 && (
+              <div className="p-5 text-center text-xs font-bold text-slate-400 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                No saved gardens yet.
+              </div>
+            )}
+            {savedList.map((g) => (
+              <div key={g.id} className="group flex items-center justify-between p-2.5 bg-white hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 rounded-xl transition-all shadow-sm">
+                <button onClick={() => handleLoad(g.id)} className="flex-1 text-left flex flex-col min-w-0">
+                  <span className="font-bold text-sm text-slate-700 truncate group-hover:text-emerald-700">{g.name}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{new Date(g.updatedAt).toLocaleDateString()}</span>
+                </button>
+                <button onClick={() => handleDelete(g.id, g.name)} className="p-2 rounded-lg text-slate-300 hover:bg-rose-100 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100">
+                  <RiDeleteBin6Line size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-        {/* ====== Popups ===== */}
-        <SearchWindow data-testid="search-window" isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-        <VariableWindow data-testid="variable-window" isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-        <Calendar data-testid="calendar-window" isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
-        <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> {/* <--- RENDER CHATBOT */}
-      </div>
-    </nav>
+      {/* ====== Windows & Chatbot ====== */}
+      <SearchWindow data-testid="search-window" isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <VariableWindow data-testid="variable-window" isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
+      <Calendar data-testid="calendar-window" isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
+      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> 
+    </>
   );
 };
 
