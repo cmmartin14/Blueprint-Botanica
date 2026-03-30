@@ -4,13 +4,21 @@ import {
   GoogleGenerativeAI,
   SchemaType,
 } from "@google/generative-ai";
+import type { Content, Part } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
 type Role = "user" | "assistant";
 
+interface ChatImageAttachment {
+  mimeType: string;
+  data: string;
+  filename?: string;
+}
+
 interface ChatMessage {
   role: Role;
-  content: string;
+  content?: string;
+  image?: ChatImageAttachment;
 }
 
 interface ChatContext {
@@ -58,6 +66,146 @@ const TOOL_NAMES = {
   ADD_CALENDAR_EVENT: "add_calendar_event",
   ADD_CALENDAR_NOTE: "add_calendar_note",
 } as const;
+
+const MAX_CHAT_IMAGE_BYTES = 4 * 1024 * 1024;
+const INVALID_IMAGE_ERROR = "Image attachment is invalid or too large.";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const getMessageText = (message: ChatMessage) =>
+  typeof message.content === "string" ? message.content.trim() : "";
+
+const estimateBase64Bytes = (value: string) => {
+  const normalized = value.replace(/\s+/g, "");
+  const padding = normalized.endsWith("==")
+    ? 2
+    : normalized.endsWith("=")
+      ? 1
+      : 0;
+
+  return Math.max(0, Math.floor((normalized.length * 3) / 4) - padding);
+};
+
+const parseImageAttachment = (value: unknown): ChatImageAttachment | null => {
+  if (!isRecord(value)) return null;
+
+  const mimeType =
+    typeof value.mimeType === "string" ? value.mimeType.trim() : "";
+  const data = typeof value.data === "string" ? value.data.trim() : "";
+  const filename =
+    typeof value.filename === "string" ? value.filename.trim() : undefined;
+
+  if (!mimeType.startsWith("image/") || data.length === 0) {
+    return null;
+  }
+
+  if (estimateBase64Bytes(data) > MAX_CHAT_IMAGE_BYTES) {
+    return null;
+  }
+
+  return {
+    mimeType,
+    data,
+    ...(filename ? { filename } : {}),
+  };
+};
+
+const parseChatMessage = (
+  value: unknown
+): { message?: ChatMessage; error?: string } => {
+  if (!isRecord(value)) return {};
+  if (value.role !== "user" && value.role !== "assistant") return {};
+
+  const content =
+    typeof value.content === "string" ? value.content : undefined;
+
+  if ("image" in value && value.image != null) {
+    const image = parseImageAttachment(value.image);
+    if (!image) {
+      return { error: INVALID_IMAGE_ERROR };
+    }
+
+    return {
+      message: {
+        role: value.role,
+        ...(content !== undefined ? { content } : {}),
+        image,
+      },
+    };
+  }
+
+  return {
+    message: {
+      role: value.role,
+      ...(content !== undefined ? { content } : {}),
+    },
+  };
+};
+
+const hasMessageContent = (message: ChatMessage) =>
+  getMessageText(message).length > 0 || Boolean(message.image);
+
+const toImagePart = (image: ChatImageAttachment): Part => ({
+  inlineData: {
+    mimeType: image.mimeType,
+    data: image.data,
+  },
+});
+
+const buildHistoryContent = (message: ChatMessage): Content | null => {
+  const parts: Part[] = [];
+  const text = getMessageText(message);
+
+  if (text) {
+    parts.push({ text });
+  }
+
+  if (message.image) {
+    parts.push(toImagePart(message.image));
+  }
+
+  if (parts.length === 0) return null;
+
+  return {
+    role: message.role === "assistant" ? "model" : "user",
+    parts,
+  };
+};
+
+const buildLatestUserPrompt = (
+  message: ChatMessage,
+  contextPrompt?: string
+): string | Part[] => {
+  const text = getMessageText(message);
+  const promptSections: string[] = [];
+
+  if (contextPrompt) {
+    promptSections.push(contextPrompt);
+  }
+
+  if (text) {
+    promptSections.push(contextPrompt ? `User request:\n${text}` : text);
+  } else if (message.image) {
+    promptSections.push(
+      "User uploaded an image without additional text. Analyze the image and ask a concise follow-up question if needed."
+    );
+  }
+
+  if (!message.image) {
+    return promptSections.join("\n\n");
+  }
+
+  const parts: Part[] = [];
+  const joinedPrompt = promptSections.join("\n\n");
+
+  if (joinedPrompt) {
+    parts.push({ text: joinedPrompt });
+  }
+
+  parts.push(toImagePart(message.image));
+  return parts;
+};
 
 const parseNumberArg = (
   args: Record<string, unknown>,
@@ -403,7 +551,7 @@ const runGardenTool = async (
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ChatRequestBody;
-    const messages = body.messages;
+    const rawMessages = body.messages;
     const context = body.context;
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -414,15 +562,30 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    if (!rawMessages || !Array.isArray(rawMessages) || rawMessages.length === 0) {
       return NextResponse.json(
         { error: "Invalid messages format" },
         { status: 400 }
       );
     }
 
+    const messages: ChatMessage[] = [];
+    for (const rawMessage of rawMessages) {
+      const { message, error } = parseChatMessage(rawMessage);
+      if (error) {
+        return NextResponse.json({ error }, { status: 400 });
+      }
+      if (!message) {
+        return NextResponse.json(
+          { error: "Invalid messages format" },
+          { status: 400 }
+        );
+      }
+      messages.push(message);
+    }
+
     const lastMessage = messages[messages.length - 1];
-    if (!lastMessage?.content || typeof lastMessage.content !== "string") {
+    if (!lastMessage || !hasMessageContent(lastMessage)) {
       return NextResponse.json(
         { error: "Last message is missing content" },
         { status: 400 }
@@ -561,6 +724,7 @@ export async function POST(request: Request) {
           {
             text: `You are Clementine, the gardening assistant for Blueprint Botanica.
 Help users plan gardens, select plants, troubleshoot issues, and make climate-aware recommendations.
+Users may attach garden or plant photos; when an image is present, use visible details from it and be explicit about uncertainty.
 Use tools for weather, hardiness zone, and plant data when factual lookup is needed.
 When users ask to add events or notes/reminders to calendar, call the calendar tools.
 Use add_calendar_note for reminder requests ("remind me..."), and add_calendar_event for schedule-only events.
@@ -572,10 +736,10 @@ Keep responses concise, practical, and specific.`,
       },
     });
 
-    let history = messages.slice(0, -1).map((msg) => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content || "" }],
-    }));
+    let history = messages
+      .slice(0, -1)
+      .map(buildHistoryContent)
+      .filter((entry): entry is Content => entry !== null);
 
     if (history.length > 0 && history[0].role === "model") {
       history = history.slice(1);
@@ -592,9 +756,7 @@ Keep responses concise, practical, and specific.`,
     });
 
     const contextPrompt = buildContextPrompt(context);
-    const userPrompt = contextPrompt
-      ? `${contextPrompt}\n\nUser request:\n${lastMessage.content}`
-      : lastMessage.content;
+    const userPrompt = buildLatestUserPrompt(lastMessage, contextPrompt);
 
     const baseUrl = new URL(request.url).origin;
     const actions: ChatAction[] = [];

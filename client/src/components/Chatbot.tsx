@@ -1,14 +1,21 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LuSprout, LuSend, LuX, LuGripHorizontal } from "react-icons/lu";
+import { LuImage, LuSend, LuSprout, LuX } from "react-icons/lu";
 import { useCalendarStore } from "../stores/calendarStore";
 import type { CalendarAssistantAction } from "../stores/calendarStore";
+
+interface ChatImageAttachment {
+  mimeType: string;
+  data: string;
+  filename?: string;
+}
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  image?: ChatImageAttachment;
 }
 
 interface ChatbotProps {
@@ -34,6 +41,7 @@ interface ChatApiResponse {
 }
 
 const CHATBOT_POPUP_DURATION_MS = 500;
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -63,6 +71,46 @@ const isAssistantAction = (value: unknown): value is CalendarAssistantAction => 
   return false;
 };
 
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("Failed to read image data."));
+    };
+
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("Failed to read image data."));
+    };
+
+    reader.readAsDataURL(file);
+  });
+
+const fileToImageAttachment = async (
+  file: File
+): Promise<ChatImageAttachment> => {
+  const dataUrl = await readFileAsDataUrl(file);
+  const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+
+  if (!match) {
+    throw new Error("Unsupported image format.");
+  }
+
+  return {
+    mimeType: match[1],
+    data: match[2],
+    filename: file.name,
+  };
+};
+
+const imageAttachmentToDataUrl = (image: ChatImageAttachment) =>
+  `data:${image.mimeType};base64,${image.data}`;
+
 const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
   const applyAssistantAction = useCalendarStore((state) => state.applyAssistantAction);
   const addAlert = useCalendarStore((state) => state.addAlert);
@@ -88,7 +136,10 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
     },
   ]);
   const [input, setInput] = useState("");
+  const [pendingImage, setPendingImage] = useState<ChatImageAttachment | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom
@@ -187,19 +238,66 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
   };
   // ---------------------
 
+  const clearPendingImage = () => {
+    setPendingImage(null);
+    setUploadError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleImageChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadError(null);
+
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please choose an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadError("Please upload an image under 4 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const image = await fileToImageAttachment(file);
+      setPendingImage(image);
+    } catch {
+      setUploadError("I couldn't read that image. Try a different file.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    const trimmedInput = input.trim();
+    if ((!trimmedInput && !pendingImage) || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input,
+      content: trimmedInput,
+      ...(pendingImage ? { image: pendingImage } : {}),
     };
 
+    const nextMessages = [...messages, userMessage];
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setPendingImage(null);
+    setUploadError(null);
     setIsLoading(true);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
 
     const context: ChatContextPayload = {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -213,7 +311,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: nextMessages,
           context,
         }),
       });
@@ -241,6 +339,14 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       console.error("Chat error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "I'm having trouble connecting to the garden network right now.",
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -313,7 +419,18 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
                     : "bg-white text-green-950 border border-[#dce9d8] rounded-[24px] rounded-tl-sm"
                 }`}
               >
-                {msg.content}
+                <div className="space-y-3">
+                  {msg.image && (
+                    <img
+                      src={imageAttachmentToDataUrl(msg.image)}
+                      alt={msg.image.filename || "Uploaded garden image"}
+                      className="max-h-56 w-full rounded-[18px] object-cover bg-white/20"
+                    />
+                  )}
+                  {msg.content && (
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -340,18 +457,67 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
 
         {/* Input Form */}
         <form onSubmit={handleSubmit} className="p-4 bg-white/80 backdrop-blur-md border-t border-[#dce9d8]">
-          <div className="flex gap-2 relative">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="sr-only"
+          />
+
+          {pendingImage && (
+            <div className="mb-3 rounded-2xl border border-[#dce9d8] bg-[#f7fbf5] p-3 shadow-sm">
+              <div className="flex items-start gap-3">
+                <img
+                  src={imageAttachmentToDataUrl(pendingImage)}
+                  alt={pendingImage.filename || "Pending upload"}
+                  className="h-16 w-16 rounded-2xl object-cover border border-[#dce9d8]"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-green-950">
+                    {pendingImage.filename || "Attached image"}
+                  </p>
+                  <p className="text-xs text-green-800/70">
+                    
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearPendingImage}
+                  className="rounded-full p-2 text-green-800/70 transition-colors hover:bg-white hover:text-green-950"
+                  aria-label="Remove attached image"
+                >
+                  <LuX size={16} strokeWidth={2.5} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {uploadError && (
+            <p className="mb-3 text-sm text-rose-700">{uploadError}</p>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-[#dce9d8] bg-[#f9fcf7] text-green-900 transition-all duration-200 hover:border-[#F28C28]/40 hover:text-[#F28C28] disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Upload image"
+            >
+              <LuImage size={18} />
+            </button>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Clementine..."
-              className="flex-1 px-5 py-3 pr-12 border border-[#dce9d8] rounded-full focus:outline-none focus:ring-2 focus:ring-[#F28C28]/40 bg-[#f9fcf7] text-green-950 placeholder:text-green-700/50 text-[15px] transition-all duration-200 shadow-inner"
+              placeholder="Ask Clementine or upload a photo..."
+              className="flex-1 px-5 py-3 border border-[#dce9d8] rounded-full focus:outline-none focus:ring-2 focus:ring-[#F28C28]/40 bg-[#f9fcf7] text-green-950 placeholder:text-green-700/50 text-[15px] transition-all duration-200 shadow-inner"
             />
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
-              className="absolute right-1.5 top-1.5 bottom-1.5 aspect-square flex items-center justify-center bg-[#F28C28] text-white rounded-full hover:bg-[#d97a21] hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 disabled:hover:bg-[#F28C28] transition-all duration-200 shadow-sm"
+              disabled={isLoading || (!input.trim() && !pendingImage)}
+              className="flex h-12 w-12 flex-shrink-0 items-center justify-center bg-[#F28C28] text-white rounded-full hover:bg-[#d97a21] hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 disabled:hover:bg-[#F28C28] transition-all duration-200 shadow-sm"
             >
               <LuSend size={18} className="mr-0.5" />
             </button>

@@ -99,6 +99,79 @@ describe("POST /api/chat", () => {
     expect(json.error).toBe("Last message is missing content");
   });
 
+  it("accepts an image-only user message", async () => {
+    mockStartChat.mockReturnValue({
+      sendMessage: mockSendMessage,
+    });
+
+    mockSendMessage.mockResolvedValueOnce(
+      createMockResponse({
+        text: "That looks like a healthy herb seedling.",
+        functionCalls: [],
+      })
+    );
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "user",
+            content: "",
+            image: {
+              mimeType: "image/png",
+              data: "ZmFrZQ==",
+              filename: "seedling.png",
+            },
+          },
+        ],
+      }),
+    });
+
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.message).toBe("That looks like a healthy herb seedling.");
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          text: "User uploaded an image without additional text. Analyze the image and ask a concise follow-up question if needed.",
+        }),
+        expect.objectContaining({
+          inlineData: {
+            mimeType: "image/png",
+            data: "ZmFrZQ==",
+          },
+        }),
+      ])
+    );
+  });
+
+  it("returns 400 for an invalid image attachment", async () => {
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "user",
+            content: "What plant is this?",
+            image: {
+              mimeType: "text/plain",
+              data: "ZmFrZQ==",
+            },
+          },
+        ],
+      }),
+    });
+
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("Image attachment is invalid or too large.");
+  });
+
   it("returns plain text response with no tools", async () => {
     mockStartChat.mockReturnValue({
       sendMessage: mockSendMessage,
