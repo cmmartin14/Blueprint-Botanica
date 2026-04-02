@@ -39,6 +39,8 @@ export interface GardenState {
   beds: Record<string, Bed>;
   // keyed by circle shape ID
   bedPlants: Record<string, PlantEntry[]>;
+
+  hardinessZone: string | null
 }
 
 type GardenActions = {
@@ -66,6 +68,9 @@ type GardenActions = {
   // Persistence
   loadGarden: (state: GardenState) => void;
   clearGarden: () => void;
+
+  //Hardiness Zone
+  setHardinessZone: (zone: string | null) => void;
 };
 
 const defaultState: GardenState = {
@@ -75,6 +80,7 @@ const defaultState: GardenState = {
   shapes: {},
   beds: {},
   bedPlants: {},
+  hardinessZone: null
 };
 
 export const useGardenStore = create<GardenState & GardenActions>((set) => ({
@@ -158,8 +164,13 @@ export const useGardenStore = create<GardenState & GardenActions>((set) => ({
   addPlantToBed: (shapeId, plant) =>
     set((state) => {
       const existing = state.bedPlants[shapeId] ?? [];
-      if (existing.some((p) => p.id === plant.id)) return state;
-      return { bedPlants: { ...state.bedPlants, [shapeId]: [...existing, plant] } };
+      if (existing.some((p) => p.id === plant.id)) return state;//if there's a plant in the bed, return that
+
+      if (plant.hardiness) {
+        //console.log(zone)
+      }
+
+      return { bedPlants: { ...state.bedPlants, [shapeId]: [...existing, plant] } };//add the plant
     }),
 
   removePlantFromBed: (shapeId, plantId) =>
@@ -171,4 +182,6 @@ export const useGardenStore = create<GardenState & GardenActions>((set) => ({
   loadGarden: (state) => set(state),
 
   clearGarden: () => set({ ...defaultState, id: crypto.randomUUID() }),
+
+  setHardinessZone: (zone) => set({ hardinessZone: zone }),
 }));

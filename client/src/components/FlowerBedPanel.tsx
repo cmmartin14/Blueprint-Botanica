@@ -76,6 +76,8 @@ export default function FlowerBedPanel({
   const [isAttributesOpen, setIsAttributesOpen] = useState(true);
   const [attributes, setAttributes] = useState<GardenBedAttributes>(emptyAttributes);
 
+  const hardinessZone = useGardenStore((s) => s.hardinessZone);//Hardiness Zone
+
   useEffect(() => {
     if (bed?.name) {
       setBedName(bed.name);
@@ -127,7 +129,7 @@ export default function FlowerBedPanel({
 
       // Fetch full details for each result to get hardiness zones
       const withHardiness = await Promise.all(
-        filtered.slice(0, 8).map(async (plant) => {
+        filtered.slice(0, 8).map(async (plant: { id: any; }) => {
           try {
             const detailResp = await fetch(`/api/perenual?id=${plant.id}`);
             if (!detailResp.ok) return plant;
@@ -212,7 +214,25 @@ export default function FlowerBedPanel({
       e.stopPropagation();
     }
   };
+  const getZoneNumber = (zone: string | number | undefined) => {
+  if (!zone) return 0;
+  return parseInt(zone.toString().replace(/[^\d]/g, ""));
+  };
+  const isPlantCompatible = (plant: PlantEntry) => {
+    if (!hardinessZone || !plant.hardiness) return true;
 
+    const zoneNumber = getZoneNumber(hardinessZone);
+    const min = getZoneNumber(plant.hardiness.min);
+    const max = getZoneNumber(plant.hardiness.max);
+
+  
+    console.log(zoneNumber)
+    console.log(plant.hardiness.min)
+    console.log(plant.hardiness.max)
+    return zoneNumber >= min && zoneNumber <= max;
+
+  return zoneNumber >= min && zoneNumber <= max;
+};
   return (
     <div
       data-testid='bed-plant-window'
@@ -442,14 +462,27 @@ export default function FlowerBedPanel({
               </thead>
               <tbody>
                 {bedPlants.map((plant) => (
-                  <tr key={plant.id} className="border-b last:border-0">
+                  <tr
+                    key={plant.id}
+                    className={`border-b last:border-0 ${
+                    !isPlantCompatible(plant) ? "bg-red-50" : ""
+                  }`}
+                 >
                     <td className="py-1.5 flex items-center gap-2">
                       {plant.image_url && (
                         <img src={plant.image_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
                       )}
-                      <span className="font-medium text-gray-800 leading-tight">
-                        {plant.common_name ?? "—"}
-                      </span>
+                      <div className="leading-tight">
+                        <span className="font-medium text-gray-800">
+                          {plant.common_name ?? "—"}
+                         </span>
+
+                        {!isPlantCompatible(plant) && (
+                          <div className="text-red-500 text-xs">
+                            Not compatible with zone {hardinessZone}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-1.5 text-gray-500 text-xs pr-2">
                       {Array.isArray(plant.scientific_name)
