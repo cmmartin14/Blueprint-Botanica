@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FiMapPin, FiChevronLeft } from "react-icons/fi";
 import ZoneSelector from "./ZoneSelector";
+import { useGardenStore } from "../types/garden";
 
 type VariableWindowProps = {
   isOpen: boolean;
@@ -11,6 +12,8 @@ type VariableWindowProps = {
 
 const VariableWindow = ({ isOpen, onClose }: VariableWindowProps) => {
   const [showZoneSelector, setShowZoneSelector] = useState(false);
+  const zone = useGardenStore((s) => s.zone);
+  const setZone = useGardenStore((s) => s.setZone);
 
 if (!isOpen) return null;
 
@@ -42,7 +45,9 @@ if (!isOpen) return null;
                          shadow-sm hover:shadow-md"
             >
               <FiMapPin size={36} className="mb-1" />
-              <span className="text-sm font-medium">Set Zone</span>
+              <span className="text-sm font-medium">
+                {zone ? `Zone ${zone}` : "Set Zone"}
+              </span>
             </button>
           </div>
         ) : (
@@ -59,7 +64,7 @@ if (!isOpen) return null;
             </button>
 
             <div className="mt-6 overflow-y-auto max-h-[360px]">
-              <ZoneSelector onZoneSelected={(zone) => console.log(zone)} />
+              <ZoneSelector onZoneSelected={(z) => setZone(z)} />
             </div>
           </div>
         )}

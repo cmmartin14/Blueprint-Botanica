@@ -323,6 +323,7 @@ const Canvas = () => {
   const editMode = useGardenStore((state) => state.editMode);
   const setEditMode = useGardenStore((state) => state.setEditMode);
   const bedPlants = useGardenStore((state) => state.bedPlants);
+  const gardenZone = useGardenStore((state) => state.zone);
 
   const gardenBedEntries = useMemo<GardenBedListEntry[]>(() => {
     const bedLikeShapes = shapes
@@ -1191,6 +1192,7 @@ const Canvas = () => {
           bedLabel={gardenBedEntries.find((bed) => bed.id === bedPanelShapeId)?.label}
           isLocked={isBedPanelLocked}
           topOffset={isMapKeyOpen ? 210 : 70}
+          zone={gardenZone}
           onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
           onClose={() => {
             setBedPanelShapeId(null);
