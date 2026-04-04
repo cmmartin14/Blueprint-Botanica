@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { TbCircleXFilled } from "react-icons/tb";
 import { FaLock, FaLockOpen } from "react-icons/fa";
 import { PlantEntry, useGardenStore } from "../types/garden";
+import { checkBedCompatibility } from "./utils/plantCompatibility";
 
 interface SearchResult {
   id: number;
@@ -75,6 +76,8 @@ export default function FlowerBedPanel({
   const [isEditingName, setIsEditingName] = useState(false);
   const [isAttributesOpen, setIsAttributesOpen] = useState(true);
   const [attributes, setAttributes] = useState<GardenBedAttributes>(emptyAttributes);
+  const [selectedPlantDetail, setSelectedPlantDetail] = useState<any | null>(null);
+  const [loadingPlantDetail, setLoadingPlantDetail] = useState(false);
 
   const hardinessZone = useGardenStore((s) => s.hardinessZone);//Hardiness Zone
 
@@ -233,6 +236,27 @@ export default function FlowerBedPanel({
 
   return zoneNumber >= min && zoneNumber <= max;
 };
+
+  const handlePlantClick = async (plant: PlantEntry) => {
+    setLoadingPlantDetail(true);
+    setSelectedPlantDetail(null);
+    
+    try {
+      const resp = await fetch(`/api/perenual?id=${plant.id}`);
+      if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+      const json = await resp.json();
+      
+      const plantData = json.data ?? json;
+      setSelectedPlantDetail(plantData);
+    } catch (err) {
+      console.error("Error fetching plant details:", err);
+      setSelectedPlantDetail(plant); // fallback to basic info
+    } finally {
+      setLoadingPlantDetail(false);
+    }
+  };
+
+
   return (
     <div
       data-testid='bed-plant-window'
@@ -452,58 +476,236 @@ export default function FlowerBedPanel({
           {bedPlants.length === 0 ? (
             <p className="text-xs text-gray-400 py-2">No plants added yet. Search below to add one.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white z-10">
-                <tr className="text-left text-xs text-gray-500 border-b">
-                  <th className="pb-1 font-medium">Plant</th>
-                  <th className="pb-1 font-medium">Scientific</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {bedPlants.map((plant) => (
-                  <tr
-                    key={plant.id}
-                    className={`border-b last:border-0 ${
-                    !isPlantCompatible(plant) ? "bg-red-50" : ""
-                  }`}
-                 >
-                    <td className="py-1.5 flex items-center gap-2">
-                      {plant.image_url && (
-                        <img src={plant.image_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                      )}
-                      <div className="leading-tight">
-                        <span className="font-medium text-gray-800">
-                          {plant.common_name ?? "—"}
-                         </span>
-
-                        {!isPlantCompatible(plant) && (
-                          <div className="text-red-500 text-xs">
-                            Not compatible with zone {hardinessZone}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-1.5 text-gray-500 text-xs pr-2">
-                      {Array.isArray(plant.scientific_name)
-                        ? plant.scientific_name[0]
-                        : plant.scientific_name}
-                    </td>
-                    <td className="py-1.5">
-                      <button
-                        onClick={() => removePlantFromBed(shapeId, plant.id)}
-                        className="text-red-400 hover:text-red-600 text-xs font-bold"
-                        title="Remove"
-                      >
-                        ✕
-                      </button>
-                    </td>
+            <>
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-white z-10">
+                  <tr className="text-left text-xs text-gray-500 border-b">
+                    <th className="pb-1 font-medium">Plant</th>
+                    <th className="pb-1 font-medium">Scientific</th>
+                    <th />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {bedPlants.map((plant) => (
+                    <tr
+                      key={plant.id}
+                      onClick={() => handlePlantClick(plant)}
+                      className={`border-b last:border-0 ${
+                        !isPlantCompatible(plant) ? "bg-red-50" : ""
+                      }`}
+                    >
+                      <td className="py-1.5 flex items-center gap-2">
+                        {plant.image_url && (
+                          <img src={plant.image_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                        )}
+                        <div className="leading-tight">
+                          <span className="font-medium text-gray-800">
+                            {plant.common_name ?? "—"}
+                          </span>
+
+                          {!isPlantCompatible(plant) && (
+                            <div className="text-red-500 text-xs">
+                              Not compatible with zone {hardinessZone}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-1.5 text-gray-500 text-xs pr-2">
+                        {Array.isArray(plant.scientific_name)
+                          ? plant.scientific_name[0]
+                          : plant.scientific_name}
+                      </td>
+                      <td className="py-1.5">
+                        <button
+                          onClick={(e) => { 
+                            e.stopPropagation();
+                            removePlantFromBed(shapeId, plant.id);
+                          }}
+                          className="text-red-400 hover:text-red-600 text-xs font-bold"
+                          title="Remove"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Plant-to-Plant Compatibility Warning */}
+              {(() => {
+                const compatibility = checkBedCompatibility(bedPlants);
+                if (!compatibility.isCompatible && compatibility.issues.length > 0) {
+                  const issue = compatibility.issues[0];
+                  const affectedPlantNames = bedPlants
+                    .filter((p) => issue.affectedPlants.includes(p.id))
+                    .map((p) => p.common_name || (Array.isArray(p.scientific_name) ? p.scientific_name[0] : p.scientific_name))
+                    .filter(Boolean);
+
+                  return (
+                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
+                      <p className="text-xs font-semibold text-red-800 flex items-start gap-1">
+                        <span className="text-red-600">⚠️</span>
+                        <span>
+                          Warning! The hardiness zones for{" "}
+                          {affectedPlantNames.length > 2
+                            ? affectedPlantNames.slice(0, -1).join(", ") + ", and " + affectedPlantNames[affectedPlantNames.length - 1]
+                            : affectedPlantNames.join(" and ")}{" "}
+                          are not compatible!
+                        </span>
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </>
           )}
         </div>
+
+        {/* Plant Detail View */}
+        {(selectedPlantDetail || loadingPlantDetail) && (
+          <div className="absolute inset-0 bg-white z-20 overflow-y-auto">
+            <div className="px-4 py-3 border-b sticky top-0 bg-white">
+              <button
+                onClick={() => setSelectedPlantDetail(null)}
+                className="text-sm text-green-700 hover:text-green-900 font-medium"
+              >
+                ← Back to plants
+              </button>
+            </div>
+
+            <div className="px-4 py-3">
+              {loadingPlantDetail && (
+                <p className="text-sm text-gray-500">Loading plant details...</p>
+              )}
+
+              {!loadingPlantDetail && selectedPlantDetail && (
+                <>
+                  {selectedPlantDetail.default_image?.medium_url && (
+                    <img
+                      src={selectedPlantDetail.default_image.medium_url}
+                      alt={selectedPlantDetail.common_name}
+                      className="w-full h-48 object-cover rounded mb-4"
+                    />
+                  )}
+
+                  <h2 className="text-xl font-bold text-gray-800 mb-1">
+                    {selectedPlantDetail.common_name ||
+                      (Array.isArray(selectedPlantDetail.scientific_name)
+                        ? selectedPlantDetail.scientific_name[0]
+                        : selectedPlantDetail.scientific_name)}
+                  </h2>
+
+                  <p className="text-sm text-gray-600 mb-3">
+                    <span className="font-medium">Scientific:</span>{" "}
+                    {Array.isArray(selectedPlantDetail.scientific_name)
+                      ? selectedPlantDetail.scientific_name.join(", ")
+                      : selectedPlantDetail.scientific_name}
+                  </p>
+
+                  {selectedPlantDetail.description && (
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {selectedPlantDetail.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Plant Details Grid */}
+                  <div className="space-y-2 text-sm">
+                    {selectedPlantDetail.hardiness && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Hardiness Zone:</span>
+                        <span className="text-gray-600">
+                          {selectedPlantDetail.hardiness.min}
+                          {selectedPlantDetail.hardiness.max !== selectedPlantDetail.hardiness.min
+                            ? `-${selectedPlantDetail.hardiness.max}`
+                            : ""}
+                        </span>
+                      </div>
+                    )}
+
+                    {selectedPlantDetail.watering && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Watering:</span>
+                        <span className="text-gray-600">{selectedPlantDetail.watering}</span>
+                      </div>
+                    )}
+
+                    {selectedPlantDetail.sunlight && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Sunlight:</span>
+                        <span className="text-gray-600">
+                          {Array.isArray(selectedPlantDetail.sunlight)
+                            ? selectedPlantDetail.sunlight.join(", ")
+                            : selectedPlantDetail.sunlight}
+                        </span>
+                      </div>
+                    )}
+
+                    {selectedPlantDetail.cycle && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Cycle:</span>
+                        <span className="text-gray-600">{selectedPlantDetail.cycle}</span>
+                      </div>
+                    )}
+
+                    {selectedPlantDetail.care_level && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Care Level:</span>
+                        <span className="text-gray-600">{selectedPlantDetail.care_level}</span>
+                      </div>
+                    )}
+
+                    {selectedPlantDetail.growth_rate && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Growth Rate:</span>
+                        <span className="text-gray-600">{selectedPlantDetail.growth_rate}</span>
+                      </div>
+                    )}
+
+                    {selectedPlantDetail.flowers !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Flowers:</span>
+                        <span className="text-gray-600">
+                          {selectedPlantDetail.flowers ? "Yes" : "No"}
+                        </span>
+                      </div>
+                    )}
+
+                    {selectedPlantDetail.fruits !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Fruits:</span>
+                        <span className="text-gray-600">
+                          {selectedPlantDetail.fruits ? "Yes" : "No"}
+                        </span>
+                      </div>
+                    )}
+
+                    {selectedPlantDetail.poisonous_to_humans !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Poisonous to Humans:</span>
+                        <span className="text-gray-600">
+                          {selectedPlantDetail.poisonous_to_humans ? "Yes" : "No"}
+                        </span>
+                      </div>
+                    )}
+
+                    {selectedPlantDetail.poisonous_to_pets !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-700">Poisonous to Pets:</span>
+                        <span className="text-gray-600">
+                          {selectedPlantDetail.poisonous_to_pets ? "Yes" : "No"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

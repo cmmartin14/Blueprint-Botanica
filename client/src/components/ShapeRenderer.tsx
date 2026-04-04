@@ -4,6 +4,7 @@
 import React from "react";
 import { FaInfoCircle } from "react-icons/fa";
 import { Shape, Position } from "../types/shapes";
+import { checkBedCompatibility } from "./utils/plantCompatibility";
 
 type BedPath = {
   id: string;
@@ -825,6 +826,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const plantCount = bedPlants[shape.id]?.length ?? 0;
       const showCircleInfoButton = isSelected;
 
+      const plants = bedPlants[shape.id] ?? [];
+      const compatibility = checkBedCompatibility(plants);
+      const badgeColor = compatibility.isCompatible ? "#4a7c59" : "#dc2626";
+
       return (
         <div
           key={shape.id}
@@ -892,7 +897,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 left: `${centerX}px`,
                 top: `${centerY + radius + 8}px`,
                 transform: "translate(-50%, 0)",
-                backgroundColor: "#4a7c59",
+                backgroundColor: badgeColor,
                 color: "#fff",
                 fontSize: "11px",
                 fontWeight: 700,
@@ -1404,6 +1409,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           const box = bboxOf(bed.vertices);
           const plantCount = bedPlants[bed.id]?.length ?? 0;
 
+          const plants = bedPlants[bed.id] ?? [];
+          const compatibility = checkBedCompatibility(plants);
+          const badgeColor = compatibility.isCompatible ? "#4a7c59" : "#dc2626";
+
           const edgeLabels = bed.vertices.map((start, index) => {
             const end = bed.vertices[(index + 1) % bed.vertices.length];
 
@@ -1518,7 +1527,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                   >
                     <div
                       style={{
-                        backgroundColor: "#4a7c59",
+                        backgroundColor: badgeColor,
                         color: "#fff",
                         fontSize: "11px",
                         fontWeight: 700,
