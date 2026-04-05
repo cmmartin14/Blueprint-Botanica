@@ -42,11 +42,13 @@ export const useHarvestDates = (
   const shapes = useGardenStore((s) => s.shapes);
 
   const sunExposure = useMemo(() => {
-    const linkedBed = Object.values(beds).find((b) =>
-      b.shapeIds.includes(shapeId)
+    const bedById = beds[shapeId];
+    const linkedBed = Object.values(beds).find(
+      (b) => Array.isArray(b.shapeIds) && b.shapeIds.includes(shapeId)
     );
     const shape = shapes[shapeId];
     return (
+      bedById?.attributes?.sunExposure ??
       linkedBed?.attributes?.sunExposure ??
       shape?.attributes?.sunExposure ??
       undefined

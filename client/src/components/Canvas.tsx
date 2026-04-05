@@ -777,6 +777,22 @@ const Canvas = () => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!editMode) return;
 
+      // Skip canvas shortcuts when the user is typing in an input/textarea/
+      // contenteditable element — otherwise Backspace in the plant search box
+      // deletes the selected bed, and "D" toggles dimensions unexpectedly.
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+      }
+
       if (e.key === "Escape") {
         if (draft) cancelDraft();
         return;
