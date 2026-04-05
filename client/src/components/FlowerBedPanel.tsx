@@ -121,6 +121,8 @@ export default function FlowerBedPanel({
   const [isAttributesOpen, setIsAttributesOpen] = useState(true);
   const [attributes, setAttributes] = useState<GardenBedAttributes>(emptyAttributes);
 
+  const hardinessZone = useGardenStore((s) => s.hardinessZone);//Hardiness Zone
+
   useEffect(() => {
     if (bed?.name) {
       setBedName(bed.name);
@@ -172,7 +174,7 @@ export default function FlowerBedPanel({
 
       // Fetch full details for each result to get hardiness zones
       const withHardiness = await Promise.all(
-        filtered.slice(0, 8).map(async (plant) => {
+        filtered.slice(0, 8).map(async (plant: { id: any; }) => {
           try {
             const detailResp = await fetch(`/api/perenual?id=${plant.id}`);
             if (!detailResp.ok) return plant;
@@ -257,7 +259,20 @@ export default function FlowerBedPanel({
       e.stopPropagation();
     }
   };
+  const getZoneNumber = (zoneValue: string | number | undefined) => {
+    if (!zoneValue) return 0;
+    return parseInt(zoneValue.toString().replace(/[^\d]/g, ""), 10);
+  };
 
+  const isPlantCompatible = (plant: PlantEntry) => {
+    if (!hardinessZone || !plant.hardiness) return true;
+
+    const zoneNumber = getZoneNumber(hardinessZone);
+    const min = getZoneNumber(plant.hardiness.min);
+    const max = getZoneNumber(plant.hardiness.max);
+
+    return zoneNumber >= min && zoneNumber <= max;
+  };
   return (
     <div
       data-testid='bed-plant-window'
@@ -507,8 +522,14 @@ export default function FlowerBedPanel({
               <tbody>
                 {bedPlants.map((plant) => {
                   const info = harvestInfo[plant.id];
+                  const compatible = isPlantCompatible(plant);
                   return (
-                    <tr key={plant.id} className="border-b last:border-0 align-top">
+                    <tr
+                      key={plant.id}
+                      className={`border-b last:border-0 align-top ${
+                        !compatible ? "bg-red-50" : ""
+                      }`}
+                    >
                       <td className="py-1.5 pr-2">
                         <div className="flex items-center gap-2">
                           {plant.image_url && (
@@ -523,6 +544,11 @@ export default function FlowerBedPanel({
                                 ? plant.scientific_name[0]
                                 : plant.scientific_name}
                             </p>
+                            {!compatible && (
+                              <p className="text-[10px] text-red-500 mt-0.5">
+                                Not compatible with zone {hardinessZone}
+                              </p>
+                            )}
                           </div>
                         </div>
                         {info?.plantingWindow && (

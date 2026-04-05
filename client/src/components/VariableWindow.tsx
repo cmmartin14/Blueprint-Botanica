@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { FiMapPin, FiChevronLeft } from "react-icons/fi";
-import ZoneSelector from "./ZoneSelector";
 import { useGardenStore } from "../types/garden";
+import ZoneSelector from "./ZoneSelector";
 
 type VariableWindowProps = {
   isOpen: boolean;
@@ -14,6 +14,7 @@ const VariableWindow = ({ isOpen, onClose }: VariableWindowProps) => {
   const [showZoneSelector, setShowZoneSelector] = useState(false);
   const zone = useGardenStore((s) => s.zone);
   const setZone = useGardenStore((s) => s.setZone);
+  const setHardinessZone = useGardenStore((s) => s.setHardinessZone);
 
 if (!isOpen) return null;
 
@@ -64,7 +65,8 @@ if (!isOpen) return null;
             </button>
 
             <div className="mt-6 overflow-y-auto max-h-[360px]">
-              <ZoneSelector onZoneSelected={(z) => setZone(z)} />
+              
+<ZoneSelector onZoneSelected={(zone) => setHardinessZone(zone)} />
             </div>
           </div>
         )}
