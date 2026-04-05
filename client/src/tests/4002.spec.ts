@@ -6,7 +6,7 @@ test("calendar weather search and close", async ({ page }) => {
   const calendar = page.locator('[data-testid="calendar-window"]').first();
   
   // navbar calendar button 
-  await page.getByTestId("calendar-button").click();
+  await page.getByRole('button', { name: 'Calendar' }).click();
   
   // window appears
   await expect(calendar).toBeVisible({ timeout: 5000 });

@@ -8,7 +8,7 @@ test.describe('Canvas toolbar buttons', () => {
   test('calendar button functions', async ({ page }) => {
     // Use the calendar window inside the canvas
     const calendar = page.locator('[data-testid="calendar-window"]').first();
-    const openButton = page.getByTestId('calendar-button');
+    const openButton = page.getByRole('button', { name: 'Calendar' });
 
     // Open calendar
     await openButton.click();
@@ -20,7 +20,7 @@ test.describe('Canvas toolbar buttons', () => {
   });
 
   test('edit mode button functions', async ({ page }) => {
-    const editButton = page.getByTestId('edit-button');
+    const editButton = page.getByRole('button', { name: 'Edit Mode' });
     await editButton.click();
 
     const editToolbar = page.getByTestId('edit-window');
@@ -33,7 +33,7 @@ test.describe('Canvas toolbar buttons', () => {
 
   test("draw garden bed", async ({ page }) => {
   await page.goto("http://localhost:3000");
-  await page.getByTestId('edit-button').click();
+  await page.getByRole('button', { name: 'Edit Mode' }).click();
   
   // Enable draw tool
   await page.getByTitle(/Draw/).click();
@@ -66,11 +66,31 @@ test.describe('Canvas toolbar buttons', () => {
 
   //Click bed to edit
   await bed.click();
+  const bedInfoButton = page.getByRole('button', { name: 'Open bed details' });
+  await expect(bedInfoButton).toBeVisible({ timeout: 5000 });
+  await bedInfoButton.click();
 
   // Wait for bed plant window to appear
   const plantWindow = page.locator('[data-testid="bed-plant-window"]'); 
   await expect(plantWindow).toBeVisible({ timeout: 5000 });
-  
+
+  await plantWindow.getByRole('combobox').first().selectOption('Loam');
+  await plantWindow.getByRole('combobox').nth(1).selectOption('Full Sun');
+  await plantWindow.getByRole('combobox').nth(2).selectOption('Well-drained');
+  await plantWindow.getByRole('combobox').nth(3).selectOption('Average');
+
+  await plantWindow.getByRole('textbox', { name: 'ex. 12"' }).fill('12"');
+  await plantWindow.getByRole('textbox', { name: 'ex. 6.0-' }).fill('6.5-7.0');
+
+  await plantWindow.getByRole('textbox', { name: 'Add bed notes...' }).fill('Test notes for bed');
+
+  await expect(plantWindow.getByRole('combobox').first()).toHaveValue('Loam');
+  await expect(plantWindow.getByRole('combobox').nth(1)).toHaveValue('Full Sun');
+  await expect(plantWindow.getByRole('combobox').nth(2)).toHaveValue('Well-drained');
+  await expect(plantWindow.getByRole('combobox').nth(3)).toHaveValue('Average');
+  await expect(plantWindow.getByRole('textbox', { name: 'ex. 6.0-' })).toHaveValue('6.5-7.0');
+  await expect(plantWindow.getByRole('textbox', { name: 'Add bed notes...' })).toHaveValue('Test notes for bed');
+
   // Enter "rose" into search field
   const searchInput = plantWindow.getByRole('textbox', { name: 'Search plants to add...' });
   await searchInput.fill("rose");

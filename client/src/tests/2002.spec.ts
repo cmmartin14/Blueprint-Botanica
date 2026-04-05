@@ -4,7 +4,7 @@ test("search and select plant", async ({ page }) => {
   await page.goto("http://localhost:3000");
   
   // click navbar
-  await page.getByTestId("search-button").click();
+  await page.getByTitle('Search').click();
   
   // wait for window
   const window = page.locator("#search-window");
@@ -40,7 +40,7 @@ test("filter plants by watering and zone", async ({ page }) => {
   await page.goto("http://localhost:3000");
   
   // Open search
-  await page.getByTestId("search-button").click();
+  await page.getByTitle('Search').click();
   const window = page.locator("#search-window");
   await expect(window).toBeVisible();
   

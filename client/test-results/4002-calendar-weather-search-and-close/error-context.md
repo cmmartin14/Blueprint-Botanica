@@ -1,0 +1,326 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - banner:
+    - navigation [ref=e1]:
+      - generic [ref=e2]:
+        - link "Blueprint Botanica" [ref=e3] [cursor=pointer]:
+          - /url: /
+          - img [ref=e5]
+          - generic [ref=e7]:
+            - generic [ref=e8]: Blueprint
+            - generic [ref=e9]: Botanica
+        - generic [ref=e11]: Locating...
+      - generic [ref=e13]:
+        - button "Edit Mode" [ref=e14]:
+          - img [ref=e15]
+        - button "Plant Settings" [ref=e17]:
+          - img [ref=e18]
+        - button "Search" [ref=e22]:
+          - img [ref=e23]
+        - button "Calendar" [ref=e25]:
+          - img [ref=e26]
+        - button "Save" [ref=e29]:
+          - img [ref=e30]
+        - button "Saved Gardens" [ref=e32]:
+          - img [ref=e33]
+        - link [ref=e36] [cursor=pointer]:
+          - /url: /handler/sign-up
+          - button "Profile" [ref=e37]:
+            - img [ref=e38]
+        - button "Clementine" [ref=e40]:
+          - img [ref=e41]
+          - generic [ref=e45]: Clementine
+  - generic [ref=e46]:
+    - generic [ref=e47]:
+      - heading "Calendar" [level=2] [ref=e49]
+      - generic [ref=e50]:
+        - button "Close" [ref=e51]:
+          - img [ref=e52]
+        - button "Enter full screen" [ref=e55]:
+          - img [ref=e56]
+    - generic [ref=e58]:
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e61]: April 2026
+          - generic [ref=e62]:
+            - button "Previous month" [ref=e63]: ‹
+            - button "Today" [ref=e64]
+            - button "Next month" [ref=e65]: ›
+        - generic [ref=e66]:
+          - generic [ref=e67]: Sun
+          - generic [ref=e68]: Mon
+          - generic [ref=e69]: Tue
+          - generic [ref=e70]: Wed
+          - generic [ref=e71]: Thu
+          - generic [ref=e72]: Fri
+          - generic [ref=e73]: Sat
+        - generic [ref=e74]:
+          - button "29" [ref=e75]:
+            - generic [ref=e76]: "29"
+          - button "30" [ref=e77]:
+            - generic [ref=e78]: "30"
+          - button "31" [ref=e79]:
+            - generic [ref=e80]: "31"
+          - button "1" [ref=e81]:
+            - generic [ref=e82]: "1"
+          - button "2" [ref=e83]:
+            - generic [ref=e84]: "2"
+          - button "3" [ref=e85]:
+            - generic [ref=e86]: "3"
+          - button "4" [ref=e87]:
+            - generic [ref=e88]: "4"
+          - button "5" [ref=e90]:
+            - generic [ref=e91]: "5"
+          - button "6" [ref=e92]:
+            - generic [ref=e93]: "6"
+          - button "7" [ref=e94]:
+            - generic [ref=e95]: "7"
+          - button "8" [ref=e96]:
+            - generic [ref=e97]: "8"
+          - button "9" [ref=e98]:
+            - generic [ref=e99]: "9"
+          - button "10" [ref=e100]:
+            - generic [ref=e101]: "10"
+          - button "11" [ref=e102]:
+            - generic [ref=e103]: "11"
+          - button "12" [ref=e104]:
+            - generic [ref=e105]: "12"
+          - button "13" [ref=e106]:
+            - generic [ref=e107]: "13"
+          - button "14" [ref=e108]:
+            - generic [ref=e109]: "14"
+          - button "15" [ref=e110]:
+            - generic [ref=e111]: "15"
+          - button "16" [ref=e112]:
+            - generic [ref=e113]: "16"
+          - button "17" [ref=e114]:
+            - generic [ref=e115]: "17"
+          - button "18" [ref=e116]:
+            - generic [ref=e117]: "18"
+          - button "19" [ref=e118]:
+            - generic [ref=e119]: "19"
+          - button "20" [ref=e120]:
+            - generic [ref=e121]: "20"
+          - button "21" [ref=e122]:
+            - generic [ref=e123]: "21"
+          - button "22" [ref=e124]:
+            - generic [ref=e125]: "22"
+          - button "23" [ref=e126]:
+            - generic [ref=e127]: "23"
+          - button "24" [ref=e128]:
+            - generic [ref=e129]: "24"
+          - button "25" [ref=e130]:
+            - generic [ref=e131]: "25"
+          - button "26" [ref=e132]:
+            - generic [ref=e133]: "26"
+          - button "27" [ref=e134]:
+            - generic [ref=e135]: "27"
+          - button "28" [ref=e136]:
+            - generic [ref=e137]: "28"
+          - button "29" [ref=e138]:
+            - generic [ref=e139]: "29"
+          - button "30" [ref=e140]:
+            - generic [ref=e141]: "30"
+          - button "1" [ref=e142]:
+            - generic [ref=e143]: "1"
+          - button "2" [ref=e144]:
+            - generic [ref=e145]: "2"
+          - button "3" [ref=e146]:
+            - generic [ref=e147]: "3"
+          - button "4" [ref=e148]:
+            - generic [ref=e149]: "4"
+          - button "5" [ref=e150]:
+            - generic [ref=e151]: "5"
+          - button "6" [ref=e152]:
+            - generic [ref=e153]: "6"
+          - button "7" [ref=e154]:
+            - generic [ref=e155]: "7"
+          - button "8" [ref=e156]:
+            - generic [ref=e157]: "8"
+          - button "9" [ref=e158]:
+            - generic [ref=e159]: "9"
+      - generic [ref=e160]:
+        - generic [ref=e161]:
+          - heading "Weather" [level=3] [ref=e162]:
+            - img [ref=e163]
+            - text: Weather
+          - generic [ref=e165]:
+            - textbox "Search city (e.g., Denton, US)" [ref=e166]: dallas
+            - button "Search" [ref=e167]
+          - button "Use my exact location" [active] [ref=e168]
+          - paragraph [ref=e169]: Loading weather data…
+        - generic [ref=e170]:
+          - generic [ref=e171]:
+            - heading "Notes & Reminders" [level=3] [ref=e172]:
+              - img [ref=e173]
+              - text: Notes & Reminders
+            - generic [ref=e175]: All dates
+          - generic [ref=e176]:
+            - textbox "Jot down a reminder or observation..." [ref=e177]
+            - generic [ref=e178]:
+              - textbox [ref=e179]
+              - button "Save" [disabled] [ref=e180]
+            - textbox "Send reminder to specific email (optional)" [ref=e181]
+          - generic [ref=e182]:
+            - generic [ref=e183]: Default Alert Email
+            - textbox "you@example.com" [ref=e184]
+          - generic [ref=e186]: No notes yet.
+        - generic [ref=e187]:
+          - heading "Active Alerts" [level=3] [ref=e188]:
+            - img [ref=e189]
+            - text: Active Alerts
+          - generic [ref=e192]: All caught up!
+  - generic [ref=e193]:
+    - generic:
+      - generic:
+        - generic:
+          - heading "Calendar" [level=2]
+        - generic:
+          - button "Close":
+            - img
+          - button "Enter full screen":
+            - img
+      - generic:
+        - generic:
+          - generic:
+            - generic: April 2026
+            - generic:
+              - button "Previous month": ‹
+              - button "Today"
+              - button "Next month": ›
+          - generic:
+            - generic: Sun
+            - generic: Mon
+            - generic: Tue
+            - generic: Wed
+            - generic: Thu
+            - generic: Fri
+            - generic: Sat
+          - generic:
+            - button "29":
+              - generic: "29"
+            - button "30":
+              - generic: "30"
+            - button "31":
+              - generic: "31"
+            - button "1":
+              - generic: "1"
+            - button "2":
+              - generic: "2"
+            - button "3":
+              - generic: "3"
+            - button "4":
+              - generic: "4"
+            - button "5":
+              - generic: "5"
+            - button "6":
+              - generic: "6"
+            - button "7":
+              - generic: "7"
+            - button "8":
+              - generic: "8"
+            - button "9":
+              - generic: "9"
+            - button "10":
+              - generic: "10"
+            - button "11":
+              - generic: "11"
+            - button "12":
+              - generic: "12"
+            - button "13":
+              - generic: "13"
+            - button "14":
+              - generic: "14"
+            - button "15":
+              - generic: "15"
+            - button "16":
+              - generic: "16"
+            - button "17":
+              - generic: "17"
+            - button "18":
+              - generic: "18"
+            - button "19":
+              - generic: "19"
+            - button "20":
+              - generic: "20"
+            - button "21":
+              - generic: "21"
+            - button "22":
+              - generic: "22"
+            - button "23":
+              - generic: "23"
+            - button "24":
+              - generic: "24"
+            - button "25":
+              - generic: "25"
+            - button "26":
+              - generic: "26"
+            - button "27":
+              - generic: "27"
+            - button "28":
+              - generic: "28"
+            - button "29":
+              - generic: "29"
+            - button "30":
+              - generic: "30"
+            - button "1":
+              - generic: "1"
+            - button "2":
+              - generic: "2"
+            - button "3":
+              - generic: "3"
+            - button "4":
+              - generic: "4"
+            - button "5":
+              - generic: "5"
+            - button "6":
+              - generic: "6"
+            - button "7":
+              - generic: "7"
+            - button "8":
+              - generic: "8"
+            - button "9":
+              - generic: "9"
+        - generic:
+          - generic:
+            - heading "Weather" [level=3]:
+              - img
+              - text: Weather
+            - generic:
+              - textbox "Search city (e.g., Denton, US)"
+              - button "Search"
+            - button "Use my exact location"
+          - generic:
+            - generic:
+              - heading "Notes & Reminders" [level=3]:
+                - img
+                - text: Notes & Reminders
+              - generic: All dates
+            - generic:
+              - textbox "Jot down a reminder or observation..."
+              - generic:
+                - textbox
+                - button "Save" [disabled]
+              - textbox "Send reminder to specific email (optional)"
+            - generic:
+              - generic: Default Alert Email
+              - textbox "you@example.com"
+            - generic:
+              - generic: No notes yet.
+          - generic:
+            - heading "Active Alerts" [level=3]:
+              - img
+              - text: Active Alerts
+            - generic:
+              - generic: All caught up!
+    - generic [ref=e195]:
+      - generic:
+        - img
+    - button "Open map key" [ref=e196]:
+      - img [ref=e197]
+  - button "Open Next.js Dev Tools" [ref=e204] [cursor=pointer]:
+    - img [ref=e205]
+  - alert [ref=e208]
+```
