@@ -323,6 +323,7 @@ const Canvas = () => {
   const editMode = useGardenStore((state) => state.editMode);
   const setEditMode = useGardenStore((state) => state.setEditMode);
   const bedPlants = useGardenStore((state) => state.bedPlants);
+  const gardenZone = useGardenStore((state) => state.zone);
 
   const gardenBedEntries = useMemo<GardenBedListEntry[]>(() => {
     const bedLikeShapes = shapes
@@ -776,6 +777,22 @@ const Canvas = () => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!editMode) return;
 
+      // Skip canvas shortcuts when the user is typing in an input/textarea/
+      // contenteditable element — otherwise Backspace in the plant search box
+      // deletes the selected bed, and "D" toggles dimensions unexpectedly.
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+      }
+
       if (e.key === "Escape") {
         if (draft) cancelDraft();
         return;
@@ -1191,6 +1208,7 @@ const Canvas = () => {
           bedLabel={gardenBedEntries.find((bed) => bed.id === bedPanelShapeId)?.label}
           isLocked={isBedPanelLocked}
           topOffset={isMapKeyOpen ? 210 : 70}
+          zone={gardenZone}
           onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
           onClose={() => {
             setBedPanelShapeId(null);

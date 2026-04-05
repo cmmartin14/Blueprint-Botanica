@@ -8,6 +8,8 @@ export interface CalendarEvent {
   time?: string; // HH:mm
   details?: string;
   source: "user" | "assistant";
+  /** Stable identifier for auto-generated events (e.g. "harvest:<shapeId>:<plantId>"). */
+  sourceRef?: string;
   createdAt: string;
 }
 
@@ -19,6 +21,8 @@ export interface CalendarNote {
   reminderEmail?: string;
   reminderSentAt?: string; // ISO timestamp
   source: "user" | "assistant";
+  /** Stable identifier for auto-generated notes (e.g. "harvest:<shapeId>:<plantId>"). */
+  sourceRef?: string;
   createdAt: string;
 }
 
@@ -59,8 +63,10 @@ interface CalendarStoreState {
   notificationEmail: string;
   addEvent: (event: AddEventInput) => CalendarEvent | null;
   removeEvent: (id: string) => void;
+  removeEventsByRefPrefix: (prefix: string) => void;
   addNote: (note: AddNoteInput) => CalendarNote | null;
   removeNote: (id: string) => void;
+  removeNotesByRefPrefix: (prefix: string) => void;
   markReminderSent: (noteId: string) => void;
   addAlert: (message: string, noteId?: string) => void;
   dismissAlert: (alertId: string) => void;
@@ -104,6 +110,7 @@ const createEventFromInput = (input: AddEventInput): CalendarEvent | null => {
     time: normalizeTime(input.time),
     details: input.details?.trim() || undefined,
     source: input.source,
+    sourceRef: input.sourceRef?.trim() || undefined,
     createdAt: new Date().toISOString(),
   };
 };
@@ -120,6 +127,7 @@ const createNoteFromInput = (input: AddNoteInput): CalendarNote | null => {
     reminderEmail: input.reminderEmail?.trim() || undefined,
     reminderSentAt: input.reminderSentAt,
     source: input.source,
+    sourceRef: input.sourceRef?.trim() || undefined,
     createdAt: new Date().toISOString(),
   };
 };
@@ -134,22 +142,46 @@ export const useCalendarStore = create<CalendarStoreState>()(
       addEvent: (event) => {
         const created = createEventFromInput(event);
         if (!created) return null;
-        set((state) => ({ events: [created, ...state.events] }));
+        set((state) => {
+          // De-dupe on sourceRef: replace any existing event with the same ref.
+          const existing = created.sourceRef
+            ? state.events.filter((e) => e.sourceRef !== created.sourceRef)
+            : state.events;
+          return { events: [created, ...existing] };
+        });
         return created;
       },
       removeEvent: (id) =>
         set((state) => ({
           events: state.events.filter((event) => event.id !== id),
         })),
+      removeEventsByRefPrefix: (prefix) =>
+        set((state) => ({
+          events: state.events.filter(
+            (event) => !event.sourceRef || !event.sourceRef.startsWith(prefix)
+          ),
+        })),
       addNote: (note) => {
         const created = createNoteFromInput(note);
         if (!created) return null;
-        set((state) => ({ notes: [created, ...state.notes] }));
+        set((state) => {
+          // De-dupe on sourceRef: replace any existing note with the same ref.
+          const existing = created.sourceRef
+            ? state.notes.filter((n) => n.sourceRef !== created.sourceRef)
+            : state.notes;
+          return { notes: [created, ...existing] };
+        });
         return created;
       },
       removeNote: (id) =>
         set((state) => ({
           notes: state.notes.filter((note) => note.id !== id),
+        })),
+      removeNotesByRefPrefix: (prefix) =>
+        set((state) => ({
+          notes: state.notes.filter(
+            (note) => !note.sourceRef || !note.sourceRef.startsWith(prefix)
+          ),
         })),
       markReminderSent: (noteId) =>
         set((state) => ({
