@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { TbCircleXFilled } from "react-icons/tb";
 import { FaLock, FaLockOpen } from "react-icons/fa";
 import { PlantEntry, useGardenStore } from "../types/garden";
+import { useHarvestDates } from "./hooks/useHarvestDates";
+import { useCalendarStore } from "../stores/calendarStore";
 
 interface SearchResult {
   id: number;
@@ -22,6 +24,7 @@ interface FlowerBedPanelProps {
   bedLabel?: string;
   isLocked: boolean;
   topOffset?: number;
+  zone?: string | null;
   onToggleLock: () => void;
   onClose: () => void;
 }
@@ -51,12 +54,54 @@ export default function FlowerBedPanel({
   bedLabel,
   isLocked,
   topOffset = 96,
+  zone,
   onToggleLock,
   onClose,
 }: FlowerBedPanelProps) {
   const bedPlants = useGardenStore((s) => s.bedPlants[shapeId]) ?? [];
   const addPlantToBed = useGardenStore((s) => s.addPlantToBed);
   const removePlantFromBed = useGardenStore((s) => s.removePlantFromBed);
+  const updatePlantInBed = useGardenStore((s) => s.updatePlantInBed);
+  const harvestInfo = useHarvestDates(shapeId, zone);
+  const addCalendarNote = useCalendarStore((s) => s.addNote);
+  const removeNotesByRefPrefix = useCalendarStore(
+    (s) => s.removeNotesByRefPrefix
+  );
+  const [scheduleStatus, setScheduleStatus] = useState<string | null>(null);
+
+  const scheduledCount = bedPlants.filter(
+    (p) => p.plantedAt && harvestInfo[p.id]?.estimatedHarvest
+  ).length;
+
+  const handleScheduleHarvests = () => {
+    // Clear existing auto-scheduled notes for this bed first, then re-add
+    // fresh ones based on current plantedAt + maturity data.
+    removeNotesByRefPrefix(`harvest:${shapeId}:`);
+
+    let added = 0;
+    for (const plant of bedPlants) {
+      const info = harvestInfo[plant.id];
+      if (!plant.plantedAt || !info?.estimatedHarvest) continue;
+
+      const plantName = plant.common_name ?? "plant";
+      const bedDisplayName = bedName || "garden bed";
+
+      const created = addCalendarNote({
+        source: "assistant",
+        content: `Harvest ${plantName} (${bedDisplayName}) — planted ${plant.plantedAt}.${
+          info.warning ? ` ${info.warning}` : ""
+        }`,
+        date: info.estimatedHarvest,
+        sourceRef: `harvest:${shapeId}:${plant.id}`,
+      });
+      if (created) added++;
+    }
+
+    setScheduleStatus(
+      added > 0 ? `Scheduled ${added} harvest${added === 1 ? "" : "s"}` : "Nothing to schedule"
+    );
+    setTimeout(() => setScheduleStatus(null), 2500);
+  };
 
   // Get bed or shape to display name
   const beds = useGardenStore((s) => s.beds);
@@ -214,10 +259,11 @@ export default function FlowerBedPanel({
       e.stopPropagation();
     }
   };
-  const getZoneNumber = (zone: string | number | undefined) => {
-  if (!zone) return 0;
-  return parseInt(zone.toString().replace(/[^\d]/g, ""));
+  const getZoneNumber = (zoneValue: string | number | undefined) => {
+    if (!zoneValue) return 0;
+    return parseInt(zoneValue.toString().replace(/[^\d]/g, ""), 10);
   };
+
   const isPlantCompatible = (plant: PlantEntry) => {
     if (!hardinessZone || !plant.hardiness) return true;
 
@@ -225,14 +271,8 @@ export default function FlowerBedPanel({
     const min = getZoneNumber(plant.hardiness.min);
     const max = getZoneNumber(plant.hardiness.max);
 
-  
-    console.log(zoneNumber)
-    console.log(plant.hardiness.min)
-    console.log(plant.hardiness.max)
     return zoneNumber >= min && zoneNumber <= max;
-
-  return zoneNumber >= min && zoneNumber <= max;
-};
+  };
   return (
     <div
       data-testid='bed-plant-window'
@@ -449,6 +489,24 @@ export default function FlowerBedPanel({
 
         {/* Plant table */}
         <div className="px-4 py-2">
+          {bedPlants.length > 0 && (
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-gray-400">
+                {scheduledCount > 0
+                  ? `${scheduledCount} plant${scheduledCount === 1 ? "" : "s"} ready to schedule`
+                  : "Set planting dates to enable scheduling"}
+              </span>
+              <button
+                type="button"
+                onClick={handleScheduleHarvests}
+                disabled={scheduledCount === 0}
+                className="text-[11px] font-medium text-green-700 hover:text-green-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+                title="Post harvest dates to the calendar"
+              >
+                {scheduleStatus ?? "Schedule harvests →"}
+              </button>
+            </div>
+          )}
           {bedPlants.length === 0 ? (
             <p className="text-xs text-gray-400 py-2">No plants added yet. Search below to add one.</p>
           ) : (
@@ -456,50 +514,89 @@ export default function FlowerBedPanel({
               <thead className="sticky top-0 bg-white z-10">
                 <tr className="text-left text-xs text-gray-500 border-b">
                   <th className="pb-1 font-medium">Plant</th>
-                  <th className="pb-1 font-medium">Scientific</th>
+                  <th className="pb-1 font-medium">Planted</th>
+                  <th className="pb-1 font-medium">Harvest</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {bedPlants.map((plant) => (
-                  <tr
-                    key={plant.id}
-                    className={`border-b last:border-0 ${
-                    !isPlantCompatible(plant) ? "bg-red-50" : ""
-                  }`}
-                 >
-                    <td className="py-1.5 flex items-center gap-2">
-                      {plant.image_url && (
-                        <img src={plant.image_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                      )}
-                      <div className="leading-tight">
-                        <span className="font-medium text-gray-800">
-                          {plant.common_name ?? "—"}
-                         </span>
-
-                        {!isPlantCompatible(plant) && (
-                          <div className="text-red-500 text-xs">
-                            Not compatible with zone {hardinessZone}
+                {bedPlants.map((plant) => {
+                  const info = harvestInfo[plant.id];
+                  const compatible = isPlantCompatible(plant);
+                  return (
+                    <tr
+                      key={plant.id}
+                      className={`border-b last:border-0 align-top ${
+                        !compatible ? "bg-red-50" : ""
+                      }`}
+                    >
+                      <td className="py-1.5 pr-2">
+                        <div className="flex items-center gap-2">
+                          {plant.image_url && (
+                            <img src={plant.image_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                          )}
+                          <div className="leading-tight">
+                            <p className="font-medium text-gray-800">
+                              {plant.common_name ?? "—"}
+                            </p>
+                            <p className="text-[10px] text-gray-400 italic">
+                              {Array.isArray(plant.scientific_name)
+                                ? plant.scientific_name[0]
+                                : plant.scientific_name}
+                            </p>
+                            {!compatible && (
+                              <p className="text-[10px] text-red-500 mt-0.5">
+                                Not compatible with zone {hardinessZone}
+                              </p>
+                            )}
                           </div>
+                        </div>
+                        {info?.plantingWindow && (
+                          <p className="text-[10px] text-gray-500 mt-0.5">
+                            Plant: {info.plantingWindow.earliest} → {info.plantingWindow.latest}
+                          </p>
                         )}
-                      </div>
-                    </td>
-                    <td className="py-1.5 text-gray-500 text-xs pr-2">
-                      {Array.isArray(plant.scientific_name)
-                        ? plant.scientific_name[0]
-                        : plant.scientific_name}
-                    </td>
-                    <td className="py-1.5">
-                      <button
-                        onClick={() => removePlantFromBed(shapeId, plant.id)}
-                        className="text-red-400 hover:text-red-600 text-xs font-bold"
-                        title="Remove"
-                      >
-                        ✕
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        <input
+                          type="date"
+                          value={plant.plantedAt ?? ""}
+                          onChange={(e) =>
+                            updatePlantInBed(shapeId, plant.id, {
+                              plantedAt: e.target.value || undefined,
+                            })
+                          }
+                          className="border border-gray-300 rounded px-1.5 py-1 text-xs text-black focus:outline-none focus:ring-1 focus:ring-green-600 w-[110px]"
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        {info?.estimatedHarvest ? (
+                          <div className="leading-tight">
+                            <p className="text-xs text-gray-800">{info.estimatedHarvest}</p>
+                            {info.warning && (
+                              <p className="text-[10px] text-amber-600 mt-0.5" title={info.warning}>
+                                ⚠ frost risk
+                              </p>
+                            )}
+                          </div>
+                        ) : info?.unknown ? (
+                          <span className="text-[10px] text-gray-400">No data</span>
+                        ) : (
+                          <span className="text-[10px] text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="py-1.5">
+                        <button
+                          onClick={() => removePlantFromBed(shapeId, plant.id)}
+                          className="text-red-400 hover:text-red-600 text-xs font-bold"
+                          title="Remove"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}

@@ -12,6 +12,8 @@ type VariableWindowProps = {
 
 const VariableWindow = ({ isOpen, onClose }: VariableWindowProps) => {
   const [showZoneSelector, setShowZoneSelector] = useState(false);
+  const zone = useGardenStore((s) => s.zone);
+  const setZone = useGardenStore((s) => s.setZone);
   const setHardinessZone = useGardenStore((s) => s.setHardinessZone);
 
 if (!isOpen) return null;
@@ -44,7 +46,9 @@ if (!isOpen) return null;
                          shadow-sm hover:shadow-md"
             >
               <FiMapPin size={36} className="mb-1" />
-              <span className="text-sm font-medium">Set Zone</span>
+              <span className="text-sm font-medium">
+                {zone ? `Zone ${zone}` : "Set Zone"}
+              </span>
             </button>
           </div>
         ) : (

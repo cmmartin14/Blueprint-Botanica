@@ -29,12 +29,17 @@ export interface PlantEntry {
     min?: string;
     max?: string;
   };
+  // Harvest scheduling (optional, per-plant-in-bed)
+  plantedAt?: string; // YYYY-MM-DD
+  daysToMaturity?: number;
+  startMethod?: "direct-sow" | "transplant" | "indoor-start";
 }
 
 export interface GardenState {
   id: string;
   name: string;
   editMode: boolean;
+  zone?: string | null;
   shapes: Record<string, Shape>;
   beds: Record<string, Bed>;
   // keyed by circle shape ID
@@ -47,6 +52,7 @@ type GardenActions = {
   // Canvas meta
   setName: (name: string) => void;
   setEditMode: (value: boolean) => void;
+  setZone: (zone: string | null) => void;
 
   // Shapes
   addShape: (shape: Shape) => void;
@@ -64,6 +70,11 @@ type GardenActions = {
   // Bed plants
   addPlantToBed: (shapeId: string, plant: PlantEntry) => void;
   removePlantFromBed: (shapeId: string, plantId: number) => void;
+  updatePlantInBed: (
+    shapeId: string,
+    plantId: number,
+    patch: Partial<PlantEntry>
+  ) => void;
 
   // Persistence
   loadGarden: (state: GardenState) => void;
@@ -77,6 +88,7 @@ const defaultState: GardenState = {
   id: '',
   name: 'My Garden',
   editMode: false,
+  zone: null,
   shapes: {},
   beds: {},
   bedPlants: {},
@@ -88,6 +100,7 @@ export const useGardenStore = create<GardenState & GardenActions>((set) => ({
 
   setName: (name) => set({ name }),
   setEditMode: (editMode) => set({ editMode }),
+  setZone: (zone) => set({ zone }),
 
   addShape: (shape) =>
     set((state) => ({ shapes: { ...state.shapes, [shape.id]: shape } })),
@@ -177,6 +190,19 @@ export const useGardenStore = create<GardenState & GardenActions>((set) => ({
     set((state) => {
       const existing = state.bedPlants[shapeId] ?? [];
       return { bedPlants: { ...state.bedPlants, [shapeId]: existing.filter((p) => p.id !== plantId) } };
+    }),
+
+  updatePlantInBed: (shapeId, plantId, patch) =>
+    set((state) => {
+      const existing = state.bedPlants[shapeId] ?? [];
+      return {
+        bedPlants: {
+          ...state.bedPlants,
+          [shapeId]: existing.map((p) =>
+            p.id === plantId ? { ...p, ...patch } : p
+          ),
+        },
+      };
     }),
 
   loadGarden: (state) => set(state),

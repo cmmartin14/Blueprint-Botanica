@@ -6,6 +6,14 @@ import {
 } from "@google/generative-ai";
 import type { Content, Part } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import { lookupPlantMaturity } from "../../../mocks/plantMaturity";
+import {
+  calculateHarvestDate,
+  estimateHarvestWindow,
+  estimatePlantingWindow,
+  getZoneFrostDates,
+  validateHarvestBeforeFrost,
+} from "../../../components/utils/harvestCalc";
 
 type Role = "user" | "assistant";
 
@@ -65,6 +73,7 @@ const TOOL_NAMES = {
   GET_PLANT_DETAILS: "get_plant_details",
   ADD_CALENDAR_EVENT: "add_calendar_event",
   ADD_CALENDAR_NOTE: "add_calendar_note",
+  CALCULATE_HARVEST_DATE: "calculate_harvest_date",
 } as const;
 
 const MAX_CHAT_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -473,6 +482,73 @@ const runGardenTool = async (
     };
   }
 
+  if (functionCall.name === TOOL_NAMES.CALCULATE_HARVEST_DATE) {
+    const plantName = parseStringArg(args, "plantName");
+    const plantingDate = parseYmdArg(args, "plantingDate");
+    const zone = parseStringArg(args, "zone");
+    const daysToMaturityOverride = parseNumberArg(args, "daysToMaturityOverride");
+
+    if (!plantName) return { ok: false, error: "plantName is required." };
+    if (!plantingDate) {
+      return {
+        ok: false,
+        error: "plantingDate is required in YYYY-MM-DD format.",
+      };
+    }
+
+    const maturity = lookupPlantMaturity(undefined, plantName);
+    const daysToMaturity = daysToMaturityOverride ?? maturity?.daysToMaturity;
+
+    if (!daysToMaturity) {
+      return {
+        ok: false,
+        error: `No maturity data for '${plantName}'. Ask the user for days-to-maturity of their variety.`,
+      };
+    }
+
+    const harvestDate = calculateHarvestDate(plantingDate, daysToMaturity);
+    if (!harvestDate) {
+      return { ok: false, error: "Could not compute harvest date from inputs." };
+    }
+
+    const harvestWindow = estimateHarvestWindow(
+      plantingDate,
+      daysToMaturity,
+      maturity?.harvestWindow ?? 14
+    );
+
+    const result: Record<string, unknown> = {
+      ok: true,
+      plantName,
+      plantingDate,
+      daysToMaturity,
+      startMethod: maturity?.startMethod ?? null,
+      estimatedHarvest: harvestDate,
+      harvestWindow: harvestWindow ?? null,
+      source: daysToMaturityOverride ? "user-override" : "lookup-table",
+    };
+
+    if (zone) {
+      const frost = getZoneFrostDates(zone);
+      if (frost) {
+        const warning = validateHarvestBeforeFrost(harvestDate, frost.firstFrost);
+        result.zone = zone;
+        result.zoneFrost = frost;
+        if (warning) result.frostWarning = warning;
+        if (maturity?.startMethod) {
+          const plantingWindow = estimatePlantingWindow(
+            frost,
+            maturity.startMethod,
+            daysToMaturity
+          );
+          if (plantingWindow) result.plantingWindow = plantingWindow;
+        }
+      }
+    }
+
+    return result;
+  }
+
   if (functionCall.name === TOOL_NAMES.ADD_CALENDAR_EVENT) {
     const title = parseStringArg(args, "title");
     const date = parseYmdArg(args, "date");
@@ -664,6 +740,35 @@ export async function POST(request: Request) {
               },
             },
             {
+              name: TOOL_NAMES.CALCULATE_HARVEST_DATE,
+              description:
+                "Estimate a harvest date for a crop given its planting date. Uses an internal days-to-maturity lookup and (if zone is provided) checks that harvest lands safely before first frost.",
+              parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  plantName: {
+                    type: SchemaType.STRING,
+                    description: "Common name of the plant, e.g. 'tomato' or 'kale'.",
+                  },
+                  plantingDate: {
+                    type: SchemaType.STRING,
+                    description: "Planting date in YYYY-MM-DD format.",
+                  },
+                  zone: {
+                    type: SchemaType.STRING,
+                    description:
+                      "Optional USDA hardiness zone (e.g. '6a'). If provided, frost-risk is checked.",
+                  },
+                  daysToMaturityOverride: {
+                    type: SchemaType.NUMBER,
+                    description:
+                      "Optional override if user knows the days-to-maturity for their specific variety.",
+                  },
+                },
+                required: ["plantName", "plantingDate"],
+              },
+            },
+            {
               name: TOOL_NAMES.ADD_CALENDAR_EVENT,
               description:
                 "Queue creation of a calendar event for the user. Use for scheduling events/tasks, not reminder requests.",
@@ -726,6 +831,7 @@ export async function POST(request: Request) {
 Help users plan gardens, select plants, troubleshoot issues, and make climate-aware recommendations.
 Users may attach garden or plant photos; when an image is present, use visible details from it and be explicit about uncertainty.
 Use tools for weather, hardiness zone, and plant data when factual lookup is needed.
+For "when will X be ready?", "when do I harvest?", or "will X mature before frost?" questions, call calculate_harvest_date.
 When users ask to add events or notes/reminders to calendar, call the calendar tools.
 Use add_calendar_note for reminder requests ("remind me..."), and add_calendar_event for schedule-only events.
 Interpret relative time words like "tomorrow" using the provided current timestamp and timezone context.

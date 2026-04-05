@@ -848,7 +848,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
               filter: glow,
-              borderStyle: "solid",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onMouseEnter={() =>
@@ -1087,7 +1086,6 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
               filter: glow,
-              borderStyle: "solid",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onClick={stop}
