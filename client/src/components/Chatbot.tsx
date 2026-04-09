@@ -13,6 +13,11 @@ import {
 } from "react-icons/lu";
 import { useCalendarStore } from "../stores/calendarStore";
 import type { CalendarAssistantAction } from "../stores/calendarStore";
+import {
+  CHATBOT_POPUP_DURATION_MS,
+  CHATBOT_POPUP_EASE,
+  CHATBOT_POPUP_EXIT_EASE,
+} from "../lib/motion";
 
 interface ChatImageAttachment {
   mimeType: string;
@@ -59,7 +64,6 @@ interface ChatApiResponse {
 
 type ChatView = "chat" | "history";
 
-const CHATBOT_POPUP_DURATION_MS = 500;
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const DEFAULT_CHAT_TITLE = "New chat";
 const DEFAULT_ASSISTANT_MESSAGE =
@@ -520,8 +524,8 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
         style={{
           transitionDuration: `${CHATBOT_POPUP_DURATION_MS}ms`,
           transitionTimingFunction: isVisible
-            ? "cubic-bezier(0.34, 1.56, 0.64, 1)"
-            : "cubic-bezier(0.4, 0, 1, 1)",
+            ? CHATBOT_POPUP_EASE
+            : CHATBOT_POPUP_EXIT_EASE,
         }}
       >
         <div
@@ -549,7 +553,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
             </div>
             <button
               onClick={onClose}
-              className="rounded-full p-2.5 text-[#F28C28] transition-all duration-200 hover:bg-orange-50 hover:shadow-sm hover:text-[#d97a21] focus:outline-none focus:ring-2 focus:ring-[#F28C28]/40"
+              className="chatbot-pop-trigger rounded-full p-2.5 text-[#F28C28] hover:bg-orange-50 hover:shadow-sm hover:text-[#d97a21] focus:outline-none focus:ring-2 focus:ring-[#F28C28]/40 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
               aria-label="Close chatbot"
             >
               <LuX size={18} strokeWidth={3} />
@@ -561,30 +565,30 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
               <button
                 type="button"
                 onClick={() => setChatView("chat")}
-                className={`group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                className={`chatbot-pop-trigger group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.03)] ${
                   chatView === "chat"
                     ? "bg-[#F28C28] text-white shadow-sm"
-                    : "text-green-900 hover:bg-[#f4faf2] hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgba(34,84,61,0.12)]"
+                    : "text-green-900 hover:bg-[#f4faf2] hover:shadow-[0_8px_18px_rgba(34,84,61,0.12)]"
                 }`}
               >
                 <LuMessageSquare
                   size={16}
-                  className="transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
+                  className="transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:-rotate-6"
                 />
                 <span>Chat</span>
               </button>
               <button
                 type="button"
                 onClick={() => setChatView("history")}
-                className={`group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                className={`chatbot-pop-trigger group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.03)] ${
                   chatView === "history"
                     ? "bg-[#F28C28] text-white shadow-sm"
-                    : "text-green-900 hover:bg-[#f4faf2] hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgba(34,84,61,0.12)]"
+                    : "text-green-900 hover:bg-[#f4faf2] hover:shadow-[0_8px_18px_rgba(34,84,61,0.12)]"
                 }`}
               >
                 <LuHistory
                   size={16}
-                  className="transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6"
+                  className="transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:rotate-6"
                 />
                 <span>History</span>
               </button>
@@ -594,7 +598,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
               type="button"
               onClick={handleStartNewChat}
               disabled={isLoading}
-              className="ml-auto inline-flex items-center gap-2 rounded-full border border-[#dce9d8] bg-white/80 px-3 py-2 text-sm font-medium text-green-900 shadow-sm transition-all hover:border-[#F28C28]/40 hover:text-[#F28C28] disabled:cursor-not-allowed disabled:opacity-50"
+              className="chatbot-pop-trigger ml-auto inline-flex items-center gap-2 rounded-full border border-[#dce9d8] bg-white/80 px-3 py-2 text-sm font-medium text-green-900 shadow-sm hover:border-[#F28C28]/40 hover:text-[#F28C28] disabled:cursor-not-allowed disabled:opacity-50 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.02)]"
             >
               <LuPlus size={16} />
               <span>New chat</span>
@@ -657,7 +661,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
                       type="button"
                       onClick={() => handleDeleteChat(chat.id)}
                       disabled={isBusy}
-                      className="rounded-full p-2 text-green-800/65 transition-all hover:bg-white hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="chatbot-pop-trigger rounded-full p-2 text-green-800/65 hover:bg-white hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
                       aria-label={`Delete ${chat.title}`}
                     >
                       <LuTrash2 size={16} />
@@ -763,7 +767,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
                     <button
                       type="button"
                       onClick={clearPendingImage}
-                      className="rounded-full p-2 text-green-800/70 transition-colors hover:bg-white hover:text-green-950"
+                      className="chatbot-pop-trigger rounded-full p-2 text-green-800/70 hover:bg-white hover:text-green-950 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
                       aria-label="Remove attached image"
                     >
                       <LuX size={16} strokeWidth={2.5} />
@@ -781,7 +785,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isLoading}
-                  className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-[#dce9d8] bg-[#f9fcf7] text-green-900 transition-all duration-200 hover:border-[#F28C28]/40 hover:text-[#F28C28] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="chatbot-pop-trigger flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-[#dce9d8] bg-[#f9fcf7] text-green-900 hover:border-[#F28C28]/40 hover:text-[#F28C28] disabled:cursor-not-allowed disabled:opacity-50 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
                   aria-label="Upload image"
                 >
                   <LuImage size={18} />
@@ -796,7 +800,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
                 <button
                   type="submit"
                   disabled={isLoading || (!input.trim() && !pendingImage)}
-                  className="flex h-12 w-12 flex-shrink-0 items-center justify-center bg-[#F28C28] text-white rounded-full hover:bg-[#d97a21] hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 disabled:hover:bg-[#F28C28] transition-all duration-200 shadow-sm"
+                  className="chatbot-pop-trigger flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#F28C28] text-white shadow-sm hover:bg-[#d97a21] disabled:opacity-40 disabled:hover:bg-[#F28C28] disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
                 >
                   <LuSend size={18} className="mr-0.5" />
                 </button>

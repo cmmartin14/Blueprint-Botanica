@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --chatbot-popup-duration: 500ms;
+  --chatbot-popup-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @theme inline {
@@ -23,6 +25,24 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.chatbot-pop-trigger {
+  --chatbot-pop-rest-transform: translateY(0) scale(1);
+  --chatbot-pop-hover-transform: translateY(-2px) scale(1.08);
+  --chatbot-pop-active-transform: translateY(0) scale(0.95);
+  transform: var(--chatbot-pop-rest-transform);
+  transition-property: transform, box-shadow, background-color, color, border-color, opacity;
+  transition-duration: var(--chatbot-popup-duration);
+  transition-timing-function: var(--chatbot-popup-ease);
+}
+
+.chatbot-pop-trigger:hover {
+  transform: var(--chatbot-pop-hover-transform);
+}
+
+.chatbot-pop-trigger:active {
+  transform: var(--chatbot-pop-active-transform);
 }
 
 @keyframes chatbot-enter {
@@ -169,7 +189,8 @@ body {
   .chatbot-thinking-card,
   .chatbot-thinking-sprout,
   .chatbot-close-btn,
-  .calendar-close-btn {
+  .calendar-close-btn,
+  .chatbot-pop-trigger {
     animation: none !important;
     transition: none !important;
     transform: none !important;

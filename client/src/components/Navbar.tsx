@@ -16,6 +16,12 @@ import { useGardenStore } from "../types/garden";
 import { useUser } from "@stackframe/stack";
 import Chatbot from "./Chatbot";
 import { LuMenu, LuSprout } from "react-icons/lu";
+import {
+  CHATBOT_POPUP_DURATION_MS,
+  CHATBOT_POPUP_EASE,
+  CHATBOT_POPUP_EXIT_EASE,
+  ICON_WINDOW_POPUP_DURATION_MS,
+} from "../lib/motion";
 
 const Navbar = () => {
   // ====== STATE ======
@@ -138,9 +144,13 @@ const Navbar = () => {
     }
   };
 
-  // Compact, Modern Playful Button Styles
+  const getPopupMotionStyle = (isVisible: boolean) => ({
+    transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
+    transitionTimingFunction: isVisible ? CHATBOT_POPUP_EASE : CHATBOT_POPUP_EXIT_EASE,
+  });
+
   const iconBtnClass =
-    "relative flex items-center justify-center w-10 h-10 rounded-2xl text-slate-500 bg-transparent transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:bg-emerald-100 hover:text-emerald-700 hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400";
+    "chatbot-pop-trigger relative flex h-10 w-10 items-center justify-center rounded-2xl bg-transparent text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 hover:shadow-[0_12px_24px_-18px_rgba(5,150,105,0.85)] focus:outline-none focus:ring-2 focus:ring-emerald-400";
 
   // ====== EFFECTS ======
   useEffect(() => setMounted(true), []);
@@ -191,15 +201,13 @@ const Navbar = () => {
   // ====== RENDER ======
   return (
     <>
-      <header className="fixed top-4 left-0 right-0 z-50 flex justify-center w-full px-4 pointer-events-none">
-        
-        {/* COMPACT Floating Island Navbar */}
-        <nav className="pointer-events-auto flex justify-between items-center w-fit max-w-[95%] bg-white/80 backdrop-blur-xl border border-white shadow-[0_12px_36px_-12px_rgba(0,0,0,0.15)] rounded-[2rem] px-2 py-1.5 transition-all gap-3 md:gap-5">
+      <header className="fixed inset-x-0 top-0 z-50 pointer-events-none">
+        <nav className="pointer-events-auto relative flex w-full items-center gap-3 border-b border-white/70 bg-white/82 px-4 py-3 shadow-[0_16px_36px_-18px_rgba(15,23,42,0.22)] backdrop-blur-xl md:px-6 lg:px-8">
           
-          {/* ====== Left: Logo & Weather ===== */}
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2.5 group px-1.5">
-              <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-emerald-400 to-emerald-600 text-white rounded-2xl shadow-emerald-500/30 shadow-md group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+          {/* ====== Left: Logo ===== */}
+          <div className="flex min-w-0 flex-1 items-center">
+            <Link href="/" className="group flex items-center gap-2.5 px-1.5">
+              <div className="chatbot-pop-trigger flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-md shadow-emerald-500/30 [--chatbot-pop-hover-transform:translateY(-2px)_scale(1.08)_rotate(6deg)]">
                 <GiOakLeaf size={24} />
               </div>
               <div className="hidden sm:flex flex-col">
@@ -211,10 +219,55 @@ const Navbar = () => {
                 </span>
               </div>
             </Link>
+          </div>
 
-            {/* Compact Weather Widget */}
-            <div className="hidden lg:flex items-center bg-slate-100/80 rounded-full p-1 pr-3 shadow-inner border border-slate-200/50">
-              <div className="flex items-center justify-center bg-white rounded-full h-7 px-2.5 shadow-sm text-xs font-bold text-slate-700">
+          {/* ====== Center: Icon Island ===== */}
+          <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:flex items-center gap-2 rounded-full border border-white/80 bg-slate-100/92 px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_26px_-20px_rgba(15,23,42,0.5)]">
+            <button onClick={toggleEdit} className={iconBtnClass} title="Edit Mode">
+              <FaEdit size={18} />
+            </button>
+            <button onClick={toggleVariableWindow} className={iconBtnClass} title="Plant Settings">
+              <TbHomeEdit size={20} />
+            </button>
+            <button onClick={toggleSearchWindow} className={iconBtnClass} title="Search">
+              <FaSearch size={18} />
+            </button>
+            <button onClick={toggleCalendarWindow} className={iconBtnClass} title="Calendar">
+              <FaCalendarAlt size={18} />
+            </button>
+
+            <div className="h-6 w-px bg-slate-200" />
+
+            <button onClick={handleSave} className={iconBtnClass} title="Save">
+              <RiSave3Line size={20} />
+            </button>
+            <button onClick={handleOpenFolder} className={iconBtnClass} title="Saved Gardens">
+              <IoFolderOutline size={20} />
+            </button>
+
+            <div className="h-6 w-px bg-slate-200" />
+
+            <Link href={user ? "/settings" : "/handler/sign-up"} className={iconBtnClass} title={user ? "Settings" : "Profile"}>
+              <FaRegUser size={18} />
+            </Link>
+
+            <button
+              onClick={toggleChatWindow}
+              className={`chatbot-pop-trigger group relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-orange-500/30 [--chatbot-pop-hover-transform:translateY(-2px)_scale(1.03)] ${
+                isChatOpen
+                  ? "bg-orange-500 text-white shadow-md shadow-orange-500/40"
+                  : "bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white hover:shadow-md hover:shadow-orange-500/30"
+              }`}
+            >
+              <LuSprout size={18} />
+              <span>Clementine</span>
+            </button>
+          </div>
+
+          {/* ====== Right: Weather + Mobile Menu ===== */}
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+            <div className="hidden min-w-0 lg:flex items-center rounded-full border border-slate-200/50 bg-slate-100/80 p-1 pr-3 shadow-inner">
+              <div className="flex h-7 max-w-[12rem] items-center justify-center truncate rounded-full bg-white px-2.5 text-xs font-bold text-slate-700 shadow-sm xl:max-w-[16rem]">
                 {city || "Locating..."}
               </div>
               
@@ -238,62 +291,11 @@ const Navbar = () => {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* ====== Right: Icons + Menu ===== */}
-          <div className="flex items-center pr-1">
-            
-            {/* Desktop Toolbar - Changed to gap-2 for perfectly even spacing across all elements */}
-            <div className="hidden md:flex items-center gap-2">           
-              <button onClick={toggleEdit} className={iconBtnClass} title="Edit Mode">
-                <FaEdit size={18} />
-              </button>                
-              <button onClick={toggleVariableWindow} className={iconBtnClass} title="Plant Settings">
-                <TbHomeEdit size={20} />
-              </button>
-              <button onClick={toggleSearchWindow} className={iconBtnClass} title="Search">
-                <FaSearch size={18} />
-              </button>
-              <button onClick={toggleCalendarWindow} className={iconBtnClass} title="Calendar">
-                <FaCalendarAlt size={18} />
-              </button>
-
-              {/* Removed mx-1.5 margin, Flexbox gap-2 will handle the spacing */}
-              <div className="w-1 h-1 rounded-full bg-slate-200" />
-
-              <button onClick={handleSave} className={iconBtnClass} title="Save">
-                <RiSave3Line size={20} />
-              </button>
-              <button onClick={handleOpenFolder} className={iconBtnClass} title="Saved Gardens">
-                <IoFolderOutline size={20} />
-              </button>
-
-              <div className="w-1 h-1 rounded-full bg-slate-200" />
-
-              <Link href={user ? "/settings" : "/handler/sign-up"}>
-                <button className={iconBtnClass} title={user ? "Settings" : "Profile"}>
-                  <FaRegUser size={18} />
-                </button>
-              </Link>
-
-              {/* Compact Bouncy Chatbot Button - Removed ml-1.5 margin */}
-              <button
-                onClick={toggleChatWindow}
-                className={`group relative flex items-center gap-2 px-4 py-2 rounded-[14px] text-sm font-bold transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-orange-500/30 ${
-                  isChatOpen 
-                    ? "bg-orange-500 text-white shadow-md shadow-orange-500/40" 
-                    : "bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white hover:shadow-md hover:shadow-orange-500/30"
-                }`}
-              >
-                <LuSprout size={18} className="group-hover:animate-pulse" />
-                <span>Clementine</span>
-              </button>
-            </div>
 
             {/* Mobile menu toggle */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden flex items-center justify-center w-10 h-10 bg-slate-100 text-slate-700 rounded-2xl active:scale-95 transition-all ml-2"
+              className="chatbot-pop-trigger ml-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 hover:bg-slate-200 md:hidden [--chatbot-pop-hover-transform:translateY(-2px)_scale(1.05)]"
             >
               {isMenuOpen ? <HiX size={22} /> : <LuMenu size={22} />}
             </button>
@@ -302,8 +304,13 @@ const Navbar = () => {
       </header>
 
       {/* ====== Mobile Dropdown Menu ====== */}
-      {isMenuOpen && (
-        <div className="fixed top-24 left-4 right-4 bg-white/90 backdrop-blur-xl border border-slate-100 rounded-3xl shadow-2xl z-40 p-2 md:hidden animate-in slide-in-from-top-4 fade-in duration-300">
+      <div
+        aria-hidden={!isMenuOpen}
+        className={`fixed left-4 right-4 top-24 z-40 rounded-3xl border border-slate-100 bg-white/90 p-2 shadow-2xl backdrop-blur-xl transition-all md:hidden ${
+          isMenuOpen ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
+        }`}
+        style={getPopupMotionStyle(isMenuOpen)}
+      >
           {[
             { name: "Edit Mode", action: toggleEdit, icon: <FaEdit size={16} /> },
             { name: "Plant Settings", action: toggleVariableWindow, icon: <TbHomeEdit size={16} /> },
@@ -317,23 +324,30 @@ const Navbar = () => {
             <button
               key={item.name}
               onClick={() => { item.action(); setIsMenuOpen(false); }}
-              className="flex items-center gap-3 w-full p-3.5 rounded-2xl text-slate-700 text-sm font-bold hover:bg-slate-100 active:scale-95 transition-all"
+              className="chatbot-pop-trigger flex w-full items-center gap-3 rounded-2xl p-3.5 text-sm font-bold text-slate-700 hover:bg-slate-100 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.01)]"
             >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200/50 text-slate-500">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-500">
                 {item.icon}
               </div>
               {item.name}
             </button>
           ))}
-        </div>
-      )}
+      </div>
 
       {/* ====== Saved Gardens Modal ====== */}
-      {showSavedList && (
-        <div className="fixed top-24 right-4 md:right-8 w-72 bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-slate-100 z-50 p-2 animate-in zoom-in-95 duration-300">
-          <div className="flex justify-between items-center px-4 py-3 mb-2 bg-slate-50 rounded-2xl">
+      <div
+        aria-hidden={!showSavedList}
+        className={`fixed right-4 top-24 z-50 w-72 rounded-3xl border border-slate-100 bg-white/95 p-2 shadow-2xl backdrop-blur-2xl transition-all md:right-8 ${
+          showSavedList ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
+        }`}
+        style={getPopupMotionStyle(showSavedList)}
+      >
+          <div className="mb-2 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
             <span className="font-black text-slate-800 text-xs uppercase tracking-widest">Your Gardens</span>
-            <button onClick={() => setShowSavedList(false)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1.5 rounded-full transition-all">
+            <button
+              onClick={() => setShowSavedList(false)}
+              className="chatbot-pop-trigger rounded-full p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
+            >
               <HiX size={18} />
             </button>
           </div>
@@ -344,24 +358,29 @@ const Navbar = () => {
               </div>
             )}
             {savedList.map((g) => (
-              <div key={g.id} className="group flex items-center justify-between p-2.5 bg-white hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 rounded-xl transition-all shadow-sm">
+              <div
+                key={g.id}
+                className="chatbot-pop-trigger group flex items-center justify-between rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm hover:border-emerald-200 hover:bg-emerald-50 [--chatbot-pop-hover-transform:translateY(-2px)_scale(1.01)]"
+              >
                 <button onClick={() => handleLoad(g.id)} className="flex-1 text-left flex flex-col min-w-0">
                   <span className="font-bold text-sm text-slate-700 truncate group-hover:text-emerald-700">{g.name}</span>
                   <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{new Date(g.updatedAt).toLocaleDateString()}</span>
                 </button>
-                <button onClick={() => handleDelete(g.id, g.name)} className="p-2 rounded-lg text-slate-300 hover:bg-rose-100 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100">
+                <button
+                  onClick={() => handleDelete(g.id, g.name)}
+                  className="chatbot-pop-trigger rounded-lg p-2 text-slate-300 opacity-0 hover:bg-rose-100 hover:text-rose-600 group-hover:opacity-100 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
+                >
                   <RiDeleteBin6Line size={16} />
                 </button>
               </div>
             ))}
           </div>
-        </div>
-      )}
+      </div>
 
       {/* ====== Windows & Chatbot ====== */}
-      <SearchWindow data-testid="search-window" isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-      <VariableWindow data-testid="variable-window" isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-      <Calendar data-testid="calendar-window" isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
+      <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
+      <Calendar isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
       <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> 
     </>
   );

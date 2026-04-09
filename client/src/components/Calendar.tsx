@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCalendarStore } from "../stores/calendarStore";
+import {
+  ICON_WINDOW_POPUP_DURATION_MS,
+  CHATBOT_POPUP_EASE,
+  CHATBOT_POPUP_EXIT_EASE,
+} from "../lib/motion";
 
 type Props = {
   isOpen: boolean;
@@ -378,16 +383,28 @@ export default function CalendarWindow({
     setNoteReminderEmail("");
   };
 
+  const windowStyle = {
+    ...(isFullscreen ? {} : { left: `${windowPosition.x}px`, top: `${windowPosition.y}px` }),
+    ...(isDragging
+      ? {}
+      : {
+          transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
+          transitionTimingFunction: isOpen
+            ? CHATBOT_POPUP_EASE
+            : CHATBOT_POPUP_EXIT_EASE,
+        }),
+  };
+
   return (
     <div
       ref={windowRef}
       data-testid="calendar-window"
       className={`fixed z-50 overflow-hidden rounded-[32px] border border-[#dce9d8] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.15)] ${
-        isDragging ? "transition-none" : "transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        isDragging ? "transition-none" : "transition-all"
       } ${
         isFullscreen ? "inset-12 md:inset-20" : "w-[980px] h-[660px] max-w-[95vw]"
       } ${isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
-      style={isFullscreen ? undefined : { left: `${windowPosition.x}px`, top: `${windowPosition.y}px` }}
+      style={windowStyle}
     >
       {/* Header section */}
       <div
@@ -415,7 +432,7 @@ export default function CalendarWindow({
             <button
               type="button"
               onClick={onClose}
-              className="calendar-close-btn rounded-full p-2.5 text-green-700 transition-all duration-200 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
+              className="chatbot-pop-trigger rounded-full p-2.5 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
               aria-label="Close"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -427,7 +444,7 @@ export default function CalendarWindow({
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="rounded-full p-2.5 text-green-700 transition-all duration-200 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
+            className="chatbot-pop-trigger rounded-full p-2.5 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
             aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
           >
             {isFullscreen ? (
@@ -452,20 +469,20 @@ export default function CalendarWindow({
             <div className="flex items-center gap-2 bg-white/60 p-1 rounded-full border border-[#dce9d8] shadow-sm">
               <button
                 onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}
-                className="rounded-full w-8 h-8 flex items-center justify-center text-green-700 hover:bg-white hover:shadow-sm transition-all"
+                className="chatbot-pop-trigger flex h-8 w-8 items-center justify-center rounded-full text-green-700 hover:bg-white hover:shadow-sm [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
                 aria-label="Previous month"
               >
                 ‹
               </button>
               <button
                 onClick={() => setMonthCursor(new Date())}
-                className="rounded-full px-4 py-1 text-sm font-medium text-green-700 hover:bg-white hover:shadow-sm transition-all"
+                className="chatbot-pop-trigger rounded-full px-4 py-1 text-sm font-medium text-green-700 hover:bg-white hover:shadow-sm [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.02)]"
               >
                 Today
               </button>
               <button
                 onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
-                className="rounded-full w-8 h-8 flex items-center justify-center text-green-700 hover:bg-white hover:shadow-sm transition-all"
+                className="chatbot-pop-trigger flex h-8 w-8 items-center justify-center rounded-full text-green-700 hover:bg-white hover:shadow-sm [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
                 aria-label="Next month"
               >
                 ›

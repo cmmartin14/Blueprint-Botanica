@@ -1,7 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import PlantSearch from "../components/PlantSearch";
-import { LuBook, LuSprout, LuX } from "react-icons/lu";
+import { LuBook, LuX } from "react-icons/lu";
+import {
+  ICON_WINDOW_POPUP_DURATION_MS,
+  CHATBOT_POPUP_EASE,
+  CHATBOT_POPUP_EXIT_EASE,
+} from "../lib/motion";
 
 type SearchWindowProps = {
   isOpen: boolean;
@@ -26,7 +31,7 @@ const SearchWindow = ({ isOpen, onClose }: SearchWindowProps) => {
     const timeout = window.setTimeout(() => {
       setShouldRender(false);
       setIsClosing(false);
-    }, 400);
+    }, ICON_WINDOW_POPUP_DURATION_MS);
 
     return () => window.clearTimeout(timeout);
   }, [isOpen, shouldRender]);
@@ -38,6 +43,7 @@ const SearchWindow = ({ isOpen, onClose }: SearchWindowProps) => {
   return (
     <div
       id="search-window"
+      data-testid="search-window"
       className={`
         fixed z-50 top-20 left-6 md:left-24 w-[440px] max-w-[92vw] h-[640px] max-h-[85vh]
         rounded-[32px] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.18)] 
@@ -46,9 +52,10 @@ const SearchWindow = ({ isOpen, onClose }: SearchWindowProps) => {
         ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}
       `}
       style={{
+        transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
         transitionTimingFunction: isVisible
-          ? "cubic-bezier(0.34, 1.56, 0.64, 1)" // Custom bouncy spring curve
-          : "cubic-bezier(0.4, 0, 1, 1)",
+          ? CHATBOT_POPUP_EASE
+          : CHATBOT_POPUP_EXIT_EASE,
       }}
     >
       {/* Header */}
@@ -64,7 +71,7 @@ const SearchWindow = ({ isOpen, onClose }: SearchWindowProps) => {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-green-700 transition-all duration-200 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
+            className="chatbot-pop-trigger rounded-full p-2 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
             aria-label="Close search"
           >
             <LuX size={20} strokeWidth={2.5} />
