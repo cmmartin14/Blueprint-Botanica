@@ -419,12 +419,6 @@ export default function CalendarWindow({
       >
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold text-green-900 tracking-tight">Calendar</h2>
-          {weather?.city && (
-            <span className="text-sm font-medium text-green-700 bg-white/60 px-3 py-1 rounded-full border border-[#dce9d8]">
-              Weather: <strong>{weather.city}</strong>
-              {weather.country ? `, ${weather.country}` : ""}
-            </span>
-          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -460,82 +454,84 @@ export default function CalendarWindow({
         </div>
       </div>
 
-      <div className="flex h-[calc(100%-69px)] flex-col lg:flex-row bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea]">
-        
-        {/* Left Side: Calendar Grid */}
-        <div className="lg:w-1/2 p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-[#dce9d8] flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-xl text-green-900 font-bold">{monthLabel}</div>
-            <div className="flex items-center gap-2 bg-white/60 p-1 rounded-full border border-[#dce9d8] shadow-sm">
-              <button
-                onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}
-                className="chatbot-pop-trigger flex h-8 w-8 items-center justify-center rounded-full text-green-700 hover:bg-white hover:shadow-sm [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
-                aria-label="Previous month"
-              >
-                ‹
-              </button>
-              <button
-                onClick={() => setMonthCursor(new Date())}
-                className="chatbot-pop-trigger rounded-full px-4 py-1 text-sm font-medium text-green-700 hover:bg-white hover:shadow-sm [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.02)]"
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
-                className="chatbot-pop-trigger flex h-8 w-8 items-center justify-center rounded-full text-green-700 hover:bg-white hover:shadow-sm [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
-                aria-label="Next month"
-              >
-                ›
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 text-center text-sm font-medium text-green-800/60 mb-2">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-              <div key={d} className="py-2">{d}</div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-1.5 flex-1">
-            {grid.map((cell, i) => {
-              const inMonth = cell.inMonth;
-              const isSelected = selectedDate ? isSameDay(cell.date, selectedDate) : false;
-              const marker = markersByDate.get(toYmd(cell.date));
-              const classes = [
-                "relative flex flex-col items-center justify-center rounded-[20px] border-2 transition-all duration-200 ease-out py-3",
-                inMonth ? "text-green-900 bg-white/40" : "text-green-900/30 bg-transparent border-transparent",
-                isSelected 
-                  ? "border-[#8cc69f] bg-white shadow-sm scale-105 z-10" 
-                  : "border-transparent hover:border-[#dce9d8] hover:bg-white hover:shadow-sm",
-              ].join(" ");
-              return (
+      <div className="h-[calc(100%-69px)] overflow-y-auto bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea] custom-scrollbar">
+        <div className="space-y-6 p-6 lg:p-8">
+          {/* Calendar Section */}
+          <section className="rounded-[28px] border border-[#dce9d8] bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
+            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-green-900">{monthLabel}</h3>
+                <p className="mt-1 text-sm text-green-800/70">
+                  Scroll down for weather, notes and reminders, and active alerts.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 rounded-full border border-[#dce9d8] bg-white/60 p-1 shadow-sm">
                 <button
-                  key={`${toYmd(cell.date)}-${i}`}
-                  onClick={() => setSelectedDate(new Date(cell.date))}
-                  className={classes}
+                  onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}
+                  className="chatbot-pop-trigger flex h-8 w-8 items-center justify-center rounded-full text-green-700 hover:bg-white hover:shadow-sm [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
+                  aria-label="Previous month"
                 >
-                  <div className="text-[15px] font-medium flex flex-col items-center">
-                    {cell.date.getDate()}
-                    {cell.isToday && (
-                      <span className="mt-1 block h-1.5 w-1.5 rounded-full bg-green-500" />
-                    )}
-                  </div>
-                  {marker && marker.notes > 0 && (
-                    <div className="absolute bottom-1.5 flex gap-0.5">
-                      {Array.from({ length: Math.min(marker.notes, 3) }).map((_, idx) => (
-                        <span key={idx} className="block h-1.5 w-1.5 rounded-full bg-amber-400" />
-                      ))}
-                    </div>
-                  )}
+                  ‹
                 </button>
-              );
-            })}
-          </div>
-        </div>
+                <button
+                  onClick={() => setMonthCursor(new Date())}
+                  className="chatbot-pop-trigger rounded-full px-4 py-1 text-sm font-medium text-green-700 hover:bg-white hover:shadow-sm [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.02)]"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
+                  className="chatbot-pop-trigger flex h-8 w-8 items-center justify-center rounded-full text-green-700 hover:bg-white hover:shadow-sm [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
+                  aria-label="Next month"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
 
-        {/* Right Side: Details & Forms */}
-        <div className="lg:w-1/2 p-6 lg:p-8 overflow-y-auto space-y-6 custom-scrollbar">
-          
+            <div className="mb-2 grid grid-cols-7 text-center text-sm font-medium text-green-800/60">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                <div key={d} className="py-2">{d}</div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1.5">
+              {grid.map((cell, i) => {
+                const inMonth = cell.inMonth;
+                const isSelected = selectedDate ? isSameDay(cell.date, selectedDate) : false;
+                const marker = markersByDate.get(toYmd(cell.date));
+                const classes = [
+                  "relative flex aspect-square w-full flex-col items-center justify-center rounded-[20px] border-2 transition-all duration-200 ease-out",
+                  inMonth ? "bg-white/40 text-green-900" : "border-transparent bg-transparent text-green-900/30",
+                  isSelected
+                    ? "z-10 scale-105 border-[#8cc69f] bg-white shadow-sm"
+                    : "border-transparent hover:border-[#dce9d8] hover:bg-white hover:shadow-sm",
+                ].join(" ");
+                return (
+                  <button
+                    key={`${toYmd(cell.date)}-${i}`}
+                    onClick={() => setSelectedDate(new Date(cell.date))}
+                    className={classes}
+                  >
+                    <div className="flex flex-col items-center text-[15px] font-medium">
+                      {cell.date.getDate()}
+                      {cell.isToday && (
+                        <span className="mt-1 block h-1.5 w-1.5 rounded-full bg-green-500" />
+                      )}
+                    </div>
+                    {marker && marker.notes > 0 && (
+                      <div className="absolute bottom-1.5 flex gap-0.5">
+                        {Array.from({ length: Math.min(marker.notes, 3) }).map((_, idx) => (
+                          <span key={idx} className="block h-1.5 w-1.5 rounded-full bg-amber-400" />
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           {/* Weather Card */}
           <section className="rounded-[28px] border border-[#dce9d8] bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
             <h3 className="text-base font-bold text-green-900 flex items-center gap-2">
@@ -695,7 +691,7 @@ export default function CalendarWindow({
               />
             </div>
 
-            <div className="mt-5 space-y-3 max-h-48 overflow-y-auto pr-1">
+            <div className="mt-5 space-y-3">
               {selectedNotes.length === 0 ? (
                 <div className="text-center py-4 text-sm text-green-700/60 italic border-2 border-dashed border-[#dce9d8] rounded-[20px]">
                   No notes yet.
@@ -733,7 +729,7 @@ export default function CalendarWindow({
               Active Alerts
             </h3>
             
-            <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
+            <div className="space-y-3">
               {alerts.length === 0 ? (
                 <div className="text-center py-3 text-sm text-green-700/60 italic border-2 border-dashed border-[#dce9d8] rounded-[20px]">
                   All caught up!
@@ -770,7 +766,6 @@ export default function CalendarWindow({
               </div>
             )}
           </section>
-
         </div>
       </div>
     </div>
