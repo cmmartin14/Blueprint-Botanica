@@ -1,10 +1,9 @@
+// Navbar.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
-import Calendar from "./Calendar";
 import { GiOakLeaf } from "react-icons/gi";
 import { TbHomeEdit } from "react-icons/tb";
 import { HiX } from "react-icons/hi";
@@ -23,14 +22,17 @@ import {
   ICON_WINDOW_POPUP_DURATION_MS,
 } from "../lib/motion";
 
-const Navbar = () => {
+type NavbarProps = {
+  onOpenSearch: () => void;
+  onOpenCalendar: () => void;
+};
+
+const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
   // ====== STATE ======
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [date, setDate] = useState("");
   const [temp, setTemp] = useState<number | null>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [city, setCity] = useState<string | null>(null);
   const [unit, setUnit] = useState<"C" | "F">("C");
@@ -46,9 +48,7 @@ const Navbar = () => {
   const toggleEdit = () => setEditMode(!editMode);
 
   // ====== HANDLERS ======
-  const toggleSearchWindow = () => setIsSearchOpen((prev) => !prev);
   const toggleVariableWindow = () => setIsVariableOpen((prev) => !prev);
-  const toggleCalendarWindow = () => setIsCalendarOpen((prev) => !prev);
   const toggleChatWindow = () => setIsChatOpen((prev) => !prev);
 
   const user = useUser({ or: 'return-null' });
@@ -229,10 +229,10 @@ const Navbar = () => {
             <button onClick={toggleVariableWindow} className={iconBtnClass} title="Plant Settings">
               <TbHomeEdit size={20} />
             </button>
-            <button onClick={toggleSearchWindow} className={iconBtnClass} title="Search">
+            <button onClick={onOpenSearch} className={iconBtnClass} title="Search">
               <FaSearch size={18} />
             </button>
-            <button onClick={toggleCalendarWindow} className={iconBtnClass} title="Calendar">
+            <button onClick={onOpenCalendar} className={iconBtnClass} title="Calendar">
               <FaCalendarAlt size={18} />
             </button>
 
@@ -314,8 +314,8 @@ const Navbar = () => {
           {[
             { name: "Edit Mode", action: toggleEdit, icon: <FaEdit size={16} /> },
             { name: "Plant Settings", action: toggleVariableWindow, icon: <TbHomeEdit size={16} /> },
-            { name: "Search", action: toggleSearchWindow, icon: <FaSearch size={16} /> },
-            { name: "Calendar", action: toggleCalendarWindow, icon: <FaCalendarAlt size={16} /> },
+            { name: "Search", action: onOpenSearch, icon: <FaSearch size={16} /> },
+            { name: "Calendar", action: onOpenCalendar, icon: <FaCalendarAlt size={16} /> },
             { name: "Save Garden", action: handleSave, icon: <RiSave3Line size={16} /> },
             { name: "Load Garden", action: handleOpenFolder, icon: <IoFolderOutline size={16} /> },
             { name: "Ask Clementine", action: toggleChatWindow, icon: <LuSprout size={16} className="text-orange-500" /> },
@@ -377,12 +377,10 @@ const Navbar = () => {
           </div>
       </div>
 
-      {/* ====== Windows & Chatbot ====== */}
-      <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-      <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-      <Calendar isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
-      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> 
-    </>
+            {/* ====== Windows & Chatbot ====== */}
+            <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
+            <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      </>
   );
 };
 

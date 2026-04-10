@@ -1,3 +1,4 @@
+// Searchwindow.tsx
 "use client";
 import { useEffect, useState } from "react";
 import PlantSearch from "../components/PlantSearch";
@@ -11,9 +12,10 @@ import {
 type SearchWindowProps = {
   isOpen: boolean;
   onClose?: () => void;
+  sidebarMode?: boolean;
 };
 
-const SearchWindow = ({ isOpen, onClose }: SearchWindowProps) => {
+const SearchWindow = ({ isOpen, onClose, sidebarMode = false }: SearchWindowProps) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -44,19 +46,34 @@ const SearchWindow = ({ isOpen, onClose }: SearchWindowProps) => {
     <div
       id="search-window"
       data-testid="search-window"
-      className={`
-        fixed z-50 top-20 left-6 md:left-24 w-[440px] max-w-[92vw] h-[640px] max-h-[85vh]
-        rounded-[32px] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.18)] 
-        border border-[#dce9d8] flex flex-col overflow-hidden font-sans
-        transition-all duration-500 origin-top-left
-        ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}
-      `}
-      style={{
-        transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
-        transitionTimingFunction: isVisible
-          ? CHATBOT_POPUP_EASE
-          : CHATBOT_POPUP_EXIT_EASE,
-      }}
+      className={
+        sidebarMode
+          ? `
+            w-full h-full
+            rounded-none
+            bg-[#F7FBF5]
+            flex flex-col overflow-hidden font-sans
+            transition-all duration-500
+            ${isVisible ? "opacity-100" : "opacity-0 pointer-events-none"}
+          `
+          : `
+            fixed z-50 top-20 left-6 md:left-24 w-[440px] max-w-[92vw] h-[640px] max-h-[85vh]
+            rounded-[32px] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.18)]
+            border border-[#dce9d8] flex flex-col overflow-hidden font-sans
+            transition-all duration-500 origin-top-left
+            ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}
+          `
+      }
+      style={
+        sidebarMode
+          ? undefined
+          : {
+              transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
+              transitionTimingFunction: isVisible
+                ? CHATBOT_POPUP_EASE
+                : CHATBOT_POPUP_EXIT_EASE,
+            }
+      }
     >
       {/* Header */}
       <div className="bg-[#ecf5e8]/90 backdrop-blur-md px-5 py-4 flex items-center justify-between border-b border-[#dce9d8]">
@@ -80,7 +97,7 @@ const SearchWindow = ({ isOpen, onClose }: SearchWindowProps) => {
       </div>
 
       {/* Content Body */}
-      <div className="flex-1 overflow-hidden bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea]">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea]">
         <PlantSearch />
       </div>
     </div>

@@ -272,6 +272,7 @@ const Canvas = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
   const [isCalendarOpen, setCalendarOpen] = useState(false);
+  const [sidebarMode, setSidebarMode] = useState<"calendar" | "workspace">("workspace");
 
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
   const [pendingBedShapeId, setPendingBedShapeId] = useState<string | null>(null);
@@ -1179,6 +1180,31 @@ const Canvas = () => {
     setToolMode("none");
   }, [history, historyIndex]);
 
+  const openCalendarSidebar = useCallback(() => {
+    setSidebarMode("calendar");
+    setCalendarOpen(true);
+    setIsSearchOpen(false);
+  }, []);
+  
+  const openSearchSidebar = useCallback(() => {
+    setSidebarMode("workspace");
+    setIsSearchOpen(true);
+    setCalendarOpen(false);
+  }, []);
+  
+  const openBedInfoSidebar = useCallback((shapeId: string) => {
+    setSidebarMode("workspace");
+    setIsSearchOpen(true);
+    setCalendarOpen(false);
+    setBedPanelShapeId(shapeId);
+  }, []);
+  
+  const closeBedInfoSidebar = useCallback(() => {
+    setBedPanelShapeId(null);
+    setIsSearchOpen(true);
+    setSidebarMode("workspace");
+  }, []);
+
   return (
     // REMOVED 'top-16' HERE SO THE CANVAS SPANS THE ENTIRE SCREEN
     <div className="fixed inset-0 overflow-hidden bg-gray-50">
@@ -1199,22 +1225,61 @@ const Canvas = () => {
         )}
       </div>
 
-      <SearchWindow isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-      <Calendar isOpen={isCalendarOpen} onClose={() => setCalendarOpen(false)} />
-      {bedPanelShapeId && (
-        <FlowerBedPanel
-          shapeId={bedPanelShapeId}
-          bedLabel={gardenBedEntries.find((bed) => bed.id === bedPanelShapeId)?.label}
-          isLocked={isBedPanelLocked}
-          topOffset={isMapKeyOpen ? 210 : 70}
-          zone={gardenZone}
-          onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
-          onClose={() => {
-            setBedPanelShapeId(null);
-            setIsBedPanelLocked(false);
-          }}
-        />
+      
+      {(isCalendarOpen || isSearchOpen || bedPanelShapeId) && (
+        <div
+          className="
+            fixed left-0 bottom-0 z-40
+            w-[33vw] min-w-[320px] max-w-[520px]
+            rounded-tr-[28px] border-r border-t border-[#dce9d8]
+            bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.18)]
+            overflow-hidden
+          "
+          style={{ top: "72px" }}
+        >
+          {sidebarMode === "calendar" && isCalendarOpen ? (
+            <div className="h-full">
+              <Calendar
+                isOpen={true}
+                onClose={() => setCalendarOpen(false)}
+              />
+            </div>
+          ) : (
+            <div className="flex h-full flex-col">
+              {bedPanelShapeId ? (
+                <>
+                  <div className="h-1/2 min-h-0 overflow-y-auto border-b border-[#dce9d8]">
+                    <FlowerBedPanel
+                      shapeId={bedPanelShapeId}
+                      isLocked={isBedPanelLocked}
+                      zone={gardenZone}
+                      onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
+                      onClose={closeBedInfoSidebar}
+                    />
+                  </div>
+
+                  <div className="h-1/2 min-h-0 overflow-y-auto">
+                    <SearchWindow
+                      isOpen={true}
+                      onClose={() => setIsSearchOpen(false)}
+                      sidebarMode={true}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="h-full min-h-0 overflow-y-auto">
+                  <SearchWindow
+                    isOpen={true}
+                    onClose={() => setIsSearchOpen(false)}
+                    sidebarMode={true}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <div
@@ -1244,7 +1309,9 @@ const Canvas = () => {
             gridToUnit={0.25}
             canEdit={editMode}
             bedPlants={bedPlants}
-            onOpenBedPanel={(shapeId) => setBedPanelShapeId((prev) => (prev === shapeId ? null : shapeId))}
+            onOpenBedPanel={(shapeId) => {
+              openBedInfoSidebar(shapeId);
+            }}
             selectedShapeId={selectedShapeId}
             showDimensions={showDimensions}
             activeBedId={activeBedId}
@@ -1311,7 +1378,7 @@ const Canvas = () => {
                 selectedShape?.type === "freehand";
             
               if (isBedPanelLocked && isBedLikeShape) {
-                setBedPanelShapeId(shapeId);
+                openBedInfoSidebar(shapeId);
               } else if (!isBedPanelLocked) {
                 setBedPanelShapeId(null);
               }

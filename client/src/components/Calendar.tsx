@@ -1,3 +1,4 @@
+// Calendar.tsx
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCalendarStore } from "../stores/calendarStore";
@@ -11,6 +12,7 @@ type Props = {
   isOpen: boolean;
   onClose?: () => void;
   defaultFullscreen?: boolean;
+  sidebarMode?: boolean;
 };
 
 type WeatherDay = {
@@ -52,6 +54,7 @@ export default function CalendarWindow({
   isOpen,
   onClose,
   defaultFullscreen = false,
+  sidebarMode = false,
 }: Props) {
   const windowRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(defaultFullscreen);
@@ -705,7 +708,7 @@ export default function CalendarWindow({
                       {note.reminderAt && (
                         <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md flex items-center gap-1">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          {new Date(note.reminderAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          {new Date(note.reminderAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       )}
                     </div>
@@ -758,7 +761,7 @@ export default function CalendarWindow({
                       <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
                       <span className="font-medium truncate">{note.content}</span>
                       <span className="text-xs text-green-600/80 ml-auto whitespace-nowrap">
-                        {new Date(note.reminderAt as string).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                        {new Date(note.reminderAt as string).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                       </span>
                     </li>
                   ))}
