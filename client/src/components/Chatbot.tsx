@@ -68,7 +68,7 @@ type ChatView = "chat" | "history";
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const DEFAULT_CHAT_TITLE = "New chat";
 const DEFAULT_ASSISTANT_MESSAGE =
-  "Hi, I'm Clementine.";
+  "Hi, I'm Clementine!";
 
 const historyTimestampFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
