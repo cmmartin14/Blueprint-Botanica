@@ -3,8 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --chatbot-popup-duration: 500ms;
-  --chatbot-popup-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --chatbot-popup-duration: 240ms;
+  --chatbot-popup-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --chatbot-popup-exit-ease: cubic-bezier(0.4, 0, 1, 1);
 }
 
 @theme inline {
@@ -92,11 +93,11 @@ body {
 }
 
 .chatbot-shell-enter {
-  animation: chatbot-enter 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: chatbot-enter var(--chatbot-popup-duration) var(--chatbot-popup-ease);
 }
 
 .chatbot-shell-exit {
-  animation: chatbot-exit 220ms ease-in forwards;
+  animation: chatbot-exit var(--chatbot-popup-duration) var(--chatbot-popup-exit-ease) forwards;
 }
 
 .chatbot-message-in {

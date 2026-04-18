@@ -85,6 +85,81 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const getMessageText = (message: ChatMessage) =>
   typeof message.content === "string" ? message.content.trim() : "";
 
+type ChatResponseMode = "instant" | "fast" | "thinking";
+
+const normalizeUserText = (value: string) =>
+  value.toLowerCase().replace(/\s+/g, " ").trim();
+
+const stripUserPunctuation = (value: string) =>
+  value.replace(/[!?.,;:]+/g, "").trim();
+
+const getInstantReply = (message: ChatMessage): string | null => {
+  if (message.image) return null;
+
+  const normalized = stripUserPunctuation(normalizeUserText(getMessageText(message)));
+  if (!normalized) return null;
+
+  if (/^(hi|hello|hey|hiya|yo|sup)( there| clementine)?$/.test(normalized)) {
+    return "Hi there, glad you're here.";
+  }
+
+  if (/^(good morning|good afternoon|good evening)( clementine)?$/.test(normalized)) {
+    return "Good to see you.";
+  }
+
+  if (/^(thanks|thank you|thx|ty)$/.test(normalized)) {
+    return "Of course.";
+  }
+
+  if (/^(ok|okay|got it|sounds good|cool|nice|perfect|awesome|great)$/.test(normalized)) {
+    return "Sounds good to me.";
+  }
+
+  if (/^(how are you|hows it going|how is it going|whats up|what is up)$/.test(normalized)) {
+    return "I'm doing well and glad to help with the garden.";
+  }
+
+  if (/^(who are you)$/.test(normalized)) {
+    return "I'm Clementine, your garden helper.";
+  }
+
+  if (/^(what can you do|what do you do)$/.test(normalized)) {
+    return "I can help with plant picks, troubleshooting, timing, and reminders.";
+  }
+
+  return null;
+};
+
+const NEEDS_THINKING_PATTERN =
+  /\b(plan|remind|schedule|calendar|event|note|weather|forecast|temperature|zone|zip|hardiness|harvest|frost|maturity|plant|seed|seedling|soil|sunlight|watering|water|fertilizer|fertilise|fertilize|disease|pest|fungus|identify|photo|image|tomato|pepper|basil|rose|lavender|bed|garden plan)\b/;
+
+const routeChatResponseMode = (message: ChatMessage): ChatResponseMode => {
+  if (getInstantReply(message)) {
+    return "instant";
+  }
+
+  if (message.image) {
+    return "thinking";
+  }
+
+  const text = normalizeUserText(getMessageText(message));
+  if (!text) {
+    return "thinking";
+  }
+
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+  if (
+    text.length <= 100 &&
+    wordCount <= 16 &&
+    !NEEDS_THINKING_PATTERN.test(text)
+  ) {
+    return "fast";
+  }
+
+  return "thinking";
+};
+
 const estimateBase64Bytes = (value: string) => {
   const normalized = value.replace(/\s+/g, "");
   const padding = normalized.endsWith("==")
@@ -668,12 +743,24 @@ export async function POST(request: Request) {
       );
     }
 
+    const responseMode = routeChatResponseMode(lastMessage);
+    const instantReply = getInstantReply(lastMessage);
+
+    if (responseMode === "instant" && instantReply) {
+      return NextResponse.json({
+        message: instantReply,
+        actions: [],
+      });
+    }
+
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-3-flash-preview",
-      tools: [
-        {
-          functionDeclarations: [
+      ...(responseMode === "thinking"
+        ? {
+            tools: [
+              {
+                functionDeclarations: [
             {
               name: TOOL_NAMES.GET_WEATHER,
               description:
@@ -820,15 +907,27 @@ export async function POST(request: Request) {
                 required: ["content"],
               },
             },
-          ],
-        },
-      ],
+                ],
+              },
+            ],
+          }
+        : {}),
       systemInstruction: {
         role: "system",
         parts: [
           {
             text: `You are Clementine, the gardening assistant for Blueprint Botanica.
 Help users plan gardens, select plants, troubleshoot issues, and make climate-aware recommendations.
+Sound like a thoughtful gardening guide, not a generic bot.
+Be warm, conversational, and grounded. Use natural phrasing and contractions when they fit.
+Match the user's energy and message length.
+For simple greetings, thanks, confirmations, or casual small talk, reply in one short sentence, or at most one short sentence plus one short follow-up question.
+Do not turn a simple "hi" into a multi-sentence response.
+Lead with the direct answer or next step, then add brief reasoning that helps the user understand why.
+Reflect the user's specific plant, problem, or goal so the reply feels tailored.
+Prefer short paragraphs over heavy formatting. Use bullets only when they genuinely make advice clearer.
+Avoid stiff filler, corporate phrasing, and lines like "as an AI."
+If you're unsure, say what you're inferring and what detail would confirm it.
 Users may attach garden or plant photos; when an image is present, use visible details from it and be explicit about uncertainty.
 Use tools for weather, hardiness zone, and plant data when factual lookup is needed.
 For "when will X be ready?", "when do I harvest?", or "will X mature before frost?" questions, call calculate_harvest_date.
@@ -853,11 +952,15 @@ Keep responses concise, practical, and specific.`,
 
     const chat = model.startChat({
       history,
-      toolConfig: {
-        functionCallingConfig: { mode: FunctionCallingMode.AUTO },
-      },
+      ...(responseMode === "thinking"
+        ? {
+            toolConfig: {
+              functionCallingConfig: { mode: FunctionCallingMode.AUTO },
+            },
+          }
+        : {}),
       generationConfig: {
-        maxOutputTokens: 600,
+        maxOutputTokens: responseMode === "fast" ? 220 : 600,
       },
     });
 
@@ -869,7 +972,7 @@ Keep responses concise, practical, and specific.`,
     let result = await chat.sendMessage(userPrompt);
     let response = await result.response;
 
-    const maxToolRounds = 4;
+    const maxToolRounds = responseMode === "thinking" ? 4 : 0;
     for (let i = 0; i < maxToolRounds; i += 1) {
       const functionCalls = response.functionCalls();
       if (!functionCalls || functionCalls.length === 0) break;

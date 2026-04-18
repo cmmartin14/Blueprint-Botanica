@@ -1,16 +1,51 @@
 "use client";
-import React, { useState } from 'react';
-import { useGardenStore } from '../../types/garden';
+import React, { useEffect, useState } from "react";
+import { useGardenStore } from "../../types/garden";
+import {
+  ICON_WINDOW_POPUP_DURATION_MS,
+  CHATBOT_POPUP_EASE,
+  CHATBOT_POPUP_EXIT_EASE,
+} from "../../lib/motion";
 
 interface GardenBedCreatorProps {
+  isOpen: boolean;
   initialShapeId?: string;
   onComplete: () => void;
   onCancel: () => void;
 }
 
-const GardenBedCreator: React.FC<GardenBedCreatorProps> = ({ initialShapeId, onComplete, onCancel }) => {
+const GardenBedCreator: React.FC<GardenBedCreatorProps> = ({
+  isOpen,
+  initialShapeId,
+  onComplete,
+  onCancel,
+}) => {
   const createBed = useGardenStore((s) => s.createBed);
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      setIsClosing(false);
+      return;
+    }
+
+    if (!shouldRender) return;
+    setIsClosing(true);
+
+    const timeout = window.setTimeout(() => {
+      setShouldRender(false);
+      setIsClosing(false);
+    }, ICON_WINDOW_POPUP_DURATION_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [isOpen, shouldRender]);
+
+  if (!shouldRender) return null;
+
+  const isVisible = isOpen && !isClosing;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +56,28 @@ const GardenBedCreator: React.FC<GardenBedCreatorProps> = ({ initialShapeId, onC
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity ${
+        isVisible ? "opacity-100" : "pointer-events-none opacity-0"
+      }`}
+      style={{
+        transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
+        transitionTimingFunction: isVisible
+          ? CHATBOT_POPUP_EASE
+          : CHATBOT_POPUP_EXIT_EASE,
+      }}
+    >
+      <div
+        className={`w-96 rounded-lg bg-white p-6 shadow-xl transition-all ${
+          isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        }`}
+        style={{
+          transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
+          transitionTimingFunction: isVisible
+            ? CHATBOT_POPUP_EASE
+            : CHATBOT_POPUP_EXIT_EASE,
+        }}
+      >
         <h2 className="text-xl font-bold mb-4 text-gray-800">Create New Garden Bed</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

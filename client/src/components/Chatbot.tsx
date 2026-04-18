@@ -68,7 +68,7 @@ type ChatView = "chat" | "history";
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const DEFAULT_CHAT_TITLE = "New chat";
 const DEFAULT_ASSISTANT_MESSAGE =
-  "Let's get started! How can I help with your garden today?";
+  "Hi, I'm Clementine.";
 
 const historyTimestampFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -215,7 +215,6 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
 
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
-  const [isEntering, setIsEntering] = useState(false);
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -339,36 +338,19 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
 
   useEffect(() => {
     if (isOpen) {
+      setShouldRender(true);
       setIsClosing(false);
-      if (!shouldRender) {
-        setShouldRender(true);
-        setIsEntering(true);
-        setPosition({ x: 0, y: 0 });
-
-        let rafId = 0;
-        let rafId2 = 0;
-        rafId = window.requestAnimationFrame(() => {
-          rafId2 = window.requestAnimationFrame(() => {
-            setIsEntering(false);
-          });
-        });
-
-        return () => {
-          window.cancelAnimationFrame(rafId);
-          window.cancelAnimationFrame(rafId2);
-        };
-      }
+      setPosition({ x: 0, y: 0 });
       return;
     }
 
     if (!shouldRender) return;
-    setIsEntering(false);
     setIsClosing(true);
 
     const timeout = window.setTimeout(() => {
       setShouldRender(false);
       setIsClosing(false);
-    }, CHATBOT_POPUP_DURATION_MS + 100);
+    }, CHATBOT_POPUP_DURATION_MS);
 
     return () => window.clearTimeout(timeout);
   }, [isOpen, shouldRender]);
@@ -489,14 +471,14 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
         content:
           data.message ||
           data.error ||
-          "I'm having trouble connecting to the garden network right now.",
+          "I hit a snag reaching the garden tools just now. Try again in a moment.",
       });
     } catch (error) {
       console.error("Chat error:", error);
       appendMessageToChat(currentChatId, {
         id: createId(),
         role: "assistant",
-        content: "I'm having trouble connecting to the garden network right now.",
+        content: "I hit a snag reaching the garden tools just now. Try again in a moment.",
       });
     } finally {
       setLoadingChatId((currentLoadingChatId) =>
@@ -505,9 +487,9 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
     }
   };
 
-  if (!shouldRender) return null;
+  if (!shouldRender && !isOpen) return null;
 
-  const isVisible = isOpen && !isClosing && !isEntering;
+  const isVisible = isOpen && !isClosing;
 
   return (
     <div
@@ -520,7 +502,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
         className={`w-[340px] md:w-[400px] h-[580px] bg-[#F7FBF5] rounded-[32px] shadow-[0_24px_64px_rgba(242,140,40,0.15)] border border-[#dce9d8] flex flex-col overflow-hidden font-sans transition-all origin-bottom-right ${
           isVisible
             ? "opacity-100 scale-100"
-            : "opacity-0 scale-75 pointer-events-none"
+            : "opacity-0 scale-95 pointer-events-none"
         }`}
         style={{
           transitionDuration: `${CHATBOT_POPUP_DURATION_MS}ms`,

@@ -484,15 +484,15 @@ const fetchDetailsForFiltering = async () => {
   const displayResults = filteredResults.length > 0 || Object.values(filters).some((f) => f !== "") ? filteredResults : results;
 
   return (
-    <div className="flex flex-col p-2 h-full overflow-hidden">
+    <div className="flex h-full flex-col p-2 overflow-hidden">
       {/* Search Bar */}
-      <div className="flex-none border-b">
+      <div className="flex-none border-b border-[#dce9d8] pb-2">
         <input
           type="text"
           placeholder="Search for a plant..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="border border-black text-black rounded-md px-3 py-2 w-full focus:outline-none focus:ring-1 focus:ring-black"
+          className="w-full rounded-[18px] border border-[#dce9d8] bg-white px-4 py-2.5 text-black focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
         />
       </div>
 
@@ -510,7 +510,7 @@ const fetchDetailsForFiltering = async () => {
 
       {/* Filters */}
       {showFilters && !selectedPlant && (
-        <div className="flex-none mt-2 p-3 bg-gray-50 rounded border space-y-2">
+        <div className="mt-2 flex-none space-y-2 rounded-[20px] border border-[#dce9d8] bg-white/75 p-3 shadow-sm">
           <div className="grid grid-cols-2 gap-2">
             {/* Watering Filter */}
             <div>
@@ -518,7 +518,7 @@ const fetchDetailsForFiltering = async () => {
               <select
                 value={filters.watering}
                 onChange={(e) => setFilters({ ...filters, watering: e.target.value })}
-                className="w-full text-xs border rounded px-2 py-1 text-black"
+                className="w-full rounded-xl border border-[#dce9d8] bg-white px-2 py-1 text-xs text-black"
               >
                 <option value="">All</option>
                 <option value="Frequent">Frequent</option>
@@ -534,7 +534,7 @@ const fetchDetailsForFiltering = async () => {
               <select
                 value={filters.hardinessZone}
                 onChange={(e) => setFilters({ ...filters, hardinessZone: e.target.value })}
-                className="w-full text-xs border rounded px-2 py-1 text-black"
+                className="w-full rounded-xl border border-[#dce9d8] bg-white px-2 py-1 text-xs text-black"
               >
                 <option value="">All</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((zone) => (
@@ -551,7 +551,7 @@ const fetchDetailsForFiltering = async () => {
               <select
                 value={filters.careLevel}
                 onChange={(e) => setFilters({ ...filters, careLevel: e.target.value })}
-                className="w-full text-xs border rounded px-2 py-1 text-black"
+                className="w-full rounded-xl border border-[#dce9d8] bg-white px-2 py-1 text-xs text-black"
               >
                 <option value="">All</option>
                 <option value="Low">Low</option>
@@ -566,7 +566,7 @@ const fetchDetailsForFiltering = async () => {
               <select
                 value={filters.cycle}
                 onChange={(e) => setFilters({ ...filters, cycle: e.target.value })}
-                className="w-full text-xs border rounded px-2 py-1 text-black"
+                className="w-full rounded-xl border border-[#dce9d8] bg-white px-2 py-1 text-xs text-black"
               >
                 <option value="">All</option>
                 <option value="Perennial">Perennial</option>
@@ -582,7 +582,7 @@ const fetchDetailsForFiltering = async () => {
               <select
                 value={filters.fruits}
                 onChange={(e) => setFilters({ ...filters, fruits: e.target.value })}
-                className="w-full text-xs border rounded px-2 py-1 text-black"
+                className="w-full rounded-xl border border-[#dce9d8] bg-white px-2 py-1 text-xs text-black"
               >
                 <option value="">All</option>
                 <option value="true">Yes</option>
@@ -596,7 +596,7 @@ const fetchDetailsForFiltering = async () => {
               <select
                 value={filters.flowers}
                 onChange={(e) => setFilters({ ...filters, flowers: e.target.value })}
-                className="w-full text-xs border rounded px-2 py-1 text-black"
+                className="w-full rounded-xl border border-[#dce9d8] bg-white px-2 py-1 text-xs text-black"
               >
                 <option value="">All</option>
                 <option value="true">Yes</option>
@@ -627,7 +627,7 @@ const fetchDetailsForFiltering = async () => {
       )}
 
       {/* RESULTS WINDOW */}
-      <div className="flex-1 overflow-y-auto mt-2 border rounded p-2 bg-white">
+      <div className="mt-2 flex-1 overflow-y-auto rounded-[24px] border border-[#dce9d8] bg-white/92 p-3 shadow-sm">
         {/* ================= LIST VIEW ================= */}
         {!selectedPlant && (
           <>
@@ -645,9 +645,9 @@ const fetchDetailsForFiltering = async () => {
                   <li
                     key={plant.id}
                     onClick={() => handleSelectPlant(plant)}
-                    className="flex gap-3 items-center cursor-pointer hover:bg-gray-100 p-2 rounded"
+                    className="flex cursor-pointer items-center gap-3 rounded-[18px] p-2 transition-colors hover:bg-[#f3f8f0]"
                   >
-                    {image && <img src={image} alt={plant.common_name ?? "Plant"} className="w-16 h-16 object-cover rounded" loading="lazy" />}
+                    {image && <img src={image} alt={plant.common_name ?? "Plant"} className="h-16 w-16 rounded-[16px] object-cover" loading="lazy" />}
 
                     <div className="flex-1">
                       <p className="font-medium text-black">
@@ -673,7 +673,7 @@ const fetchDetailsForFiltering = async () => {
         {/* ================= DETAIL VIEW ================= */}
         {(selectedPlant || loadingPlant) && (
           <div className="text-black animate-fadeIn">
-            <button onClick={() => setSelectedPlant(null)} className="mb-3 border rounded px-2 py-1 hover:bg-gray-200">
+            <button onClick={() => setSelectedPlant(null)} className="mb-3 rounded-full border border-[#dce9d8] px-3 py-1.5 transition-colors hover:bg-[#f3f8f0]">
               Back
             </button>
 
@@ -687,7 +687,7 @@ const fetchDetailsForFiltering = async () => {
                     alt={
                       selectedPlant.common_name || (Array.isArray(selectedPlant.scientific_name) ? selectedPlant.scientific_name[0] : selectedPlant.scientific_name)
                     }
-                    className="w-47 h-48 object-cover rounded mb-4"
+                    className="mb-4 h-48 w-47 rounded-[20px] object-cover"
                   />
                 )}
 

@@ -15,6 +15,7 @@ import { useGardenStore } from "../types/garden";
 import { useUser } from "@stackframe/stack";
 import Chatbot from "./Chatbot";
 import { LuMenu, LuSprout } from "react-icons/lu";
+import { useSidebarStore } from "../stores/sidebarStore";
 import {
   CHATBOT_POPUP_DURATION_MS,
   CHATBOT_POPUP_EASE,
@@ -23,8 +24,8 @@ import {
 } from "../lib/motion";
 
 type NavbarProps = {
-  onOpenSearch: () => void;
-  onOpenCalendar: () => void;
+  onOpenSearch?: () => void;
+  onOpenCalendar?: () => void;
 };
 
 const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
@@ -52,6 +53,10 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
   const toggleChatWindow = () => setIsChatOpen((prev) => !prev);
 
   const user = useUser({ or: 'return-null' });
+  const toggleSearch = useSidebarStore((state) => state.toggleSearch);
+  const toggleCalendar = useSidebarStore((state) => state.toggleCalendar);
+  const handleSearchClick = onOpenSearch ?? toggleSearch;
+  const handleCalendarClick = onOpenCalendar ?? toggleCalendar;
 
   const formatTemperature = (tempC: number) => {
     if (unit === "C") return `${tempC.toFixed(0)}°C`;
@@ -229,10 +234,10 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
             <button onClick={toggleVariableWindow} className={iconBtnClass} title="Plant Settings">
               <TbHomeEdit size={20} />
             </button>
-            <button onClick={onOpenSearch} className={iconBtnClass} title="Search">
+            <button onClick={handleSearchClick} className={iconBtnClass} title="Search">
               <FaSearch size={18} />
             </button>
-            <button onClick={onOpenCalendar} className={iconBtnClass} title="Calendar">
+            <button onClick={handleCalendarClick} className={iconBtnClass} title="Calendar">
               <FaCalendarAlt size={18} />
             </button>
 
@@ -314,8 +319,8 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
           {[
             { name: "Edit Mode", action: toggleEdit, icon: <FaEdit size={16} /> },
             { name: "Plant Settings", action: toggleVariableWindow, icon: <TbHomeEdit size={16} /> },
-            { name: "Search", action: onOpenSearch, icon: <FaSearch size={16} /> },
-            { name: "Calendar", action: onOpenCalendar, icon: <FaCalendarAlt size={16} /> },
+            { name: "Search", action: handleSearchClick, icon: <FaSearch size={16} /> },
+            { name: "Calendar", action: handleCalendarClick, icon: <FaCalendarAlt size={16} /> },
             { name: "Save Garden", action: handleSave, icon: <RiSave3Line size={16} /> },
             { name: "Load Garden", action: handleOpenFolder, icon: <IoFolderOutline size={16} /> },
             { name: "Ask Clementine", action: toggleChatWindow, icon: <LuSprout size={16} className="text-orange-500" /> },

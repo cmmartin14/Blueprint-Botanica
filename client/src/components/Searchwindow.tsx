@@ -13,9 +13,15 @@ type SearchWindowProps = {
   isOpen: boolean;
   onClose?: () => void;
   sidebarMode?: boolean;
+  sidebarCornerMode?: "full" | "bottom";
 };
 
-const SearchWindow = ({ isOpen, onClose, sidebarMode = false }: SearchWindowProps) => {
+const SearchWindow = ({
+  isOpen,
+  onClose,
+  sidebarMode = false,
+  sidebarCornerMode = "full",
+}: SearchWindowProps) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -41,6 +47,10 @@ const SearchWindow = ({ isOpen, onClose, sidebarMode = false }: SearchWindowProp
   if (!shouldRender) return null;
 
   const isVisible = isOpen && !isClosing;
+  const sidebarCornerClass =
+    sidebarCornerMode === "bottom" ? "rounded-b-[24px]" : "rounded-[24px]";
+  const sidebarHeaderCornerClass =
+    sidebarMode && sidebarCornerMode !== "bottom" ? "rounded-t-[24px]" : "";
 
   return (
     <div
@@ -50,8 +60,10 @@ const SearchWindow = ({ isOpen, onClose, sidebarMode = false }: SearchWindowProp
         sidebarMode
           ? `
             w-full h-full
-            rounded-none
+            ${sidebarCornerClass}
+            border-0
             bg-[#F7FBF5]
+            shadow-none
             flex flex-col overflow-hidden font-sans
             transition-all duration-500
             ${isVisible ? "opacity-100" : "opacity-0 pointer-events-none"}
@@ -76,7 +88,9 @@ const SearchWindow = ({ isOpen, onClose, sidebarMode = false }: SearchWindowProp
       }
     >
       {/* Header */}
-      <div className="bg-[#ecf5e8]/90 backdrop-blur-md px-5 py-4 flex items-center justify-between border-b border-[#dce9d8]">
+      <div
+        className={`bg-[#ecf5e8]/90 backdrop-blur-md px-5 py-4 flex items-center justify-between border-b border-[#dce9d8] ${sidebarHeaderCornerClass}`}
+      >
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[#8cc69f] rounded-full flex items-center justify-center text-white shadow-sm ring-2 ring-white/50">
             <LuBook size={22} />
@@ -97,7 +111,7 @@ const SearchWindow = ({ isOpen, onClose, sidebarMode = false }: SearchWindowProp
       </div>
 
       {/* Content Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea]">
+      <div className="flex-1 min-h-0 overflow-y-auto rounded-b-[24px] bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea]">
         <PlantSearch />
       </div>
     </div>

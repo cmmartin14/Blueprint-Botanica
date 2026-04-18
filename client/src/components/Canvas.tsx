@@ -8,12 +8,16 @@ import { FaKey } from "react-icons/fa6";
 
 import ShapeRenderer from "./ShapeRenderer";
 import { Shape, Position } from "../types/shapes";
-import SearchWindow from "./Searchwindow";
 import VariableWindow from "./VariableWindow";
-import Calendar from "./Calendar";
 import GardenBedCreator from "./garden/GardenBedCreator";
-import FlowerBedPanel from "./FlowerBedPanel";
+import Sidebar from "./Sidebar";
 import { useGardenStore } from "../types/garden";
+import { useSidebarStore } from "../stores/sidebarStore";
+import {
+  ICON_WINDOW_POPUP_DURATION_MS,
+  CHATBOT_POPUP_EASE,
+  CHATBOT_POPUP_EXIT_EASE,
+} from "../lib/motion";
 
 export type BedPath = {
   id: string;
@@ -170,97 +174,108 @@ const MapKeyPanel = ({
     return Array.from(legendMap.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [bedPlants]);
 
-  if (!isOpen) {
-    return (
+  const popupStyle = {
+    transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
+    transitionTimingFunction: isOpen
+      ? CHATBOT_POPUP_EASE
+      : CHATBOT_POPUP_EXIT_EASE,
+  };
+
+  return (
+    <>
       <button
         type="button"
         onClick={onOpen}
-        className="absolute right-5 top-24 bg-white rounded-lg shadow-lg p-2 z-40 text-green-800 hover:bg-gray-100 font-bold"
+        className={`absolute right-5 top-24 z-40 rounded-lg bg-white p-2 font-bold text-green-800 shadow-lg transition-all origin-top-right hover:bg-gray-100 ${
+          isOpen ? "pointer-events-none opacity-0 scale-95" : "opacity-100 scale-100"
+        }`}
+        style={popupStyle}
         title="Open map key"
       >
         <FaKey size={25} />
       </button>
-    );
-  }
 
-  return (
-    <div className="absolute right-5 top-24 bg-white rounded-lg shadow-lg border z-50 w-72 h-[180px] flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
-        <h3 className="font-semibold text-green-800">Key</h3>
+      <div
+        className={`absolute right-5 top-24 z-50 flex h-[180px] w-72 flex-col overflow-hidden rounded-lg border bg-white shadow-lg transition-all origin-top-right ${
+          isOpen ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
+        }`}
+        style={popupStyle}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
+          <h3 className="font-semibold text-green-800">Key</h3>
 
-        <div className="flex items-center gap-2">
-          {/* Toggle button */}
-          <button
-            type="button"
-            onClick={onToggleView}
-            className="text-green-800 hover:opacity-70"
-            title={view === "beds" ? "Show species list" : "Show bed list"}
-          >
-            {view === "beds" ? <FaLeaf size={20} /> : <FaListUl size={18} />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleView}
+              className="text-green-800 hover:opacity-70"
+              title={view === "beds" ? "Show species list" : "Show bed list"}
+            >
+              {view === "beds" ? <FaLeaf size={20} /> : <FaListUl size={18} />}
+            </button>
 
-          {/* Close button */}
-          <button
-            type="button"
-            onClick={() => {
-              onHoverBed(null);
-              onClose();
-            }}
-            title="Close map key"
-            className="text-green-800 hover:opacity-70"
-          >
-            <TbCircleXFilled size={25} className="text-green-800" />
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                onHoverBed(null);
+                onClose();
+              }}
+              title="Close map key"
+              className="text-green-800 hover:opacity-70"
+            >
+              <TbCircleXFilled size={25} className="text-green-800" />
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 pr-2">
-        {view === "beds" ? (
-          bedEntries.length === 0 ? (
-            <p className="text-sm text-gray-500">No garden beds yet.</p>
+        <div className="flex-1 overflow-y-auto px-4 py-3 pr-2">
+          {view === "beds" ? (
+            bedEntries.length === 0 ? (
+              <p className="text-sm text-gray-500">No garden beds yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {bedEntries.map((bed) => (
+                  <li key={bed.id}>
+                    <button
+                      type="button"
+                      onMouseEnter={() => onHoverBed(bed.id)}
+                      onMouseLeave={() => onHoverBed(null)}
+                      onFocus={() => onHoverBed(bed.id)}
+                      onBlur={() => onHoverBed(null)}
+                      onClick={() => onSelectBed(bed.id)}
+                      className="w-full text-left rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50"
+                    >
+                      <div className="text-sm font-semibold text-green-800">{bed.label}</div>
+                      <div className="text-xs text-green-700/80">
+                        {bed.plantCount} plant{bed.plantCount !== 1 ? "s" : ""}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : entries.length === 0 ? (
+            <p className="text-sm text-gray-500">No planted species yet.</p>
           ) : (
             <ul className="space-y-2">
-              {bedEntries.map((bed) => (
-                <li key={bed.id}>
-                  <button
-                    type="button"
-                    onMouseEnter={() => onHoverBed(bed.id)}
-                    onMouseLeave={() => onHoverBed(null)}
-                    onFocus={() => onHoverBed(bed.id)}
-                    onBlur={() => onHoverBed(null)}
-                    onClick={() => onSelectBed(bed.id)}
-                    className="w-full text-left rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50"
-                  >
-                    <div className="text-sm font-semibold text-green-800">{bed.label}</div>
-                    <div className="text-xs text-green-700/80">
-                      {bed.plantCount} plant{bed.plantCount !== 1 ? "s" : ""}
-                    </div>
-                  </button>
+              {entries.map((entry) => (
+                <li key={entry.speciesKey} className="flex items-center gap-3 text-green-800">
+                  <span
+                    aria-hidden="true"
+                    className="h-5 w-5 rounded border border-black/15 shrink-0"
+                    style={{ backgroundColor: entry.color }}
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold leading-tight break-words">{entry.label}</div>
+                    <div className="text-xs text-green-700/80">{entry.count} plant{entry.count !== 1 ? "s" : ""}</div>
+                  </div>
                 </li>
               ))}
             </ul>
-          )
-        ) : entries.length === 0 ? (
-          <p className="text-sm text-gray-500">No planted species yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {entries.map((entry) => (
-              <li key={entry.speciesKey} className="flex items-center gap-3 text-green-800">
-                <span
-                  aria-hidden="true"
-                  className="h-5 w-5 rounded border border-black/15 shrink-0"
-                  style={{ backgroundColor: entry.color }}
-                />
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold leading-tight break-words">{entry.label}</div>
-                  <div className="text-xs text-green-700/80">{entry.count} plant{entry.count !== 1 ? "s" : ""}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -269,14 +284,10 @@ const Canvas = () => {
   const [isPanning, setIsPanning] = useState(false);
   const [dragStart, setDragStart] = useState<Position>({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVariableOpen, setIsVariableOpen] = useState(false);
-  const [isCalendarOpen, setCalendarOpen] = useState(false);
-  const [sidebarMode, setSidebarMode] = useState<"calendar" | "workspace">("workspace");
 
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
   const [pendingBedShapeId, setPendingBedShapeId] = useState<string | null>(null);
-  const [bedPanelShapeId, setBedPanelShapeId] = useState<string | null>(null);
   const [isBedPanelLocked, setIsBedPanelLocked] = useState(false);
 
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
@@ -325,6 +336,14 @@ const Canvas = () => {
   const setEditMode = useGardenStore((state) => state.setEditMode);
   const bedPlants = useGardenStore((state) => state.bedPlants);
   const gardenZone = useGardenStore((state) => state.zone);
+  const isSearchOpen = useSidebarStore((state) => state.isSearchOpen);
+  const isCalendarOpen = useSidebarStore((state) => state.isCalendarOpen);
+  const sidebarMode = useSidebarStore((state) => state.mode);
+  const bedPanelShapeId = useSidebarStore((state) => state.bedPanelShapeId);
+  const setSidebarBedPanelShapeId = useSidebarStore((state) => state.setBedPanelShapeId);
+  const openSearchSidebar = useSidebarStore((state) => state.openSearch);
+  const closeSearchSidebar = useSidebarStore((state) => state.closeSearch);
+  const closeCalendarSidebar = useSidebarStore((state) => state.closeCalendar);
 
   const gardenBedEntries = useMemo<GardenBedListEntry[]>(() => {
     const bedLikeShapes = shapes
@@ -706,7 +725,7 @@ const Canvas = () => {
         setActiveVertex(null);
 
         if (!isBedPanelLocked) {
-          setBedPanelShapeId(null);
+          setSidebarBedPanelShapeId(null);
         }
       }
 
@@ -715,7 +734,7 @@ const Canvas = () => {
       setIsPanning(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     },
-    [editMode, isBedPanelLocked, isInteractiveTarget, pan.x, pan.y]
+    [editMode, isBedPanelLocked, isInteractiveTarget, pan.x, pan.y, setSidebarBedPanelShapeId]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -1180,107 +1199,51 @@ const Canvas = () => {
     setToolMode("none");
   }, [history, historyIndex]);
 
-  const openCalendarSidebar = useCallback(() => {
-    setSidebarMode("calendar");
-    setCalendarOpen(true);
-    setIsSearchOpen(false);
-  }, []);
-  
-  const openSearchSidebar = useCallback(() => {
-    setSidebarMode("workspace");
-    setIsSearchOpen(true);
-    setCalendarOpen(false);
-  }, []);
-  
   const openBedInfoSidebar = useCallback((shapeId: string) => {
-    setSidebarMode("workspace");
-    setIsSearchOpen(true);
-    setCalendarOpen(false);
-    setBedPanelShapeId(shapeId);
-  }, []);
+    openSearchSidebar();
+    setSidebarBedPanelShapeId(shapeId);
+  }, [openSearchSidebar, setSidebarBedPanelShapeId]);
   
   const closeBedInfoSidebar = useCallback(() => {
-    setBedPanelShapeId(null);
-    setIsSearchOpen(true);
-    setSidebarMode("workspace");
-  }, []);
+    setSidebarBedPanelShapeId(null);
+    openSearchSidebar();
+  }, [openSearchSidebar, setSidebarBedPanelShapeId]);
 
   return (
     // REMOVED 'top-16' HERE SO THE CANVAS SPANS THE ENTIRE SCREEN
     <div className="fixed inset-0 overflow-hidden bg-gray-50">
       {/* MOVED from top-4 to top-24 so it doesn't overlap the floating navbar */}
       <div className="absolute top-24 left-4 flex gap-2 z-50">
-        {showGardenBedCreator && (
-          <GardenBedCreator
-            initialShapeId={pendingBedShapeId ?? undefined}
-            onComplete={() => {
-              setShowGardenBedCreator(false);
-              setPendingBedShapeId(null);
-            }}
-            onCancel={() => {
-              setShowGardenBedCreator(false);
-              setPendingBedShapeId(null);
-            }}
-          />
-        )}
+        <GardenBedCreator
+          isOpen={showGardenBedCreator}
+          initialShapeId={pendingBedShapeId ?? undefined}
+          onComplete={() => {
+            setShowGardenBedCreator(false);
+            setPendingBedShapeId(null);
+          }}
+          onCancel={() => {
+            setShowGardenBedCreator(false);
+            setPendingBedShapeId(null);
+          }}
+        />
       </div>
 
       
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
       
-      {(isCalendarOpen || isSearchOpen || bedPanelShapeId) && (
-        <div
-          className="
-            fixed left-0 bottom-0 z-40
-            w-[33vw] min-w-[320px] max-w-[520px]
-            rounded-tr-[28px] border-r border-t border-[#dce9d8]
-            bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.18)]
-            overflow-hidden
-          "
-          style={{ top: "72px" }}
-        >
-          {sidebarMode === "calendar" && isCalendarOpen ? (
-            <div className="h-full">
-              <Calendar
-                isOpen={true}
-                onClose={() => setCalendarOpen(false)}
-              />
-            </div>
-          ) : (
-            <div className="flex h-full flex-col">
-              {bedPanelShapeId ? (
-                <>
-                  <div className="h-1/2 min-h-0 overflow-y-auto border-b border-[#dce9d8]">
-                    <FlowerBedPanel
-                      shapeId={bedPanelShapeId}
-                      isLocked={isBedPanelLocked}
-                      zone={gardenZone}
-                      onToggleLock={() => setIsBedPanelLocked((prev) => !prev)}
-                      onClose={closeBedInfoSidebar}
-                    />
-                  </div>
-
-                  <div className="h-1/2 min-h-0 overflow-y-auto">
-                    <SearchWindow
-                      isOpen={true}
-                      onClose={() => setIsSearchOpen(false)}
-                      sidebarMode={true}
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="h-full min-h-0 overflow-y-auto">
-                  <SearchWindow
-                    isOpen={true}
-                    onClose={() => setIsSearchOpen(false)}
-                    sidebarMode={true}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      <Sidebar
+        mode={sidebarMode}
+        showCalendar={isCalendarOpen}
+        showSearch={isSearchOpen}
+        showBedInfo={Boolean(bedPanelShapeId)}
+        selectedShapeId={bedPanelShapeId}
+        isBedPanelLocked={isBedPanelLocked}
+        zone={gardenZone}
+        onCloseSearch={closeSearchSidebar}
+        onCloseCalendar={closeCalendarSidebar}
+        onCloseBedInfo={closeBedInfoSidebar}
+        onToggleBedLock={() => setIsBedPanelLocked((prev) => !prev)}
+      />
 
       <div
         ref={canvasRef}
@@ -1330,9 +1293,9 @@ const Canvas = () => {
               setSelectedShapeId(null);
 
               if (isBedPanelLocked) {
-                setBedPanelShapeId(id);
+                setSidebarBedPanelShapeId(id);
               } else {
-                setBedPanelShapeId((prev) => (prev === id ? prev : null));
+                setSidebarBedPanelShapeId(bedPanelShapeId === id ? null : id);
               }
             }}
             onSelectVertex={(bedId, index) => {
@@ -1341,9 +1304,9 @@ const Canvas = () => {
               setSelectedShapeId(null);
 
               if (isBedPanelLocked) {
-                setBedPanelShapeId(bedId);
+                setSidebarBedPanelShapeId(bedId);
               } else {
-                setBedPanelShapeId((prev) => (prev === bedId ? prev : null));
+                setSidebarBedPanelShapeId(bedPanelShapeId === bedId ? null : bedId);
               }
             }}
             onMoveBedBy={moveBedBy}
@@ -1380,7 +1343,7 @@ const Canvas = () => {
               if (isBedPanelLocked && isBedLikeShape) {
                 openBedInfoSidebar(shapeId);
               } else if (!isBedPanelLocked) {
-                setBedPanelShapeId(null);
+                setSidebarBedPanelShapeId(null);
               }
             }}
           />
@@ -1398,7 +1361,7 @@ const Canvas = () => {
         onHoverBed={setHoveredMapKeyBedId}
         onSelectBed={(bedId) => {
           setHoveredMapKeyBedId(null);
-          setBedPanelShapeId(bedId);
+          setSidebarBedPanelShapeId(bedId);
           setActiveBedId(bedId);
           setActiveVertex(null);
           setSelectedShapeId(bedId);

@@ -1,8 +1,8 @@
 // FlowerBedPanel.tsx
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { TbCircleXFilled } from "react-icons/tb";
+import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { FaLock, FaLockOpen } from "react-icons/fa";
+import { LuX } from "react-icons/lu";
 import { PlantEntry, useGardenStore } from "../types/garden";
 import { useHarvestDates } from "./hooks/useHarvestDates";
 import { useCalendarStore } from "../stores/calendarStore";
@@ -25,6 +25,7 @@ interface FlowerBedPanelProps {
   isLocked: boolean;
   topOffset?: number;
   zone?: string | null;
+  sidebarMode?: boolean;
   onToggleLock: () => void;
   onClose: () => void;
 }
@@ -55,6 +56,7 @@ export default function FlowerBedPanel({
   isLocked,
   topOffset = 96,
   zone,
+  sidebarMode = false,
   onToggleLock,
   onClose,
 }: FlowerBedPanelProps) {
@@ -240,7 +242,7 @@ export default function FlowerBedPanel({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleSaveName();
     } else if (e.key === "Escape") {
@@ -275,14 +277,28 @@ export default function FlowerBedPanel({
   };
   return (
     <div
-      data-testid='bed-plant-window'
-      className="absolute right-5 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
-      style={{ width: 380, height: "60vh", top: `${topOffset}px` }}
+      data-testid="bed-plant-window"
+      className={
+        sidebarMode
+          ? "relative flex h-full w-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-[#F7FBF5] shadow-none"
+          : "absolute right-5 z-50 flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl"
+      }
+      style={
+        sidebarMode
+          ? undefined
+          : { width: 380, height: "60vh", top: `${topOffset}px` }
+      }
       data-interactive="true"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b shrink-0 bg-white">
+      <div
+        className={`flex shrink-0 items-center justify-between border-b px-4 py-3 ${
+          sidebarMode
+            ? "border-[#dce9d8] bg-[#ecf5e8]/90 backdrop-blur-md"
+            : "border-gray-200 bg-white"
+        }`}
+      >
         {isEditingName ? (
           <input
             type="text"
@@ -311,24 +327,30 @@ export default function FlowerBedPanel({
           <button
             type="button"
             onClick={onToggleLock}
-            className={`p-1.5 rounded ${
-              isLocked
-                ? "text-green-800 hover:bg-gray-200"
-                : "text-green-800 hover:bg-gray-200"
-            }`}
+            className="chatbot-pop-trigger rounded-full p-2 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
             title={isLocked ? "Unlock window" : "Lock window"}
+            aria-label={isLocked ? "Unlock bed panel" : "Lock bed panel"}
           >
             {isLocked ? <FaLock size={18} /> : <FaLockOpen size={18} />}
           </button>
 
-          <button onClick={onClose} className="text-green-800 hover:opacity-70">
-            <TbCircleXFilled size={22} />
+          <button
+            type="button"
+            onClick={onClose}
+            className="chatbot-pop-trigger rounded-full p-2 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
+            aria-label="Close bed panel"
+          >
+            <LuX size={20} strokeWidth={2.5} />
           </button>
         </div>
       </div>
 
       {/* Search to add */}
-      <div className="px-4 py-3 border-b shrink-0 bg-white">
+      <div
+        className={`shrink-0 border-b px-4 py-3 ${
+          sidebarMode ? "border-[#dce9d8] bg-[#f5fbf3]/80" : "border-gray-200 bg-white"
+        }`}
+      >
         <input
           type="text"
           placeholder="Search plants to add..."
@@ -370,12 +392,12 @@ export default function FlowerBedPanel({
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="border-b">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea]">
+        <div className="border-b border-[#dce9d8]">
           <button
             type="button"
             onClick={() => setIsAttributesOpen((prev) => !prev)}
-            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
+            className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-white/60"
           >
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Bed Attributes
@@ -511,7 +533,11 @@ export default function FlowerBedPanel({
             <p className="text-xs text-gray-400 py-2">No plants added yet. Search below to add one.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white z-10">
+              <thead
+                className={`sticky top-0 z-10 ${
+                  sidebarMode ? "bg-[#f7fbf5]" : "bg-white"
+                }`}
+              >
                 <tr className="text-left text-xs text-gray-500 border-b">
                   <th className="pb-1 font-medium">Plant</th>
                   <th className="pb-1 font-medium">Planted</th>

@@ -172,6 +172,26 @@ describe("POST /api/chat", () => {
     expect(json.error).toBe("Image attachment is invalid or too large.");
   });
 
+  it("returns instant reply for a simple greeting without calling Gemini", async () => {
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "Hi" }],
+      }),
+    });
+
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json).toEqual({
+      message: "Hi there, glad you're here.",
+      actions: [],
+    });
+    expect(mockGetGenerativeModel).not.toHaveBeenCalled();
+    expect(mockStartChat).not.toHaveBeenCalled();
+  });
+
   it("returns plain text response with no tools", async () => {
     mockStartChat.mockReturnValue({
       sendMessage: mockSendMessage,
@@ -187,7 +207,7 @@ describe("POST /api/chat", () => {
     const req = new Request("http://localhost/api/chat", {
       method: "POST",
       body: JSON.stringify({
-        messages: [{ role: "user", content: "Hi" }],
+        messages: [{ role: "user", content: "Share a quick gardening tip" }],
       }),
     });
 
@@ -490,7 +510,7 @@ describe("POST /api/chat", () => {
     const req = new Request("http://localhost/api/chat", {
       method: "POST",
       body: JSON.stringify({
-        messages: [{ role: "user", content: "Hi" }],
+        messages: [{ role: "user", content: "Help me plan lettuce for spring" }],
       }),
     });
 

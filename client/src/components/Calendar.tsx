@@ -1,6 +1,13 @@
 // Calendar.tsx
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type PointerEvent,
+} from "react";
 import { useCalendarStore } from "../stores/calendarStore";
 import {
   ICON_WINDOW_POPUP_DURATION_MS,
@@ -103,6 +110,12 @@ export default function CalendarWindow({
   }, [isOpen, isFullscreen]);
 
   useEffect(() => {
+    if (!sidebarMode) return;
+    setIsFullscreen(false);
+    setDragState(null);
+  }, [sidebarMode]);
+
+  useEffect(() => {
     if (!selectedDate) return;
     if (noteReminderAt) return;
     const defaultReminder = new Date(selectedDate);
@@ -194,7 +207,7 @@ export default function CalendarWindow({
     };
   };
 
-  const handleHeaderPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handleHeaderPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (isFullscreen) return;
     if ((event.target as HTMLElement).closest("button")) return;
 
@@ -210,7 +223,7 @@ export default function CalendarWindow({
     });
   };
 
-  const handleHeaderPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handleHeaderPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!dragState || event.pointerId !== dragState.pointerId) return;
 
     setWindowPosition(
@@ -221,7 +234,7 @@ export default function CalendarWindow({
     );
   };
 
-  const handleHeaderPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handleHeaderPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     if (!dragState || event.pointerId !== dragState.pointerId) return;
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -368,7 +381,7 @@ export default function CalendarWindow({
     [notes]
   );
 
-  const submitNote = (e: React.FormEvent) => {
+  const submitNote = (e: FormEvent) => {
     e.preventDefault();
     const created = addNote({
       source: "user",
@@ -386,39 +399,51 @@ export default function CalendarWindow({
     setNoteReminderEmail("");
   };
 
-  const windowStyle = {
-    ...(isFullscreen ? {} : { left: `${windowPosition.x}px`, top: `${windowPosition.y}px` }),
-    ...(isDragging
-      ? {}
-      : {
-          transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
-          transitionTimingFunction: isOpen
-            ? CHATBOT_POPUP_EASE
-            : CHATBOT_POPUP_EXIT_EASE,
-        }),
-  };
+  const windowStyle = sidebarMode
+    ? undefined
+    : {
+        ...(isFullscreen ? {} : { left: `${windowPosition.x}px`, top: `${windowPosition.y}px` }),
+        ...(isDragging
+          ? {}
+          : {
+              transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
+              transitionTimingFunction: isOpen
+                ? CHATBOT_POPUP_EASE
+                : CHATBOT_POPUP_EXIT_EASE,
+            }),
+      };
 
   return (
     <div
       ref={windowRef}
       data-testid="calendar-window"
-      className={`fixed z-50 overflow-hidden rounded-[32px] border border-[#dce9d8] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.15)] ${
-        isDragging ? "transition-none" : "transition-all"
-      } ${
-        isFullscreen ? "inset-12 md:inset-20" : "w-[980px] h-[660px] max-w-[95vw]"
-      } ${isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
+      className={`overflow-hidden border border-[#dce9d8] bg-[#F7FBF5] ${
+        sidebarMode
+          ? "relative h-full w-full rounded-[24px] border-0 shadow-none"
+          : `fixed z-50 rounded-[32px] shadow-[0_24px_64px_rgba(25,64,41,0.15)] ${
+              isDragging ? "transition-none" : "transition-all"
+            } ${isFullscreen ? "inset-12 md:inset-20" : "h-[660px] w-[980px] max-w-[95vw]"} ${
+              isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+            }`
+      } ${sidebarMode && !isOpen ? "pointer-events-none opacity-0" : ""}`}
       style={windowStyle}
     >
       {/* Header section */}
       <div
         className={`flex items-center justify-between border-b border-[#dce9d8] bg-[#ecf5e8]/80 px-6 py-4 backdrop-blur-md ${
-          isFullscreen ? "" : isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+          sidebarMode
+            ? "rounded-t-[24px]"
+            : isFullscreen
+              ? ""
+              : isDragging
+                ? "cursor-grabbing select-none"
+                : "cursor-grab"
         }`}
-        onPointerDown={handleHeaderPointerDown}
-        onPointerMove={handleHeaderPointerMove}
-        onPointerUp={handleHeaderPointerUp}
-        onPointerCancel={handleHeaderPointerUp}
-        style={isFullscreen ? undefined : { touchAction: "none" }}
+        onPointerDown={sidebarMode ? undefined : handleHeaderPointerDown}
+        onPointerMove={sidebarMode ? undefined : handleHeaderPointerMove}
+        onPointerUp={sidebarMode ? undefined : handleHeaderPointerUp}
+        onPointerCancel={sidebarMode ? undefined : handleHeaderPointerUp}
+        style={!sidebarMode && !isFullscreen ? { touchAction: "none" } : undefined}
       >
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold text-green-900 tracking-tight">Calendar</h2>
@@ -438,26 +463,28 @@ export default function CalendarWindow({
               </svg>
             </button>
           )}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="chatbot-pop-trigger rounded-full p-2.5 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
-            aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
-          >
-            {isFullscreen ? (
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-              </svg>
-            )}
-          </button>
+          {!sidebarMode && (
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="chatbot-pop-trigger rounded-full p-2.5 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
+              aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
+            >
+              {isFullscreen ? (
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                </svg>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="h-[calc(100%-69px)] overflow-y-auto bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea] custom-scrollbar">
+      <div className="h-[calc(100%-69px)] overflow-y-auto rounded-b-[24px] bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea] custom-scrollbar">
         <div className="space-y-6 p-6 lg:p-8">
           {/* Calendar Section */}
           <section className="rounded-[28px] border border-[#dce9d8] bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
