@@ -288,10 +288,19 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
                   <span className="text-xs font-black text-slate-700">{formatTemperature(temp)}</span>
                   <button
                     onClick={() => setUnit(unit === "C" ? "F" : "C")}
-                    className="relative flex items-center w-8 h-5 bg-slate-200 rounded-full transition-colors hover:bg-slate-300 focus:outline-none"
+                    className={`relative flex h-5 w-9 items-center rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                      unit === "F"
+                        ? "border-amber-300 bg-gradient-to-r from-amber-300 to-orange-400 focus:ring-amber-300"
+                        : "border-sky-300 bg-gradient-to-r from-sky-300 to-cyan-400 focus:ring-sky-300"
+                    }`}
                     title="Toggle °C/°F"
+                    aria-label={`Switch temperature unit to ${unit === "C" ? "Fahrenheit" : "Celsius"}`}
                   >
-                    <div className={`absolute w-3.5 h-3.5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${unit === "F" ? "translate-x-4" : "translate-x-0.5"}`} />
+                    <div
+                      className={`absolute h-3.5 w-3.5 rounded-full bg-white shadow-[0_2px_10px_rgba(15,23,42,0.22)] ring-1 ring-white/80 transform transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
+                        unit === "F" ? "translate-x-[18px]" : "translate-x-0.5"
+                      }`}
+                    />
                   </button>
                 </div>
               )}
