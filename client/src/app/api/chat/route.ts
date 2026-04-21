@@ -38,6 +38,9 @@ interface ChatContext {
   timezone?: string;
   locale?: string;
   currentDateISO?: string;
+  canvasState?: any;
+  uiState?: any;
+  calendarState?: any;
 }
 
 interface ChatRequestBody {
@@ -389,6 +392,18 @@ const buildContextPrompt = (context?: ChatContext) => {
   if (context.timezone) lines.push(`User timezone: ${context.timezone}.`);
   if (context.locale) lines.push(`User locale: ${context.locale}.`);
   if (context.currentDateISO) lines.push(`Current user timestamp: ${context.currentDateISO}.`);
+
+  if (context.uiState) {
+    lines.push(`User's current UI State (what tabs are open, edit mode, etc): ${JSON.stringify(context.uiState)}`);
+  }
+
+  if (context.canvasState) {
+    lines.push(`User's Canvas State (shapes, beds, plants they drew): ${JSON.stringify(context.canvasState)}`);
+  }
+  
+  if (context.calendarState) {
+    lines.push(`User's Calendar State (tasks, events, notes): ${JSON.stringify(context.calendarState)}`);
+  }
 
   if (lines.length === 0) return "";
   return `Client context (provided by app, use when helpful):\n- ${lines.join("\n- ")}`;

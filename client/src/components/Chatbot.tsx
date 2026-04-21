@@ -14,6 +14,8 @@ import {
 } from "react-icons/lu";
 import { useCalendarStore } from "../stores/calendarStore";
 import type { CalendarAssistantAction } from "../stores/calendarStore";
+import { useGardenStore } from "../types/garden";
+import { useSidebarStore } from "../stores/sidebarStore";
 import {
   CHATBOT_POPUP_DURATION_MS,
   CHATBOT_POPUP_EASE,
@@ -55,6 +57,9 @@ interface ChatContextPayload {
   timezone?: string;
   locale?: string;
   currentDateISO?: string;
+  canvasState?: any;
+  uiState?: any;
+  calendarState?: any;
 }
 
 interface ChatApiResponse {
@@ -437,11 +442,37 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
     resetComposer();
     setLoadingChatId(currentChatId);
 
+    const gardenState = useGardenStore.getState();
+    const sidebarState = useSidebarStore.getState();
+    const calendarState = useCalendarStore.getState();
+
+    const canvasState = {
+      gardenName: gardenState.name,
+      hardinessZone: gardenState.hardinessZone,
+      shapesCount: Object.keys(gardenState.shapes).length,
+      bedsCount: Object.keys(gardenState.beds).length,
+      plants: gardenState.bedPlants,
+      beds: gardenState.beds,
+      shapes: gardenState.shapes,
+    };
+
+    const uiState = {
+      editModeActive: gardenState.editMode,
+      gridMode: gardenState.gridMode,
+      shapeMode: gardenState.shapeMode,
+      isSearchOpen: sidebarState.isSearchOpen,
+      isCalendarOpen: sidebarState.isCalendarOpen,
+      bedPanelShapeId: sidebarState.bedPanelShapeId,
+    };
+
     const context: ChatContextPayload = {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       locale: navigator.language,
       currentDateISO: new Date().toISOString(),
       ...(geoContext ? { location: geoContext } : {}),
+      canvasState,
+      uiState,
+      calendarState: { events: calendarState.events, notes: calendarState.notes },
     };
 
     try {
