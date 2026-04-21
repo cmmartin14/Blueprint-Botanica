@@ -499,7 +499,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
       }}
     >
       <div
-        className={`w-[340px] md:w-[400px] h-[580px] bg-[#F7FBF5] rounded-[32px] shadow-[0_24px_64px_rgba(242,140,40,0.15)] border border-[#dce9d8] flex flex-col overflow-hidden font-sans transition-all origin-bottom-right ${
+        className={`w-[340px] md:w-[400px] h-[580px] bg-[#F7FBF5] rounded-[32px] shadow-2xl border border-gray-200/50 flex flex-col overflow-hidden font-sans transition-all origin-bottom-right ${
           isVisible
             ? "opacity-100 scale-100"
             : "opacity-0 scale-95 pointer-events-none"

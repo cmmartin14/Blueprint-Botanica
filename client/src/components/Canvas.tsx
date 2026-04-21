@@ -186,9 +186,8 @@ const MapKeyPanel = ({
       <button
         type="button"
         onClick={onOpen}
-        className={`absolute right-5 top-24 z-40 rounded-lg bg-white p-2 font-bold text-green-800 shadow-lg transition-all origin-top-right hover:bg-gray-100 ${
-          isOpen ? "pointer-events-none opacity-0 scale-95" : "opacity-100 scale-100"
-        }`}
+        className={`absolute right-5 top-24 z-40 rounded-lg border border-gray-200/50 bg-white p-2 font-bold text-green-800 shadow-2xl transition-all origin-top-right hover:bg-gray-100 ${isOpen ? "pointer-events-none opacity-0 scale-95" : "opacity-100 scale-100"
+          }`}
         style={popupStyle}
         title="Open map key"
       >
@@ -196,9 +195,8 @@ const MapKeyPanel = ({
       </button>
 
       <div
-        className={`absolute right-5 top-24 z-50 flex h-[180px] w-72 flex-col overflow-hidden rounded-lg border bg-white shadow-lg transition-all origin-top-right ${
-          isOpen ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
-        }`}
+        className={`absolute right-5 top-24 z-50 flex h-[180px] w-72 flex-col overflow-hidden rounded-lg border border-gray-200/50 bg-white shadow-2xl transition-all origin-top-right ${isOpen ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
+          }`}
         style={popupStyle}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
@@ -336,6 +334,8 @@ const Canvas = () => {
   const setEditMode = useGardenStore((state) => state.setEditMode);
   const bedPlants = useGardenStore((state) => state.bedPlants);
   const gardenZone = useGardenStore((state) => state.zone);
+  const gridMode = useGardenStore((state) => state.gridMode);
+  const shapeMode = useGardenStore((state) => state.shapeMode);
   const isSearchOpen = useSidebarStore((state) => state.isSearchOpen);
   const isCalendarOpen = useSidebarStore((state) => state.isCalendarOpen);
   const sidebarMode = useSidebarStore((state) => state.mode);
@@ -370,15 +370,15 @@ const Canvas = () => {
     return combined.map((bedEntry, index) => {
       const plants = bedPlants[bedEntry.id] ?? [];
       const speciesKeys = new Set(plants.map((plant) => getMapKeySpeciesKey(plant)));
-      
+
       const matchingBed = beds.find((bed) => bed.id === bedEntry.id);
       const matchingShape = shapes.find((shape) => shape.id === bedEntry.id);
-      
+
       const savedName =
         matchingBed?.name?.trim() ||
         matchingShape?.name?.trim() ||
         "";
-      
+
       return {
         id: bedEntry.id,
         label: savedName || `Garden Bed ${index + 1}`,
@@ -776,16 +776,25 @@ const Canvas = () => {
 
   const gridStyle = useMemo(() => {
     const safeScale = scale || 1;
+    const size = GRID_SIZE * safeScale;
+    const halfSize = size / 2;
+
+    if (gridMode === "lines") {
+      return {
+        backgroundColor: "#6D8934",
+        backgroundImage: "linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px)",
+        backgroundSize: `${size}px ${size}px`,
+        backgroundPosition: `${pan.x % size}px ${pan.y % size}px`,
+      };
+    }
+
     return {
       backgroundColor: "#6D8934",
-      backgroundImage: `
-        linear-gradient(to right, #9EAD73 1px, transparent 1px),
-        linear-gradient(to bottom, #9EAD73 1px, transparent 1px)
-      `,
-      backgroundSize: `${GRID_SIZE * safeScale}px ${GRID_SIZE * safeScale}px`,
-      backgroundPosition: `${pan.x % (GRID_SIZE * safeScale)}px ${pan.y % (GRID_SIZE * safeScale)}px`,
+      backgroundImage: "radial-gradient(circle, rgba(255, 255, 255, 0.6) 2px, transparent 2px)",
+      backgroundSize: `${size}px ${size}px`,
+      backgroundPosition: `${(pan.x % size) - halfSize}px ${(pan.y % size) - halfSize}px`,
     };
-  }, [pan.x, pan.y, scale]);
+  }, [pan.x, pan.y, scale, gridMode]);
 
   const canvasCursor = useMemo(() => {
     if (!editMode) return "default";
@@ -1203,7 +1212,7 @@ const Canvas = () => {
     openSearchSidebar();
     setSidebarBedPanelShapeId(shapeId);
   }, [openSearchSidebar, setSidebarBedPanelShapeId]);
-  
+
   const closeBedInfoSidebar = useCallback(() => {
     setSidebarBedPanelShapeId(null);
     openSearchSidebar();
@@ -1228,9 +1237,9 @@ const Canvas = () => {
         />
       </div>
 
-      
+
       <VariableWindow isOpen={isVariableOpen} onClose={() => setIsVariableOpen(false)} />
-      
+
       <Sidebar
         mode={sidebarMode}
         showCalendar={isCalendarOpen}
@@ -1272,6 +1281,7 @@ const Canvas = () => {
             gridToUnit={0.25}
             canEdit={editMode}
             bedPlants={bedPlants}
+            shapeMode={shapeMode}
             onOpenBedPanel={(shapeId) => {
               openBedInfoSidebar(shapeId);
             }}
@@ -1333,13 +1343,13 @@ const Canvas = () => {
               setSelectedShapeId(shapeId);
               setActiveBedId(null);
               setActiveVertex(null);
-            
+
               const selectedShape = shapesRef.current.find((s) => s.id === shapeId);
               const isBedLikeShape =
                 selectedShape?.type === "circle" ||
                 selectedShape?.type === "rectangle" ||
                 selectedShape?.type === "freehand";
-            
+
               if (isBedPanelLocked && isBedLikeShape) {
                 openBedInfoSidebar(shapeId);
               } else if (!isBedPanelLocked) {
@@ -1370,7 +1380,7 @@ const Canvas = () => {
 
       {editMode && (
         // MOVED from top-0 (with mt-5) to top-24 to clear floating navbar
-        <div className="absolute top-24 left-4 bg-white rounded-lg shadow-lg p-3 border z-40" data-testid="edit-window">
+        <div className="absolute top-24 left-4 bg-white rounded-lg shadow-2xl p-3 border border-gray-200/50 z-40" data-testid="edit-window">
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
               <button
@@ -1380,7 +1390,7 @@ const Canvas = () => {
                   setPreviewEnd(null);
                   createCircleShape();
                 }}
-                className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+                className="p-2 rounded text-green-800 bg-gray-100 hover:bg-gray-200 hover:scale-[1.4] hover:shadow-sm active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
                 title="Circle"
               >
                 <FaRegCircle size={25} />
@@ -1398,7 +1408,7 @@ const Canvas = () => {
                     startDrawMode();
                   }
                 }}
-                className={`p-2 rounded text-green-800 ${toolMode === "draw" ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"}`}
+                className={`p-2 rounded text-green-800 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[1.4] hover:shadow-sm active:scale-95 ${toolMode === "draw" ? "bg-gray-300 shadow-inner" : "bg-gray-100 hover:bg-gray-200"}`}
                 title="Draw (lines + beds). Hold Shift to start. Click points. Click start to close into a bed."
               >
                 <FaDrawPolygon size={25} />
@@ -1406,17 +1416,17 @@ const Canvas = () => {
 
               <button
                 onClick={() => setShowDimensions((prev) => !prev)}
-                className={`p-2 rounded text-green-800 ${showDimensions ? "bg-gray-300" : "bg-gray-100 hover:bg-gray-200"}`}
+                className={`p-2 rounded text-green-800 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[1.4] hover:shadow-sm active:scale-95 ${showDimensions ? "bg-gray-300 shadow-inner" : "bg-gray-100 hover:bg-gray-200"}`}
                 title={showDimensions ? "Hide Dimensions" : "Show Dimensions"}
               >
                 <FaRulerCombined size={25} />
               </button>
 
-              <button onClick={undo} className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800" title="Undo">
+              <button onClick={undo} className="p-2 rounded text-green-800 bg-gray-100 hover:bg-gray-200 hover:scale-[1.4] hover:shadow-sm active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]" title="Undo">
                 <FaUndoAlt size={25} />
               </button>
 
-              <button onClick={redo} className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800" title="Redo">
+              <button onClick={redo} className="p-2 rounded text-green-800 bg-gray-100 hover:bg-gray-200 hover:scale-[1.4] hover:shadow-sm active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]" title="Redo">
                 <FaRedoAlt size={25} />
               </button>
 
@@ -1432,7 +1442,7 @@ const Canvas = () => {
                     setPreviewEnd(null);
                   }
                 }}
-                className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+                className="p-2 rounded text-green-800 bg-gray-100 hover:bg-gray-200 hover:scale-[1.4] hover:shadow-sm active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
                 title="Clear Canvas"
               >
                 <FaTrashAlt size={25} />
@@ -1447,7 +1457,7 @@ const Canvas = () => {
                   setDraft(null);
                   setPreviewEnd(null);
                 }}
-                className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-green-800"
+                className="p-2 rounded text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 hover:scale-[1.4] hover:shadow-sm active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
                 title="Exit Edit Mode"
               >
                 <TbCircleXFilled size={25} />

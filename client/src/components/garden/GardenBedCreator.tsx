@@ -68,7 +68,7 @@ const GardenBedCreator: React.FC<GardenBedCreatorProps> = ({
       }}
     >
       <div
-        className={`w-96 rounded-lg bg-white p-6 shadow-xl transition-all ${
+        className={`w-96 rounded-lg border border-gray-200/50 bg-white p-6 shadow-2xl transition-all ${
           isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
         }`}
         style={{

@@ -71,7 +71,7 @@ export default function Sidebar({
 
   return (
     <div
-      className={`fixed left-2 top-[72px] bottom-2 z-40 w-[33vw] min-w-[320px] max-w-[520px] overflow-hidden rounded-[30px] border border-[#dce9d8] bg-[#eef6ea]/92 shadow-[0_24px_64px_rgba(25,64,41,0.18)] backdrop-blur-md transition-all origin-top-left ${
+      className={`fixed left-2 top-[72px] bottom-2 z-40 w-[33vw] min-w-[320px] max-w-[520px] overflow-hidden rounded-[30px] border border-gray-200/50 bg-[#eef6ea]/92 shadow-2xl backdrop-blur-md transition-all origin-top-left ${
         isVisible ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
       }`}
       style={{
@@ -82,7 +82,7 @@ export default function Sidebar({
       }}
     >
       <div className="flex h-full min-h-0 flex-col p-2">
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-[#dce9d8] bg-[#f7fbf5] shadow-[0_18px_42px_rgba(25,64,41,0.10)]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-gray-200/50 bg-[#f7fbf5] shadow-2xl">
           {showCalendarView && (
             <div className="min-h-0 flex-1">
               <CalendarWindow

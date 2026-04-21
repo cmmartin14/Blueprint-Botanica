@@ -171,6 +171,7 @@ interface ShapeRendererProps {
   onUpdateShapeResize: (shapeId: string, updates: Partial<Shape>) => void;
   onEndShapeResize: (shapeId: string) => void;
 
+  shapeMode?: "white" | "brown";
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
   onShapeSelect?: (shapeId: string) => void;
 }
@@ -178,6 +179,7 @@ interface ShapeRendererProps {
 const GRID_SIZE = 20;
 
 const EMPTY_BED_FILL = "rgba(229, 231, 235, 0.55)";
+const EMPTY_BED_BROWN_FILL = "rgba(140, 90, 53, 0.65)";
 const EMPTY_BED_STROKE = "#d1d5db";
 const STRIPE_WIDTH = 14;
 const MAX_VISIBLE_SPECIES_IN_FILL = 5;
@@ -259,9 +261,9 @@ const withAlpha = (color: string, alpha: number) => {
     const full =
       hex.length === 3
         ? hex
-            .split("")
-            .map((c) => c + c)
-            .join("")
+          .split("")
+          .map((c) => c + c)
+          .join("")
         : hex.length === 6
           ? hex
           : null;
@@ -370,9 +372,12 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   onShapeUpdate,
   onShapeSelect,
   bedPlants = {},
+  shapeMode = "white",
   onOpenBedPanel,
 }) => {
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+
+  const defaultStrokeColor = "#ffffff";
 
   const [hoveredBedId, setHoveredBedId] = React.useState<string | null>(null);
   const [hoveredBedAnchor, setHoveredBedAnchor] = React.useState<Position | null>(null);
@@ -414,8 +419,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         visibleSpeciesKeys: [] as string[],
         visibleColors: [] as string[],
         solidColor: null as string | null,
-        svgFill: EMPTY_BED_FILL,
-        htmlFill: EMPTY_BED_FILL,
+        svgFill: shapeMode === "brown" ? EMPTY_BED_BROWN_FILL : EMPTY_BED_FILL,
+        htmlFill: shapeMode === "brown" ? EMPTY_BED_BROWN_FILL : EMPTY_BED_FILL,
         stroke: EMPTY_BED_STROKE,
         strokeDasharray: undefined as string | undefined,
         patternId: null as string | null,
@@ -440,14 +445,14 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         : withAlpha(solidColor ?? "#4a7c59", 0.55),
       htmlFill: isMixed
         ? `repeating-linear-gradient(135deg, ${visibleColors
-            .map((color, index) => {
-              const start = index * STRIPE_WIDTH;
-              const end = start + STRIPE_WIDTH;
-              return `${withAlpha(color, 0.55)} ${start}px ${end}px`;
-            })
-            .join(", ")})`
+          .map((color, index) => {
+            const start = index * STRIPE_WIDTH;
+            const end = start + STRIPE_WIDTH;
+            return `${withAlpha(color, 0.55)} ${start}px ${end}px`;
+          })
+          .join(", ")})`
         : withAlpha(solidColor ?? "#4a7c59", 0.55),
-      stroke: "#ffffff",
+      stroke: defaultStrokeColor,
       strokeDasharray: undefined as string | undefined,
       patternId,
     };
@@ -788,7 +793,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     };
 
   const renderShape = (shape: Shape) => {
-    const { type, startPos, endPos, color, strokeWidth } = shape;
+    let { type, startPos, endPos, color, strokeWidth } = shape;
+    if (!color || color.toLowerCase() === "#ffffff" || color === "white") {
+      color = defaultStrokeColor;
+    }
     const isSelected = selectedShapeId === shape.id;
     const isHoveredFromKey = hoveredMapKeyBedId === shape.id;
     const isVisuallyActive = isSelected || isHoveredFromKey;
@@ -809,7 +817,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       const visual = getBedVisual(shape.id);
       const stroke = visual.isEmpty
         ? EMPTY_BED_STROKE
-        : (shape as any).color ?? color ?? "#ffffff";
+        : (shape as any).color ?? color ?? defaultStrokeColor;
       const sw = (shape as any).strokeWidth ?? strokeWidth ?? 2;
 
       const gridUnits = radius / GRID_SIZE;
@@ -847,7 +855,9 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               top: centerY - radius,
               cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
-              filter: glow,
+              filter: hoveredBedId === shape.id ? "drop-shadow(0 6px 12px rgba(183,195,152,0.6)) brightness(1.05)" : glow,
+              transform: hoveredBedId === shape.id ? "scale(1.02) translateY(-2px)" : "scale(1)",
+              transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onMouseEnter={() =>
@@ -931,7 +941,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 height: "12px",
                 borderRadius: "50%",
                 backgroundColor: "#111",
-                border: "2px solid white",
+                border: `2px solid ${defaultStrokeColor}`,
                 cursor: "ew-resize",
                 pointerEvents: "auto",
                 zIndex: 10,
@@ -977,11 +987,15 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               width: `${length}px`,
               height: `${Math.max(strokeWidth ?? 2, 8)}px`,
               backgroundColor: color,
-              transformOrigin: "0 50%",
-              transform: `rotate(${angle}deg)`,
               cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
+              filter: hoveredBedId === shape.id ? "drop-shadow(0 4px 8px rgba(0,0,0,0.15)) brightness(1.15)" : "none",
+              transformOrigin: "0 50%",
+              transform: `rotate(${angle}deg) ${hoveredBedId === shape.id ? "scale(1.02)" : "scale(1)"}`,
+              transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
             }}
+            onMouseEnter={() => showBedHover(shape.id, { x: midX, y: midY })}
+            onMouseLeave={hideBedHover}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onClick={stop}
           />
@@ -1024,7 +1038,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                   height: "12px",
                   borderRadius: "50%",
                   backgroundColor: "black",
-                  border: "2px solid white",
+                  border: `2px solid ${defaultStrokeColor}`,
                   cursor: "pointer",
                   pointerEvents: "auto",
                   zIndex: 10,
@@ -1045,7 +1059,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                   height: "12px",
                   borderRadius: "50%",
                   backgroundColor: "black",
-                  border: "2px solid white",
+                  border: `2px solid ${defaultStrokeColor}`,
                   cursor: "pointer",
                   pointerEvents: "auto",
                   zIndex: 10,
@@ -1085,7 +1099,9 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               background: visual.htmlFill,
               cursor: canEdit ? "move" : "pointer",
               pointerEvents: "auto",
-              filter: glow,
+              filter: hoveredBedId === shape.id ? "drop-shadow(0 6px 12px rgba(183,195,152,0.6)) brightness(1.05)" : glow,
+              transform: hoveredBedId === shape.id ? "scale(1.02) translateY(-2px)" : "scale(1)",
+              transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
             }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onClick={stop}
@@ -1142,7 +1158,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             strokeLinejoin="round"
             strokeDasharray={visual.strokeDasharray}
             pointerEvents="auto"
-            style={{ cursor: canEdit ? "move" : "pointer", filter: glow }}
+            style={{ 
+              cursor: canEdit ? "move" : "pointer", 
+              filter: hoveredBedId === shape.id ? "drop-shadow(0 6px 12px rgba(183,195,152,0.6)) brightness(1.05)" : glow,
+              transformOrigin: `${(box.minX + box.maxX) / 2}px ${(box.minY + box.maxY) / 2}px`,
+              transform: hoveredBedId === shape.id ? "scale(1.02) translateY(-2px)" : "scale(1)",
+              transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            }}
             onMouseDown={handleShapeMouseDown(shape.id)}
             onMouseEnter={() =>
               showBedHover(shape.id, {
@@ -1187,7 +1209,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 width={12}
                 height={12}
                 fill="#111"
-                stroke="white"
+                stroke={defaultStrokeColor}
                 strokeWidth={2}
                 style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
                 onMouseDown={handleFreehandResizeDown(shape.id, h, pts.map((q) => ({ ...q })))}
@@ -1202,6 +1224,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   const renderDraft = () => {
     if (!drawModeActive || !draftVertices || draftVertices.length === 0) return null;
+    const draftStroke = "#ffffff";
 
     const verts = draftVertices;
     const d = openPathD(verts);
@@ -1216,7 +1239,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           <path
             d={d}
             fill="none"
-            stroke="#ffffff"
+            stroke={draftStroke}
             strokeWidth={2}
             strokeDasharray="10 8"
             opacity={0.9}
@@ -1230,7 +1253,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             y1={last.y}
             x2={preview.x}
             y2={preview.y}
-            stroke="#ffffff"
+            stroke={draftStroke}
             strokeWidth={2}
             strokeDasharray="8 6"
             opacity={0.9}
@@ -1275,7 +1298,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           cy={last.y}
           r={6}
           fill="#111"
-          stroke="white"
+          stroke={draftStroke}
           strokeWidth={2}
           opacity={0.95}
           pointerEvents="none"
@@ -1392,8 +1415,8 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           const glow = isSelected
             ? "drop-shadow(0 0 8px rgba(183,195,152,1))"
             : isHoveredFromKey
-            ? "drop-shadow(0 0 6px rgba(183,195,152,0.6))"
-            : "none";
+              ? "drop-shadow(0 0 6px rgba(183,195,152,0.6))"
+              : "none";
 
           const visual = getBedVisual(bed.id);
           const fill = visual.svgFill;
@@ -1442,7 +1465,13 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 strokeDasharray={visual.strokeDasharray}
-                style={{ cursor: canEdit ? "move" : "pointer", filter: glow }}
+                style={{ 
+                  cursor: canEdit ? "move" : "pointer", 
+                  filter: hoveredBedId === bed.id ? "drop-shadow(0 6px 12px rgba(183,195,152,0.6)) brightness(1.05)" : glow,
+                  transformOrigin: `${(box.minX + box.maxX) / 2}px ${(box.minY + box.maxY) / 2}px`,
+                  transform: hoveredBedId === bed.id ? "scale(1.02) translateY(-2px)" : "scale(1)",
+                  transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                }}
                 onMouseDown={handleBedMouseDown(bed.id)}
                 onMouseEnter={() =>
                   showBedHover(bed.id, {
@@ -1563,7 +1592,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                       width={12}
                       height={12}
                       fill="#111"
-                      stroke="white"
+                      stroke={defaultStrokeColor}
                       strokeWidth={2}
                       style={{ cursor: "nwse-resize" }}
                       onMouseDown={handleResizeHandleDown(bed, h)}
@@ -1591,7 +1620,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
                           cy={v.y}
                           r={selected ? 8 : 6}
                           fill={selected ? "#B7C398" : "#111"}
-                          stroke="white"
+                          stroke={defaultStrokeColor}
                           strokeWidth={selected ? 3 : 2}
                           style={{ cursor: "pointer" }}
                           onMouseDown={handleVertexMouseDown(bed.id, idx)}

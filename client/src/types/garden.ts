@@ -45,7 +45,9 @@ export interface GardenState {
   // keyed by circle shape ID
   bedPlants: Record<string, PlantEntry[]>;
 
-  hardinessZone: string | null
+  hardinessZone: string | null;
+  gridMode: "dots" | "lines";
+  shapeMode: "white" | "brown";
 }
 
 type GardenActions = {
@@ -82,6 +84,9 @@ type GardenActions = {
 
   //Hardiness Zone
   setHardinessZone: (zone: string | null) => void;
+
+  setGridMode: (mode: "dots" | "lines") => void;
+  setShapeMode: (mode: "white" | "brown") => void;
 };
 
 const defaultState: GardenState = {
@@ -92,7 +97,9 @@ const defaultState: GardenState = {
   shapes: {},
   beds: {},
   bedPlants: {},
-  hardinessZone: null
+  hardinessZone: null,
+  gridMode: "dots",
+  shapeMode: "white"
 };
 
 export const useGardenStore = create<GardenState & GardenActions>((set) => ({
@@ -210,4 +217,7 @@ export const useGardenStore = create<GardenState & GardenActions>((set) => ({
   clearGarden: () => set({ ...defaultState, id: crypto.randomUUID() }),
 
   setHardinessZone: (zone) => set({ hardinessZone: zone }),
+
+  setGridMode: (gridMode) => set({ gridMode }),
+  setShapeMode: (shapeMode) => set({ shapeMode }),
 }));

@@ -50,7 +50,7 @@ const VariableWindow = ({ isOpen, onClose }: VariableWindowProps) => {
   return (
     <div
       data-testid="variable-window"
-      className={`fixed right-3 top-24 z-50 h-[460px] w-[360px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[28px] border border-[#dce9d8] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.18)] transition-all origin-top-right ${
+      className={`fixed right-3 top-24 z-50 h-[460px] w-[360px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[28px] border border-gray-200/50 bg-[#F7FBF5] shadow-2xl transition-all origin-top-right ${
         isVisible ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
       }`}
       style={{

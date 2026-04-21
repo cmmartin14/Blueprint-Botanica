@@ -70,8 +70,8 @@ const SearchWindow = ({
           `
           : `
             fixed z-50 top-20 left-6 md:left-24 w-[440px] max-w-[92vw] h-[640px] max-h-[85vh]
-            rounded-[32px] bg-[#F7FBF5] shadow-[0_24px_64px_rgba(25,64,41,0.18)]
-            border border-[#dce9d8] flex flex-col overflow-hidden font-sans
+            rounded-[32px] bg-[#F7FBF5] shadow-2xl
+            border border-gray-200/50 flex flex-col overflow-hidden font-sans
             transition-all duration-500 origin-top-left
             ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}
           `

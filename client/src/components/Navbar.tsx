@@ -7,7 +7,7 @@ import VariableWindow from "./VariableWindow";
 import { GiOakLeaf } from "react-icons/gi";
 import { TbHomeEdit } from "react-icons/tb";
 import { HiX } from "react-icons/hi";
-import { FaEdit, FaSearch, FaCalendarAlt, FaRegUser } from "react-icons/fa";
+import { FaEdit, FaSearch, FaCalendarAlt, FaRegUser, FaCog } from "react-icons/fa";
 import { RiDeleteBin6Line, RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { saveGarden, listGardens, loadGarden, deleteGarden } from "../actions/gardenActions";
@@ -41,11 +41,12 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
   const [mounted, setMounted] = useState(false);
   const [savedList, setSavedList] = useState<{ id: string; name: string; updatedAt: Date }[]>([]);
   const [showSavedList, setShowSavedList] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // ====== Canvas store (edit mode) ======
   const gardenState = useGardenStore();
   const { id, name, shapes, beds, loadGarden: loadIntoStore } = useGardenStore();
-  const { editMode, setEditMode } = useGardenStore();
+  const { editMode, setEditMode, gridMode, shapeMode, setGridMode, setShapeMode } = useGardenStore();
   const toggleEdit = () => setEditMode(!editMode);
 
   // ====== HANDLERS ======
@@ -252,9 +253,75 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
 
             <div className="h-6 w-px bg-slate-200" />
 
-            <Link href={user ? "/settings" : "/handler/sign-up"} className={iconBtnClass} title={user ? "Settings" : "Profile"}>
+            <Link href={user ? "/settings" : "/handler/sign-up"} className={iconBtnClass} title={user ? "Profile Settings" : "Profile"}>
               <FaRegUser size={18} />
             </Link>
+
+            <div className="relative">
+              <button
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={iconBtnClass}
+                title="Canvas Settings"
+              >
+                <FaCog size={18} />
+              </button>
+              
+              <div
+                aria-hidden={!isSettingsOpen}
+                className={`absolute top-full left-1/2 -translate-x-1/2 mt-4 w-64 rounded-2xl border border-slate-100 bg-white/95 p-3 shadow-2xl backdrop-blur-2xl transition-all z-50 ${
+                  isSettingsOpen ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
+                }`}
+                style={getPopupMotionStyle(isSettingsOpen)}
+              >
+                <div className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                  <span className="font-black text-slate-800 text-xs uppercase tracking-widest">Canvas Settings</span>
+                  <button
+                    onClick={() => setIsSettingsOpen(false)}
+                    className="chatbot-pop-trigger rounded-full p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+                  >
+                    <HiX size={16} />
+                  </button>
+                </div>
+                
+                <div className="flex flex-col gap-3 p-1">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-bold text-slate-500">Grid Style</span>
+                    <div className="flex rounded-lg bg-slate-100 p-1">
+                      <button
+                        onClick={() => setGridMode("dots")}
+                        className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95 ${gridMode === "dots" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+                      >
+                        White Dots
+                      </button>
+                      <button
+                        onClick={() => setGridMode("lines")}
+                        className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95 ${gridMode === "lines" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+                      >
+                        White Lines
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-bold text-slate-500">Shape Color</span>
+                    <div className="flex rounded-lg bg-slate-100 p-1">
+                      <button
+                        onClick={() => setShapeMode("white")}
+                        className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95 ${shapeMode === "white" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+                      >
+                        White
+                      </button>
+                      <button
+                        onClick={() => setShapeMode("brown")}
+                        className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95 ${shapeMode === "brown" ? "bg-white text-amber-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+                      >
+                        Earth Brown
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <button
               onClick={toggleChatWindow}
