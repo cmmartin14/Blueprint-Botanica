@@ -1249,7 +1249,7 @@ const Canvas = () => {
         ref={canvasRef}
         data-canvas
         data-testid="canvas"
-        className="w-full h-full relative"
+        className="w-full h-full relative select-none"
         style={{ ...gridStyle, cursor: canvasCursor, touchAction: "none" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
