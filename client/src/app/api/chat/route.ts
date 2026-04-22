@@ -77,6 +77,10 @@ const TOOL_NAMES = {
   ADD_CALENDAR_EVENT: "add_calendar_event",
   ADD_CALENDAR_NOTE: "add_calendar_note",
   CALCULATE_HARVEST_DATE: "calculate_harvest_date",
+  SET_GRID_MODE: "set_grid_mode",
+  SET_SHAPE_MODE: "set_shape_mode",
+  SET_EDIT_MODE: "set_edit_mode",
+  OPEN_CALENDAR: "open_calendar",
 } as const;
 
 const MAX_CHAT_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -472,6 +476,41 @@ const runGardenTool = async (
   onAction?: (action: ChatAction) => void
 ) => {
   const args = (functionCall.args ?? {}) as Record<string, unknown>;
+
+  if (functionCall.name === TOOL_NAMES.SET_GRID_MODE) {
+    const mode = parseStringArg(args, "mode") as "dots" | "lines";
+    if (onAction && mode) {
+      onAction({ type: "set_grid_mode", payload: { mode } } as any);
+      return { ok: true, action: "set_grid_mode", mode };
+    }
+    return { ok: false };
+  }
+
+  if (functionCall.name === TOOL_NAMES.SET_SHAPE_MODE) {
+    const mode = parseStringArg(args, "mode") as "white" | "brown";
+    if (onAction && mode) {
+      onAction({ type: "set_shape_mode", payload: { mode } } as any);
+      return { ok: true, action: "set_shape_mode", mode };
+    }
+    return { ok: false };
+  }
+
+  if (functionCall.name === TOOL_NAMES.SET_EDIT_MODE) {
+    const enabled = Boolean(args.enabled);
+    if (onAction && args.enabled !== undefined) {
+      onAction({ type: "set_edit_mode", payload: { enabled } } as any);
+      return { ok: true, action: "set_edit_mode", enabled };
+    }
+    return { ok: false };
+  }
+
+  if (functionCall.name === TOOL_NAMES.OPEN_CALENDAR) {
+    if (onAction) {
+      onAction({ type: "open_calendar" } as any);
+      return { ok: true, action: "open_calendar" };
+    }
+    return { ok: false };
+  }
 
   if (functionCall.name === TOOL_NAMES.GET_WEATHER) {
     const lat = parseNumberArg(args, "latitude") ?? context?.location?.latitude;
@@ -922,6 +961,47 @@ export async function POST(request: Request) {
                 required: ["content"],
               },
             },
+            {
+              name: TOOL_NAMES.SET_GRID_MODE,
+              description: "Toggle or set the canvas grid mode to either 'dots' or 'lines'.",
+              parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  mode: { type: SchemaType.STRING, description: "Must be 'dots' or 'lines'." },
+                },
+                required: ["mode"],
+              },
+            },
+            {
+              name: TOOL_NAMES.SET_SHAPE_MODE,
+              description: "Toggle or set the shape fill color mode to either 'white' or 'brown'.",
+              parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  mode: { type: SchemaType.STRING, description: "Must be 'white' or 'brown'." },
+                },
+                required: ["mode"],
+              },
+            },
+            {
+              name: TOOL_NAMES.SET_EDIT_MODE,
+              description: "Toggle or set the canvas edit mode (for drawing shapes and beds).",
+              parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  enabled: { type: SchemaType.BOOLEAN },
+                },
+                required: ["enabled"],
+              },
+            },
+            {
+              name: TOOL_NAMES.OPEN_CALENDAR,
+              description: "Open the calendar sidebar tab for the user.",
+              parameters: {
+                type: SchemaType.OBJECT,
+                properties: {},
+              },
+            },
                 ],
               },
             ],
@@ -949,6 +1029,7 @@ For "when will X be ready?", "when do I harvest?", or "will X mature before fros
 When users ask to add events or notes/reminders to calendar, call the calendar tools.
 Use add_calendar_note for reminder requests ("remind me..."), and add_calendar_event for schedule-only events.
 Interpret relative time words like "tomorrow" using the provided current timestamp and timezone context.
+You can control the app UI using these tools: open_calendar (opens the calendar side panel), set_grid_mode (change grid to dots or lines), set_shape_mode (change garden bed colors to white or brown), and set_edit_mode (enable or disable drawing mode).
 If a required value is missing, ask a concise clarifying question.
 Keep responses concise, practical, and specific.`,
           },

@@ -11,7 +11,11 @@ import {
   LuSprout,
   LuTrash2,
   LuX,
+  LuMic,
+  LuMicOff,
 } from "react-icons/lu";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useCalendarStore } from "../stores/calendarStore";
 import type { CalendarAssistantAction } from "../stores/calendarStore";
 import { useGardenStore } from "../types/garden";
@@ -64,8 +68,8 @@ interface ChatContextPayload {
 
 interface ChatApiResponse {
   message?: string;
-  actions?: CalendarAssistantAction[];
   error?: string;
+  actions?: any[];
 }
 
 type ChatView = "chat" | "history";
@@ -222,10 +226,68 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
   const [isClosing, setIsClosing] = useState(false);
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [size, setSize] = useState({ width: 340, height: 580 });
+
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const resizeStartRef = useRef({ width: 0, height: 0, x: 0, y: 0 });
 
   const [chatView, setChatView] = useState<ChatView>("chat");
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+
+        recognitionRef.current.onresult = (event: any) => {
+          let finalTranscript = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            }
+          }
+          if (finalTranscript) {
+            setInput((prev) => prev + (prev && !prev.endsWith(" ") ? " " : "") + finalTranscript);
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error("Speech recognition error", event.error);
+          setIsListening(false);
+        };
+
+        recognitionRef.current.onend = () => {
+          setIsListening(false);
+        };
+      }
+    }
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current?.start();
+        setIsListening(true);
+      } catch (e) {
+        console.error("Failed to start speech recognition", e);
+      }
+    }
+  };
+
   const [geoContext, setGeoContext] = useState<ChatContextPayload["location"]>();
   const [geoAttempted, setGeoAttempted] = useState(false);
   const [chats, setChats] = useState<ChatSession[]>(() => [
@@ -267,14 +329,14 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
         previousChats.map((chat) =>
           chat.id === chatId
             ? {
-                ...chat,
-                messages: [...chat.messages, message],
-                title:
-                  chat.title === DEFAULT_CHAT_TITLE && message.role === "user"
-                    ? buildChatTitle(message)
-                    : chat.title,
-                updatedAt,
-              }
+              ...chat,
+              messages: [...chat.messages, message],
+              title:
+                chat.title === DEFAULT_CHAT_TITLE && message.role === "user"
+                  ? buildChatTitle(message)
+                  : chat.title,
+              updatedAt,
+            }
             : chat
         )
       )
@@ -332,7 +394,7 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
           accuracyMeters: Math.round(position.coords.accuracy),
         });
       },
-      () => {},
+      () => { },
       {
         enableHighAccuracy: false,
         timeout: 5000,
@@ -382,6 +444,34 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     setIsDragging(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const handleResizeDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    setIsResizing(true);
+    resizeStartRef.current = {
+      width: size.width,
+      height: size.height,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleResizeMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isResizing) return;
+    const dx = resizeStartRef.current.x - event.clientX;
+    const dy = resizeStartRef.current.y - event.clientY;
+
+    setSize({
+      width: Math.max(300, resizeStartRef.current.width + dx),
+      height: Math.max(400, resizeStartRef.current.height + dy),
+    });
+  };
+
+  const handleResizeUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    setIsResizing(false);
     event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
@@ -486,345 +576,390 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
       });
 
       const data = (await response.json()) as ChatApiResponse;
-      if (Array.isArray(data.actions)) {
-        const validActions = data.actions.filter(isAssistantAction);
-        for (const action of validActions) {
-          applyAssistantAction(action);
-        }
-        if (validActions.length > 0) {
-          addAlert(`Chatbot added ${validActions.length} calendar item(s).`);
-        }
+
+      if (!response.ok) {
+        throw new Error(data.error || "Chat request failed.");
       }
 
       appendMessageToChat(currentChatId, {
         id: createId(),
         role: "assistant",
-        content:
-          data.message ||
-          data.error ||
-          "I hit a snag reaching the garden tools just now. Try again in a moment.",
+        content: data.message || "",
       });
+
+      if (Array.isArray(data.actions) && data.actions.length > 0) {
+        data.actions.forEach((action) => {
+          if (action.type === "set_grid_mode") {
+            useGardenStore.getState().setGridMode(action.payload.mode);
+          } else if (action.type === "set_shape_mode") {
+            useGardenStore.getState().setShapeMode(action.payload.mode);
+          } else if (action.type === "set_edit_mode") {
+            useGardenStore.getState().setEditMode(action.payload.enabled);
+          } else if (action.type === "open_calendar") {
+            useSidebarStore.getState().openCalendar();
+          } else {
+            applyAssistantAction(action);
+          }
+        });
+      }
     } catch (error) {
-      console.error("Chat error:", error);
-      appendMessageToChat(currentChatId, {
-        id: createId(),
-        role: "assistant",
-        content: "I hit a snag reaching the garden tools just now. Try again in a moment.",
-      });
-    } finally {
-      setLoadingChatId((currentLoadingChatId) =>
-        currentLoadingChatId === currentChatId ? null : currentLoadingChatId
-      );
-    }
-  };
+        console.error("Chat error:", error);
+        appendMessageToChat(currentChatId, {
+          id: createId(),
+          role: "assistant",
+          content: "I hit a snag reaching the garden tools just now. Try again in a moment.",
+        });
+      } finally {
+        setLoadingChatId((currentLoadingChatId) =>
+          currentLoadingChatId === currentChatId ? null : currentLoadingChatId
+        );
+      }
+    };
 
-  if (!shouldRender && !isOpen) return null;
+    if (!shouldRender && !isOpen) return null;
 
-  const isVisible = isOpen && !isClosing;
+    const isVisible = isOpen && !isClosing;
 
-  return (
-    <div
-      className="fixed bottom-6 right-6 z-[100]"
-      style={{
-        transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
-      }}
-    >
+    return (
       <div
-        className={`w-[340px] md:w-[400px] h-[580px] bg-[#F7FBF5] rounded-[32px] shadow-2xl border border-gray-200/50 flex flex-col overflow-hidden font-sans transition-all origin-bottom-right ${
-          isVisible
-            ? "opacity-100 scale-100"
-            : "opacity-0 scale-95 pointer-events-none"
-        }`}
+        className="fixed bottom-6 right-6 z-[100]"
         style={{
-          transitionDuration: `${CHATBOT_POPUP_DURATION_MS}ms`,
-          transitionTimingFunction: isVisible
-            ? CHATBOT_POPUP_EASE
-            : CHATBOT_POPUP_EXIT_EASE,
+          transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
         }}
       >
         <div
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          className={`bg-[#ecf5e8]/90 backdrop-blur-md px-5 py-4 border-b border-[#dce9d8] touch-none ${
-            isDragging ? "cursor-grabbing" : "cursor-grab"
-          }`}
+          className={`bg-[#F7FBF5] rounded-[32px] shadow-2xl border border-gray-200/50 flex flex-col font-sans transition-all origin-bottom-right relative overflow-hidden ${isVisible
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-95 pointer-events-none"
+            } ${isResizing ? "!transition-none" : ""}`}
+          style={{
+            width: `${size.width}px`,
+            height: `${size.height}px`,
+            minWidth: '300px',
+            minHeight: '400px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            transitionDuration: isResizing ? '0ms' : `${CHATBOT_POPUP_DURATION_MS}ms`,
+            transitionTimingFunction: isVisible
+              ? CHATBOT_POPUP_EASE
+              : CHATBOT_POPUP_EXIT_EASE,
+          }}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 pointer-events-none">
-              <div className="w-10 h-10 bg-[#F28C28] rounded-full flex items-center justify-center text-white shadow-[0_4px_14px_rgba(242,140,40,0.4)] ring-2 ring-orange-200 transition-transform duration-300">
-                <LuSprout size={22} />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-green-900 tracking-tight">
-                  Clementine
-                </h3>
-                <p className="text-xs text-green-800/70">
-                  {chatView === "history" ? "Conversation history" : activeChatTitle}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="chatbot-pop-trigger rounded-full p-2.5 text-[#F28C28] hover:bg-orange-50 hover:shadow-sm hover:text-[#d97a21] focus:outline-none focus:ring-2 focus:ring-[#F28C28]/40 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
-              aria-label="Close chatbot"
+          {/* Resize Handle */}
+          <div
+            onPointerDown={handleResizeDown}
+            onPointerMove={handleResizeMove}
+            onPointerUp={handleResizeUp}
+            onPointerCancel={handleResizeUp}
+            className="absolute top-0 left-0 w-12 h-12 cursor-nwse-resize z-50 group"
+          >
+            <svg 
+              className="absolute top-3 left-3 text-green-800/20 group-hover:text-[#F28C28] transition-colors" 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="currentColor"
             >
-              <LuX size={18} strokeWidth={3} />
-            </button>
+              <circle cx="5" cy="5" r="2"/>
+              <circle cx="12" cy="5" r="2"/>
+              <circle cx="5" cy="12" r="2"/>
+              <circle cx="19" cy="5" r="2"/>
+              <circle cx="12" cy="12" r="2"/>
+              <circle cx="5" cy="19" r="2"/>
+            </svg>
           </div>
 
-          <div className="mt-4 flex items-center gap-2">
-            <div className="flex items-center rounded-full border border-[#dce9d8] bg-white/80 p-1 shadow-sm">
+          <div
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className={`bg-[#ecf5e8]/90 backdrop-blur-md px-5 py-4 border-b border-[#dce9d8] touch-none ${isDragging ? "cursor-grabbing" : "cursor-grab"
+              }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 pointer-events-none">
+                <div className="w-10 h-10 bg-[#F28C28] rounded-full flex items-center justify-center text-white shadow-[0_4px_14px_rgba(242,140,40,0.4)] ring-2 ring-orange-200 transition-transform duration-300">
+                  <LuSprout size={22} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-green-900 tracking-tight">
+                    Clementine
+                  </h3>
+                  <p className="text-xs text-green-800/70">
+                    {chatView === "history" ? "Conversation history" : activeChatTitle}
+                  </p>
+                </div>
+              </div>
               <button
-                type="button"
-                onClick={() => setChatView("chat")}
-                className={`chatbot-pop-trigger group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.03)] ${
-                  chatView === "chat"
-                    ? "bg-[#F28C28] text-white shadow-sm"
-                    : "text-green-900 hover:bg-[#f4faf2] hover:shadow-[0_8px_18px_rgba(34,84,61,0.12)]"
-                }`}
+                onClick={onClose}
+                className="chatbot-pop-trigger rounded-full p-2.5 text-[#F28C28] hover:bg-orange-50 hover:shadow-sm hover:text-[#d97a21] focus:outline-none focus:ring-2 focus:ring-[#F28C28]/40 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
+                aria-label="Close chatbot"
               >
-                <LuMessageSquare
-                  size={16}
-                  className="transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:-rotate-6"
-                />
-                <span>Chat</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setChatView("history")}
-                className={`chatbot-pop-trigger group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.03)] ${
-                  chatView === "history"
-                    ? "bg-[#F28C28] text-white shadow-sm"
-                    : "text-green-900 hover:bg-[#f4faf2] hover:shadow-[0_8px_18px_rgba(34,84,61,0.12)]"
-                }`}
-              >
-                <LuHistory
-                  size={16}
-                  className="transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:rotate-6"
-                />
-                <span>History</span>
+                <LuX size={18} strokeWidth={3} />
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleStartNewChat}
-              disabled={isLoading}
-              className="chatbot-pop-trigger ml-auto inline-flex items-center gap-2 rounded-full border border-[#dce9d8] bg-white/80 px-3 py-2 text-sm font-medium text-green-900 shadow-sm hover:border-[#F28C28]/40 hover:text-[#F28C28] disabled:cursor-not-allowed disabled:opacity-50 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.02)]"
-            >
-              <LuPlus size={16} />
-              <span>New chat</span>
-            </button>
-          </div>
-        </div>
-
-        {chatView === "history" ? (
-          <div className="flex-1 overflow-y-auto bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea] p-4 space-y-3 custom-scrollbar">
-            <div className="rounded-[24px] border border-[#dce9d8] bg-white/85 p-4 shadow-sm">
-              <p className="text-sm font-semibold text-green-950">
-                Conversation history
-              </p>
-              <p className="mt-1 text-sm text-green-800/70">
-                Reopen an older thread, start a fresh one, or remove chats you no
-                longer need.
-              </p>
-            </div>
-
-            {chats.map((chat) => {
-              const preview = getChatPreview(chat);
-              const isActive = chat.id === activeChatId;
-              const isBusy = chat.id === loadingChatId;
-
-              return (
-                <div
-                  key={chat.id}
-                  className={`group rounded-[24px] border p-3 shadow-sm transition-all duration-200 ${
-                    isActive
-                      ? "border-[#F28C28]/40 bg-white hover:-translate-y-1 hover:shadow-[0_16px_30px_rgba(242,140,40,0.16)]"
-                      : "border-[#dce9d8] bg-[#f9fcf7] hover:-translate-y-1 hover:border-[#F28C28]/30 hover:bg-white hover:shadow-[0_16px_30px_rgba(34,84,61,0.12)]"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenChat(chat.id)}
-                      className="min-w-0 flex-1 text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-green-950 transition-colors duration-200 group-hover:text-[#c56f1b]">
-                          {chat.title}
-                        </p>
-                        {isActive && (
-                          <span className="rounded-full bg-[#F28C28]/10 px-2 py-0.5 text-[11px] font-medium text-[#c56f1b]">
-                            Active
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1 truncate text-sm text-green-800/75 transition-colors duration-200 group-hover:text-green-900">
-                        {preview}
-                      </p>
-                      <div className="mt-2 flex items-center gap-2 text-xs text-green-700/60">
-                        <span>{formatChatTimestamp(chat.updatedAt)}</span>
-                        {isBusy && <span className="text-[#c56f1b]">Waiting for reply</span>}
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteChat(chat.id)}
-                      disabled={isBusy}
-                      className="chatbot-pop-trigger rounded-full p-2 text-green-800/65 hover:bg-white hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
-                      aria-label={`Delete ${chat.title}`}
-                    >
-                      <LuTrash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <>
-            <div className="flex-1 overflow-y-auto p-5 bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea] space-y-5 custom-scrollbar">
-              {activeMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  } animate-in slide-in-from-bottom-2 fade-in duration-300`}
-                  style={{ animationFillMode: "both" }}
-                >
-                  <div
-                    className={`max-w-[85%] px-4 py-3 text-[15px] leading-relaxed shadow-sm transition-all duration-200 hover:shadow-md ${
-                      message.role === "user"
-                        ? "bg-[#F28C28] text-white rounded-[24px] rounded-br-sm"
-                        : "bg-white text-green-950 border border-[#dce9d8] rounded-[24px] rounded-tl-sm"
-                    }`}
-                  >
-                    <div className="space-y-3">
-                      {message.image && (
-                        <img
-                          src={imageAttachmentToDataUrl(message.image)}
-                          alt={message.image.filename || "Uploaded garden image"}
-                          className="max-h-56 w-full rounded-[18px] object-cover bg-white/20"
-                        />
-                      )}
-                      {message.content && (
-                        <p className="whitespace-pre-wrap">{message.content}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {isActiveChatLoading && (
-                <div className="flex justify-start animate-in fade-in duration-200">
-                  <div className="bg-white px-4 py-3 rounded-[24px] rounded-tl-sm border border-orange-200 shadow-sm">
-                    <span className="flex items-center gap-2">
-                      <div
-                        className="flex items-center gap-2 animate-bounce"
-                        style={{ animationDuration: "1.5s" }}
-                      >
-                        <LuSprout size={16} className="text-[#F28C28]" />
-                        <span className="text-sm text-orange-800/90 font-medium">
-                          Clementine is thinking
-                        </span>
-                      </div>
-                      <span className="flex items-center gap-1 mt-1">
-                        <span className="w-1.5 h-1.5 bg-orange-400/60 rounded-full animate-pulse" />
-                        <span
-                          className="w-1.5 h-1.5 bg-orange-400/60 rounded-full animate-pulse"
-                          style={{ animationDelay: "0.2s" }}
-                        />
-                        <span
-                          className="w-1.5 h-1.5 bg-orange-400/60 rounded-full animate-pulse"
-                          style={{ animationDelay: "0.4s" }}
-                        />
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} className="h-1" />
-            </div>
-
-            <form
-              onSubmit={handleSubmit}
-              className="p-4 bg-white/80 backdrop-blur-md border-t border-[#dce9d8]"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="sr-only"
-              />
-
-              {pendingImage && (
-                <div className="mb-3 rounded-2xl border border-[#dce9d8] bg-[#f7fbf5] p-3 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <img
-                      src={imageAttachmentToDataUrl(pendingImage)}
-                      alt={pendingImage.filename || "Pending upload"}
-                      className="h-16 w-16 rounded-2xl object-cover border border-[#dce9d8]"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-green-950">
-                        {pendingImage.filename || "Attached image"}
-                      </p>
-                      <p className="text-xs text-green-800/70">
-                        This will be sent with your next message.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={clearPendingImage}
-                      className="chatbot-pop-trigger rounded-full p-2 text-green-800/70 hover:bg-white hover:text-green-950 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
-                      aria-label="Remove attached image"
-                    >
-                      <LuX size={16} strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {uploadError && (
-                <p className="mb-3 text-sm text-rose-700">{uploadError}</p>
-              )}
-
-              <div className="flex items-center gap-2">
+            <div className="mt-4 flex items-center gap-2">
+              <div className="flex items-center rounded-full border border-[#dce9d8] bg-white/80 p-1 shadow-sm">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading}
-                  className="chatbot-pop-trigger flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-[#dce9d8] bg-[#f9fcf7] text-green-900 hover:border-[#F28C28]/40 hover:text-[#F28C28] disabled:cursor-not-allowed disabled:opacity-50 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
-                  aria-label="Upload image"
+                  onClick={() => setChatView("chat")}
+                  className={`chatbot-pop-trigger group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.03)] ${chatView === "chat"
+                    ? "bg-[#F28C28] text-white shadow-sm"
+                    : "text-green-900 hover:bg-[#f4faf2] hover:shadow-[0_8px_18px_rgba(34,84,61,0.12)]"
+                    }`}
                 >
-                  <LuImage size={18} />
+                  <LuMessageSquare
+                    size={16}
+                    className="transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:-rotate-6"
+                  />
+                  <span>Chat</span>
                 </button>
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  placeholder="Ask Clementine or upload a photo..."
-                  className="flex-1 px-5 py-3 border border-[#dce9d8] rounded-full focus:outline-none focus:ring-2 focus:ring-[#F28C28]/40 bg-[#f9fcf7] text-green-950 placeholder:text-green-700/50 text-[15px] transition-all duration-200 shadow-inner"
-                />
                 <button
-                  type="submit"
-                  disabled={isLoading || (!input.trim() && !pendingImage)}
-                  className="chatbot-pop-trigger flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#F28C28] text-white shadow-sm hover:bg-[#d97a21] disabled:opacity-40 disabled:hover:bg-[#F28C28] disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
+                  type="button"
+                  onClick={() => setChatView("history")}
+                  className={`chatbot-pop-trigger group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.03)] ${chatView === "history"
+                    ? "bg-[#F28C28] text-white shadow-sm"
+                    : "text-green-900 hover:bg-[#f4faf2] hover:shadow-[0_8px_18px_rgba(34,84,61,0.12)]"
+                    }`}
                 >
-                  <LuSend size={18} className="mr-0.5" />
+                  <LuHistory
+                    size={16}
+                    className="transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:rotate-6"
+                  />
+                  <span>History</span>
                 </button>
               </div>
-            </form>
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
 
-export default Chatbot;
+              <button
+                type="button"
+                onClick={handleStartNewChat}
+                disabled={isLoading}
+                className="chatbot-pop-trigger ml-auto inline-flex items-center gap-2 rounded-full border border-[#dce9d8] bg-white/80 px-3 py-2 text-sm font-medium text-green-900 shadow-sm hover:border-[#F28C28]/40 hover:text-[#F28C28] disabled:cursor-not-allowed disabled:opacity-50 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.02)]"
+              >
+                <LuPlus size={16} />
+                <span>New chat</span>
+              </button>
+            </div>
+          </div>
+
+          {chatView === "history" ? (
+            <div className="flex-1 overflow-y-auto bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea] p-4 space-y-3 custom-scrollbar">
+              <div className="rounded-[24px] border border-[#dce9d8] bg-white/85 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-green-950">
+                  Conversation history
+                </p>
+                <p className="mt-1 text-sm text-green-800/70">
+                  Reopen an older thread, start a fresh one, or remove chats you no
+                  longer need.
+                </p>
+              </div>
+
+              {chats.map((chat) => {
+                const preview = getChatPreview(chat);
+                const isActive = chat.id === activeChatId;
+                const isBusy = chat.id === loadingChatId;
+
+                return (
+                  <div
+                    key={chat.id}
+                    className={`group rounded-[24px] border p-3 shadow-sm transition-all duration-200 ${isActive
+                      ? "border-[#F28C28]/40 bg-white hover:-translate-y-1 hover:shadow-[0_16px_30px_rgba(242,140,40,0.16)]"
+                      : "border-[#dce9d8] bg-[#f9fcf7] hover:-translate-y-1 hover:border-[#F28C28]/30 hover:bg-white hover:shadow-[0_16px_30px_rgba(34,84,61,0.12)]"
+                      }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenChat(chat.id)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-green-950 transition-colors duration-200 group-hover:text-[#c56f1b]">
+                            {chat.title}
+                          </p>
+                          {isActive && (
+                            <span className="rounded-full bg-[#F28C28]/10 px-2 py-0.5 text-[11px] font-medium text-[#c56f1b]">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 truncate text-sm text-green-800/75 transition-colors duration-200 group-hover:text-green-900">
+                          {preview}
+                        </p>
+                        <div className="mt-2 flex items-center gap-2 text-xs text-green-700/60">
+                          <span>{formatChatTimestamp(chat.updatedAt)}</span>
+                          {isBusy && <span className="text-[#c56f1b]">Waiting for reply</span>}
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteChat(chat.id)}
+                        disabled={isBusy}
+                        className="chatbot-pop-trigger rounded-full p-2 text-green-800/65 hover:bg-white hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
+                        aria-label={`Delete ${chat.title}`}
+                      >
+                        <LuTrash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto p-5 bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea] space-y-5 custom-scrollbar">
+                {activeMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"
+                      } animate-in slide-in-from-bottom-2 fade-in duration-300`}
+                    style={{ animationFillMode: "both" }}
+                  >
+                    <div
+                      className={`max-w-[85%] px-4 py-3 text-[15px] leading-relaxed shadow-sm transition-all duration-200 hover:shadow-md ${message.role === "user"
+                        ? "bg-[#F28C28] text-white rounded-[24px] rounded-br-sm"
+                        : "bg-white text-green-950 border border-[#dce9d8] rounded-[24px] rounded-tl-sm"
+                        }`}
+                    >
+                      <div className="space-y-3">
+                        {message.image && (
+                          <img
+                            src={imageAttachmentToDataUrl(message.image)}
+                            alt={message.image.filename || "Uploaded garden image"}
+                            className="max-h-56 w-full rounded-[18px] object-cover bg-white/20"
+                          />
+                        )}
+                        {message.content && (
+                          <div className={`prose prose-sm prose-p:leading-relaxed prose-pre:bg-[#eaf1e7] prose-pre:text-green-950 prose-a:underline hover:prose-a:text-orange-700 max-w-none break-words ${message.role === 'user' ? 'prose-invert text-white prose-a:text-white' : 'prose-green prose-a:text-orange-600'}`}>
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {isActiveChatLoading && (
+                  <div className="flex justify-start animate-in fade-in duration-200">
+                    <div className="bg-white px-4 py-3 rounded-[24px] rounded-tl-sm border border-orange-200 shadow-sm">
+                      <span className="flex items-center gap-2">
+                        <div
+                          className="flex items-center gap-2 animate-bounce"
+                          style={{ animationDuration: "1.5s" }}
+                        >
+                          <LuSprout size={16} className="text-[#F28C28]" />
+                          <span className="text-sm text-orange-800/90 font-medium">
+                            Clementine is thinking
+                          </span>
+                        </div>
+                        <span className="flex items-center gap-1 mt-1">
+                          <span className="w-1.5 h-1.5 bg-orange-400/60 rounded-full animate-pulse" />
+                          <span
+                            className="w-1.5 h-1.5 bg-orange-400/60 rounded-full animate-pulse"
+                            style={{ animationDelay: "0.2s" }}
+                          />
+                          <span
+                            className="w-1.5 h-1.5 bg-orange-400/60 rounded-full animate-pulse"
+                            style={{ animationDelay: "0.4s" }}
+                          />
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} className="h-1" />
+              </div>
+
+              <form
+                onSubmit={handleSubmit}
+                className="p-4 bg-white/80 backdrop-blur-md border-t border-[#dce9d8]"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="sr-only"
+                />
+
+                {pendingImage && (
+                  <div className="mb-3 rounded-2xl border border-[#dce9d8] bg-[#f7fbf5] p-3 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={imageAttachmentToDataUrl(pendingImage)}
+                        alt={pendingImage.filename || "Pending upload"}
+                        className="h-16 w-16 rounded-2xl object-cover border border-[#dce9d8]"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-green-950">
+                          {pendingImage.filename || "Attached image"}
+                        </p>
+                        <p className="text-xs text-green-800/70">
+                          This will be sent with your next message.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearPendingImage}
+                        className="chatbot-pop-trigger rounded-full p-2 text-green-800/70 hover:bg-white hover:text-green-950 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
+                        aria-label="Remove attached image"
+                      >
+                        <LuX size={16} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {uploadError && (
+                  <p className="mb-3 text-sm text-rose-700">{uploadError}</p>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    className={`chatbot-pop-trigger flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-[#dce9d8] ${isListening ? "bg-rose-50 border-rose-300 text-rose-500 animate-pulse" : "bg-[#f9fcf7] text-green-900 hover:border-[#F28C28]/40 hover:text-[#F28C28]"} disabled:cursor-not-allowed disabled:opacity-50 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]`}
+                    aria-label="Voice input"
+                  >
+                    {isListening ? <LuMicOff size={18} /> : <LuMic size={18} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                    className="chatbot-pop-trigger flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-[#dce9d8] bg-[#f9fcf7] text-green-900 hover:border-[#F28C28]/40 hover:text-[#F28C28] disabled:cursor-not-allowed disabled:opacity-50 disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
+                    aria-label="Upload image"
+                  >
+                    <LuImage size={18} />
+                  </button>
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    placeholder="Ask Clementine or upload a photo..."
+                    className="flex-1 px-5 py-3 border border-[#dce9d8] rounded-full focus:outline-none focus:ring-2 focus:ring-[#F28C28]/40 bg-[#f9fcf7] text-green-950 placeholder:text-green-700/50 text-[15px] transition-all duration-200 shadow-inner"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || (!input.trim() && !pendingImage)}
+                    className="chatbot-pop-trigger flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#F28C28] text-white shadow-sm hover:bg-[#d97a21] disabled:opacity-40 disabled:hover:bg-[#F28C28] disabled:[--chatbot-pop-hover-transform:translateY(0)_scale(1)] disabled:[--chatbot-pop-active-transform:translateY(0)_scale(1)] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
+                  >
+                    <LuSend size={18} className="mr-0.5" />
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  export default Chatbot;
