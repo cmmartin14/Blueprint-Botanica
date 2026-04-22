@@ -7,7 +7,7 @@ import VariableWindow from "./VariableWindow";
 import { GiOakLeaf } from "react-icons/gi";
 import { TbHomeEdit } from "react-icons/tb";
 import { HiX } from "react-icons/hi";
-import { FaEdit, FaSearch, FaCalendarAlt, FaRegUser, FaCog } from "react-icons/fa";
+import { FaEdit, FaSearch, FaCalendarAlt, FaRegUser, FaCog, FaMobileAlt } from "react-icons/fa";
 import { RiDeleteBin6Line, RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { saveGarden, listGardens, loadGarden, deleteGarden } from "../actions/gardenActions";
@@ -42,6 +42,7 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
   const [savedList, setSavedList] = useState<{ id: string; name: string; updatedAt: Date }[]>([]);
   const [showSavedList, setShowSavedList] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
 
   // ====== Canvas store (edit mode) ======
   const gardenState = useGardenStore();
@@ -244,9 +245,46 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
 
             <div className="h-6 w-px bg-slate-200" />
 
-            <button onClick={handleSave} className={iconBtnClass} title="Save">
-              <RiSave3Line size={20} />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setIsSaveMenuOpen(!isSaveMenuOpen)}
+                className={iconBtnClass}
+                title="Save Options"
+              >
+                <RiSave3Line size={20} />
+              </button>
+              
+              <div
+                aria-hidden={!isSaveMenuOpen}
+                className={`absolute top-full left-1/2 -translate-x-1/2 mt-4 w-48 rounded-2xl border border-slate-100 bg-white/95 p-2 shadow-2xl backdrop-blur-2xl transition-all z-50 ${
+                  isSaveMenuOpen ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
+                }`}
+                style={getPopupMotionStyle(isSaveMenuOpen)}
+              >
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => {
+                      handleSave();
+                      setIsSaveMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95 hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <RiSave3Line size={16} />
+                    Save garden
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.alert("Garden link sent to phone!");
+                      setIsSaveMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95 hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <FaMobileAlt size={16} />
+                    Send to phone
+                  </button>
+                </div>
+              </div>
+            </div>
             <button onClick={handleOpenFolder} className={iconBtnClass} title="Saved Gardens">
               <IoFolderOutline size={20} />
             </button>
