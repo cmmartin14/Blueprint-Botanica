@@ -66,9 +66,7 @@ export default function FlowerBedPanel({
   const updatePlantInBed = useGardenStore((s) => s.updatePlantInBed);
   const harvestInfo = useHarvestDates(shapeId, zone);
   const addCalendarNote = useCalendarStore((s) => s.addNote);
-  const removeNotesByRefPrefix = useCalendarStore(
-    (s) => s.removeNotesByRefPrefix
-  );
+  const removeNotesByRefPrefix = useCalendarStore((s) => s.removeNotesByRefPrefix);
   const [scheduleStatus, setScheduleStatus] = useState<string | null>(null);
 
   const scheduledCount = bedPlants.filter(
@@ -76,8 +74,6 @@ export default function FlowerBedPanel({
   ).length;
 
   const handleScheduleHarvests = () => {
-    // Clear existing auto-scheduled notes for this bed first, then re-add
-    // fresh ones based on current plantedAt + maturity data.
     removeNotesByRefPrefix(`harvest:${shapeId}:`);
 
     let added = 0;
@@ -105,7 +101,6 @@ export default function FlowerBedPanel({
     setTimeout(() => setScheduleStatus(null), 2500);
   };
 
-  // Get bed or shape to display name
   const beds = useGardenStore((s) => s.beds);
   const shapes = useGardenStore((s) => s.shapes);
   const updateBed = useGardenStore((s) => s.updateBed);
@@ -123,7 +118,7 @@ export default function FlowerBedPanel({
   const [isAttributesOpen, setIsAttributesOpen] = useState(true);
   const [attributes, setAttributes] = useState<GardenBedAttributes>(emptyAttributes);
 
-  const hardinessZone = useGardenStore((s) => s.hardinessZone);//Hardiness Zone
+  const hardinessZone = useGardenStore((s) => s.hardinessZone);
 
   useEffect(() => {
     if (bed?.name) {
@@ -137,7 +132,6 @@ export default function FlowerBedPanel({
     }
 
     const sourceAttributes = bed?.attributes || shape?.attributes;
-
     setAttributes({
       soilType: sourceAttributes?.soilType ?? "",
       sunExposure: sourceAttributes?.sunExposure ?? "",
@@ -149,10 +143,18 @@ export default function FlowerBedPanel({
     });
   }, [bed, shape, bedLabel]);
 
+  // ── Plant search state ────────────────────────────────────────────────────
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [useMock, setUseMock] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear results when switching data source
+  useEffect(() => {
+    setResults([]);
+    setQuery("");
+  }, [useMock]);
 
   useEffect(() => {
     if (!query) {
@@ -166,25 +168,36 @@ export default function FlowerBedPanel({
     };
   }, [query]);
 
+  const apiUrl = (params: Record<string, string>) => {
+    const qs = new URLSearchParams(params);
+    if (useMock) qs.set("mock", "true");
+    return `/api/perenual?${qs}`;
+  };
+
   const fetchResults = async (q: string) => {
     setLoading(true);
     try {
-      const resp = await fetch(`/api/perenual?q=${encodeURIComponent(q)}`);
+      const resp = await fetch(apiUrl({ q }));
       if (!resp.ok) throw new Error();
       const json = await resp.json();
-      const filtered = (json.data || []).filter((p: SearchResult) => p.id >= 1 && p.id <= 3000);
 
-      // Fetch full details for each result to get hardiness zones
+      // Mock results already include hardiness — skip the extra detail fetch
+      if (useMock) {
+        setResults((json.data || []).slice(0, 8));
+        return;
+      }
+
+      const filtered = (json.data || []).filter(
+        (p: SearchResult) => p.id >= 1 && p.id <= 3000
+      );
+
       const withHardiness = await Promise.all(
-        filtered.slice(0, 8).map(async (plant: { id: any; }) => {
+        filtered.slice(0, 8).map(async (plant: SearchResult) => {
           try {
-            const detailResp = await fetch(`/api/perenual?id=${plant.id}`);
+            const detailResp = await fetch(apiUrl({ id: String(plant.id) }));
             if (!detailResp.ok) return plant;
             const details = await detailResp.json();
-            return {
-              ...plant,
-              hardiness: details.hardiness,
-            };
+            return { ...plant, hardiness: details.hardiness };
           } catch {
             return plant;
           }
@@ -208,7 +221,7 @@ export default function FlowerBedPanel({
       common_name: p.common_name,
       scientific_name: p.scientific_name,
       image_url: getImage(p),
-      hardiness: p.hardiness, // Include hardiness data
+      hardiness: p.hardiness,
     };
     addPlantToBed(shapeId, entry);
     setQuery("");
@@ -224,17 +237,9 @@ export default function FlowerBedPanel({
     setIsEditingName(false);
   };
 
-  const handleAttributeChange = (
-    field: keyof GardenBedAttributes,
-    value: string
-  ) => {
-    const nextAttributes = {
-      ...attributes,
-      [field]: value,
-    };
-
+  const handleAttributeChange = (field: keyof GardenBedAttributes, value: string) => {
+    const nextAttributes = { ...attributes, [field]: value };
     setAttributes(nextAttributes);
-
     if (bed) {
       updateBed(bed.id, { attributes: nextAttributes });
     } else if (shape) {
@@ -247,20 +252,15 @@ export default function FlowerBedPanel({
       handleSaveName();
     } else if (e.key === "Escape") {
       setIsEditingName(false);
-      // Reset to original name
-      if (bed?.name) {
-        setBedName(bed.name);
-      } else if (shape?.name) {
-        setBedName(shape.name);
-      } else if (bedLabel) {
-        setBedName(bedLabel);
-      } else {
-        setBedName("Garden Bed");
-      }
+      if (bed?.name) setBedName(bed.name);
+      else if (shape?.name) setBedName(shape.name);
+      else if (bedLabel) setBedName(bedLabel);
+      else setBedName("Garden Bed");
     } else if (e.key === "Backspace" || e.key === "Delete") {
       e.stopPropagation();
     }
   };
+
   const getZoneNumber = (zoneValue: string | number | undefined) => {
     if (!zoneValue) return 0;
     return parseInt(zoneValue.toString().replace(/[^\d]/g, ""), 10);
@@ -268,13 +268,12 @@ export default function FlowerBedPanel({
 
   const isPlantCompatible = (plant: PlantEntry) => {
     if (!hardinessZone || !plant.hardiness) return true;
-
     const zoneNumber = getZoneNumber(hardinessZone);
     const min = getZoneNumber(plant.hardiness.min);
     const max = getZoneNumber(plant.hardiness.max);
-
     return zoneNumber >= min && zoneNumber <= max;
   };
+
   return (
     <div
       data-testid="bed-plant-window"
@@ -284,9 +283,7 @@ export default function FlowerBedPanel({
           : "absolute right-5 z-50 flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl"
       }
       style={
-        sidebarMode
-          ? undefined
-          : { width: 380, height: "60vh", top: `${topOffset}px` }
+        sidebarMode ? undefined : { width: 380, height: "60vh", top: `${topOffset}px` }
       }
       data-interactive="true"
       onClick={(e) => e.stopPropagation()}
@@ -327,7 +324,7 @@ export default function FlowerBedPanel({
           <button
             type="button"
             onClick={onToggleLock}
-            className="chatbot-pop-trigger rounded-full p-2 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
+            className="chatbot-pop-trigger rounded-full p-2 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
             title={isLocked ? "Unlock window" : "Lock window"}
             aria-label={isLocked ? "Unlock bed panel" : "Lock bed panel"}
           >
@@ -337,7 +334,7 @@ export default function FlowerBedPanel({
           <button
             type="button"
             onClick={onClose}
-            className="chatbot-pop-trigger rounded-full p-2 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f] [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"
+            className="chatbot-pop-trigger rounded-full p-2 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
             aria-label="Close bed panel"
           >
             <LuX size={20} strokeWidth={2.5} />
@@ -351,9 +348,36 @@ export default function FlowerBedPanel({
           sidebarMode ? "border-[#dce9d8] bg-[#f5fbf3]/80" : "border-gray-200 bg-white"
         }`}
       >
+        {/* Mock / Live toggle */}
+        <div className="flex items-center gap-1.5 mb-2">
+          <button
+            onClick={() => setUseMock(false)}
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
+              !useMock
+                ? "bg-green-700 text-white"
+                : "bg-white border border-gray-300 text-gray-400 hover:border-green-400"
+            }`}
+          >
+            Live
+          </button>
+          <button
+            onClick={() => setUseMock(true)}
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
+              useMock
+                ? "bg-amber-500 text-white"
+                : "bg-white border border-gray-300 text-gray-400 hover:border-amber-400"
+            }`}
+          >
+            Mock
+          </button>
+          {useMock && (
+            <span className="text-[10px] text-amber-500 italic">offline data</span>
+          )}
+        </div>
+
         <input
           type="text"
-          placeholder="Search plants to add..."
+          placeholder={useMock ? "Search mock plants..." : "Search plants to add..."}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-600 text-black"
@@ -374,17 +398,33 @@ export default function FlowerBedPanel({
                   }`}
                 >
                   {getImage(p) && (
-                    <img src={getImage(p)} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                    <img
+                      src={getImage(p)}
+                      alt=""
+                      className="w-8 h-8 rounded object-cover flex-shrink-0"
+                    />
                   )}
                   <div>
                     <p className="font-medium text-gray-800 leading-tight">
-                      {p.common_name ?? (Array.isArray(p.scientific_name) ? p.scientific_name[0] : p.scientific_name)}
+                      {p.common_name ??
+                        (Array.isArray(p.scientific_name)
+                          ? p.scientific_name[0]
+                          : p.scientific_name)}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {Array.isArray(p.scientific_name) ? p.scientific_name[0] : p.scientific_name}
+                      {Array.isArray(p.scientific_name)
+                        ? p.scientific_name[0]
+                        : p.scientific_name}
                     </p>
+                    {p.hardiness?.min && p.hardiness?.max && (
+                      <p className="text-[10px] text-green-600">
+                        Zone {p.hardiness.min}–{p.hardiness.max}
+                      </p>
+                    )}
                   </div>
-                  {alreadyAdded && <span className="ml-auto text-xs text-green-600">Added</span>}
+                  {alreadyAdded && (
+                    <span className="ml-auto text-xs text-green-600">Added</span>
+                  )}
                 </li>
               );
             })}
@@ -393,6 +433,7 @@ export default function FlowerBedPanel({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto bg-gradient-to-br from-[#f5fbf3] to-[#eef6ea]">
+        {/* Bed Attributes */}
         <div className="border-b border-[#dce9d8]">
           <button
             type="button"
@@ -529,8 +570,11 @@ export default function FlowerBedPanel({
               </button>
             </div>
           )}
+
           {bedPlants.length === 0 ? (
-            <p className="text-xs text-gray-400 py-2">No plants added yet. Search below to add one.</p>
+            <p className="text-xs text-gray-400 py-2">
+              No plants added yet. Search above to add one.
+            </p>
           ) : (
             <table className="w-full text-sm">
               <thead
@@ -552,14 +596,16 @@ export default function FlowerBedPanel({
                   return (
                     <tr
                       key={plant.id}
-                      className={`border-b last:border-0 align-top ${
-                        !compatible ? "bg-red-50" : ""
-                      }`}
+                      className={`border-b last:border-0 align-top ${!compatible ? "bg-red-50" : ""}`}
                     >
                       <td className="py-1.5 pr-2">
                         <div className="flex items-center gap-2">
                           {plant.image_url && (
-                            <img src={plant.image_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                            <img
+                              src={plant.image_url}
+                              alt=""
+                              className="w-8 h-8 rounded object-cover flex-shrink-0"
+                            />
                           )}
                           <div className="leading-tight">
                             <p className="font-medium text-gray-800">
