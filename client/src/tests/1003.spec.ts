@@ -1,7 +1,16 @@
 import { test, expect } from '@playwright/test';
+import { plantsMock } from '../mocks/plants';
 
 test.describe('Canvas toolbar buttons', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('**/api/perenual', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(plantsMock),
+      });
+    });
+
     await page.goto('http://localhost:3000');
   });
 
@@ -64,6 +73,8 @@ test.describe('Canvas toolbar buttons', () => {
   const bed = page.locator('g > path').first();
   await expect(bed).toBeVisible({ timeout: 5000 });
 
+  await page.getByRole('button', { name: 'Exit Edit Mode' }).click();
+
   //Click bed to edit
   await bed.click();
   const bedInfoButton = page.getByRole('button', { name: 'Open bed details' });
@@ -95,12 +106,6 @@ test.describe('Canvas toolbar buttons', () => {
   const searchInput = plantWindow.getByRole('textbox', { name: 'Search plants to add...' });
   await searchInput.fill("rose");
   
-  // Wait for API response
-  await page.waitForResponse(
-    response => response.url().includes('/api/perenual') && response.status() === 200,
-    { timeout: 10000 }
-  );
-  
   // Select first element
   const firstResult = plantWindow.getByRole('listitem').first();
   await expect(firstResult).toBeVisible({ timeout: 10_000 });
@@ -115,12 +120,12 @@ test.describe('Canvas toolbar buttons', () => {
   await deleteButton.click();
   
   // Rename garden bed
-  const renameInput = plantWindow.getByRole('heading', { name: 'Garden Bed' }); 
+  const renameInput = plantWindow.getByRole('heading', { name: 'Garden Bed' });
   await renameInput.click();
   await page.keyboard.type('My Test Bed');
   
   // Close the window 
-  await plantWindow.locator('.text-green-800.hover\\:opacity-70').click();
+  await plantWindow.getByRole('button', { name: 'Close bed panel' }).click();
   await expect(plantWindow).not.toBeVisible({ timeout: 5000 });
 });
 });

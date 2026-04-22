@@ -49,9 +49,12 @@ jobs:
       - name: Run Vitest tests
         run: npx vitest run ./src/tests
 
-      - name: Start dev server
+      - name: Build app
+        run: npm run build
+
+      - name: Start production server
         run: |
-          npm run dev &
+          npm run start &
           npx wait-on http://localhost:3000
         env:
           NEXT_PUBLIC_STACK_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_STACK_PROJECT_ID }}
