@@ -17,6 +17,7 @@ interface SearchResult {
     min?: string;
     max?: string;
   };
+  sunlight?: string[] | string;
 }
 
 interface FlowerBedPanelProps {
@@ -39,6 +40,21 @@ type GardenBedAttributes = {
   soilPh: string;
   notes: string;
 };
+type SunLevel = "full_sun" | "part_sun" | "part_shade" | "full_shade";
+
+const normalizeSun = (value?: string): SunLevel | null => {
+  if (!value) return null;
+
+  const v = value.toLowerCase();
+
+  if (v.includes("full sun")) return "full_sun";
+  if (v.includes("part sun")) return "part_sun";
+  if (v.includes("part shade")) return "part_shade";
+  if (v.includes("full shade")) return "full_shade";
+
+  return null;
+};
+
 
 const emptyAttributes: GardenBedAttributes = {
   soilType: "",
@@ -112,6 +128,7 @@ export default function FlowerBedPanel({
   );
   const bed = bedById ?? linkedBed;
   const shape = shapes[shapeId];
+  const sunExposure = bed?.attributes?.sunExposure ?? shape?.attributes?.sunExposure;
 
   const [bedName, setBedName] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -197,7 +214,7 @@ export default function FlowerBedPanel({
             const detailResp = await fetch(apiUrl({ id: String(plant.id) }));
             if (!detailResp.ok) return plant;
             const details = await detailResp.json();
-            return { ...plant, hardiness: details.hardiness };
+            return { ...plant, hardiness: details.hardiness};
           } catch {
             return plant;
           }
@@ -222,6 +239,7 @@ export default function FlowerBedPanel({
       scientific_name: p.scientific_name,
       image_url: getImage(p),
       hardiness: p.hardiness,
+      sunlight: p.sunlight,
     };
     addPlantToBed(shapeId, entry);
     setQuery("");
@@ -272,6 +290,23 @@ export default function FlowerBedPanel({
     const min = getZoneNumber(plant.hardiness.min);
     const max = getZoneNumber(plant.hardiness.max);
     return zoneNumber >= min && zoneNumber <= max;
+  };
+  const isSunCompatible = (plant: PlantEntry) => {
+    if (!sunExposure || !plant.sunlight) return true;
+    const bedSun = normalizeSun(sunExposure);
+
+    const plantSunArray = Array.isArray(plant.sunlight)
+      ? plant.sunlight
+      : [plant.sunlight];
+
+    const plantSunLevels = plantSunArray
+      .map(normalizeSun)
+      .filter(Boolean) as SunLevel[];
+
+    if (!bedSun || plantSunLevels.length === 0) return true;
+
+    // Simple rule: bed must match one of the plant's acceptable conditions
+    return plantSunLevels.includes(bedSun);
   };
 
   return (
@@ -592,7 +627,9 @@ export default function FlowerBedPanel({
               <tbody>
                 {bedPlants.map((plant) => {
                   const info = harvestInfo[plant.id];
-                  const compatible = isPlantCompatible(plant);
+                  const zoneCompatible = isPlantCompatible(plant);
+                  const sunCompatible = isSunCompatible(plant);
+                  const compatible = zoneCompatible && sunCompatible
                   return (
                     <tr
                       key={plant.id}
@@ -616,9 +653,15 @@ export default function FlowerBedPanel({
                                 ? plant.scientific_name[0]
                                 : plant.scientific_name}
                             </p>
-                            {!compatible && (
+                            {!zoneCompatible && (
                               <p className="text-[10px] text-red-500 mt-0.5">
                                 Not compatible with zone {hardinessZone}
+                              </p>
+                            )}
+
+                            {!sunCompatible && (
+                              <p className="text-[10px] text-orange-500 mt-0.5">
+                                Sunlight mismatch ({sunExposure || "unknown"})
                               </p>
                             )}
                           </div>

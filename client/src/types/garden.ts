@@ -29,6 +29,7 @@ export interface PlantEntry {
     min?: string;
     max?: string;
   };
+  sunlight?: string | string[];       // from Perenual details
   // Harvest scheduling (optional, per-plant-in-bed)
   plantedAt?: string; // YYYY-MM-DD
   daysToMaturity?: number;
