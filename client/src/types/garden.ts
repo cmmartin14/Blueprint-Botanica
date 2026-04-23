@@ -6,6 +6,8 @@ export interface Bed {
   name: string;
   shapeIds: string[];
   createdAt: number;
+  vertices?: { x: number; y: number }[];
+  isClosed?: boolean;
   attributes?: GardenBedAttributes;
 }
 

@@ -11,7 +11,7 @@ import { FaEdit, FaSearch, FaCalendarAlt, FaRegUser, FaCog, FaMobileAlt } from "
 import { RiDeleteBin6Line, RiSave3Line } from "react-icons/ri";
 import { IoFolderOutline } from "react-icons/io5";
 import { saveGarden, listGardens, loadGarden, deleteGarden } from "../actions/gardenActions";
-import { useGardenStore } from "../types/garden";
+import { GardenState, useGardenStore } from "../types/garden";
 import { useUser } from "@stackframe/stack";
 import Chatbot from "./Chatbot";
 import { LuMenu, LuSprout } from "react-icons/lu";
@@ -111,14 +111,12 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
 
       const state = useGardenStore.getState();
 
-      const { id: savedId } = await saveGarden(user.id, { 
-        id: state.id, 
-        name: gardenName, 
-        shapes: state.shapes, 
-        beds: state.beds, 
-        bedPlants: state.bedPlants,
-        editMode: false 
-      });
+      const payload: GardenState = {
+        ...state,
+        name: gardenName,
+        editMode: false,
+      };
+      const { id: savedId } = await saveGarden(user.id, payload);
       useGardenStore.setState({ id: savedId });
   };
 

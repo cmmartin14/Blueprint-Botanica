@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -15,7 +13,5 @@ export async function GET() {
       { error: "Failed to fetch zones" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
