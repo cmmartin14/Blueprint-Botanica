@@ -124,7 +124,7 @@ interface ShapeRendererProps {
   gridToUnit?: number;
 
   canEdit: boolean;
-
+  speciesColors?: Record<string, string>;
   bedPlants?: Record<
     string,
     {
@@ -373,6 +373,7 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   onShapeSelect,
   bedPlants = {},
   shapeMode = "white",
+  speciesColors = {},
   onOpenBedPanel,
 }) => {
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -429,7 +430,9 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
     const uniqueSpeciesKeys = Array.from(new Set(plants.map(normalizeSpeciesKey)));
     const visibleSpeciesKeys = uniqueSpeciesKeys.slice(0, MAX_VISIBLE_SPECIES_IN_FILL);
-    const visibleColors = visibleSpeciesKeys.map(getSpeciesColor);
+    const visibleColors = visibleSpeciesKeys.map(
+      (key) => speciesColors[key] ?? getSpeciesColor(key)
+    );
     const solidColor = visibleColors[0] ?? null;
     const isMixed = uniqueSpeciesKeys.length > 1;
     const patternId = isMixed ? getStripePatternId(shapeId, visibleSpeciesKeys) : null;

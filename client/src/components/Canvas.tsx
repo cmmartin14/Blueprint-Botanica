@@ -149,6 +149,8 @@ const MapKeyPanel = ({
   onHoverBed,
   onSelectBed,
 }: MapKeyPanelProps) => {
+  const speciesColors = useGardenStore((s) => s.speciesColors);
+  const setSpeciesColor = useGardenStore((state) => state.setSpeciesColor);
   const entries = useMemo<MapKeyEntry[]>(() => {
     const legendMap = new Map<string, MapKeyEntry>();
 
@@ -165,14 +167,14 @@ const MapKeyPanel = ({
         legendMap.set(speciesKey, {
           speciesKey,
           label: getMapKeyLabel(plant),
-          color: getMapKeyColor(speciesKey),
+          color: speciesColors[speciesKey] || getMapKeyColor(speciesKey),
           count: 1,
         });
       });
     });
 
     return Array.from(legendMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }, [bedPlants]);
+  }, [bedPlants, speciesColors]);
 
   const popupStyle = {
     transitionDuration: `${ICON_WINDOW_POPUP_DURATION_MS}ms`,
@@ -258,11 +260,12 @@ const MapKeyPanel = ({
             <ul className="space-y-2">
               {entries.map((entry) => (
                 <li key={entry.speciesKey} className="flex items-center gap-3 text-green-800">
-                  <span
-                    aria-hidden="true"
-                    className="h-5 w-5 rounded border border-black/15 shrink-0"
-                    style={{ backgroundColor: entry.color }}
-                  />
+                  <input
+                  type="color"
+                  value={entry.color}
+                  onChange={(e) => setSpeciesColor(entry.speciesKey, e.target.value)}
+                  className="h-5 w-5 p-0 border border-black/15 rounded cursor-pointer"
+                />
                   <div className="min-w-0">
                     <div className="text-sm font-semibold leading-tight break-words">{entry.label}</div>
                     <div className="text-xs text-green-700/80">{entry.count} plant{entry.count !== 1 ? "s" : ""}</div>
@@ -330,6 +333,9 @@ const Canvas = () => {
     [bedsRecord]
   );
 
+  //Plant color selection
+  const speciesColors = useGardenStore((state) => state.speciesColors);
+  
   const editMode = useGardenStore((state) => state.editMode);
   const setEditMode = useGardenStore((state) => state.setEditMode);
   const bedPlants = useGardenStore((state) => state.bedPlants);
@@ -1356,6 +1362,7 @@ const Canvas = () => {
                 setSidebarBedPanelShapeId(null);
               }
             }}
+            speciesColors={speciesColors}
           />
         </div>
       </div>
