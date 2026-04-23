@@ -1,8 +1,7 @@
-# 🌼 Blueprint Botanica 🌼 [![Main](https://github.com/cmmartin14/Blueprint-Botanica/actions/workflows/main.yml/badge.svg)](https://github.com/cmmartin14/Blueprint-Botanica/actions/workflows/main.yml)
-
 <div align="center">
 
-# 🌱 Blueprint Botanica
+# 🌱 Blueprint Botanica [![Main](https://github.com/cmmartin14/Blueprint-Botanica/actions/workflows/main.yml/badge.svg)](https://github.com/cmmartin14/Blueprint-Botanica/actions/workflows/main.yml)
+
 
 **Design your dream garden with confidence**
 
