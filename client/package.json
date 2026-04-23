@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "prisma generate && next build --turbopack",
+    "postinstall": "prisma generate",
     "type-check": "tsc --noEmit",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
-    "test": "vitest"
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.64",
