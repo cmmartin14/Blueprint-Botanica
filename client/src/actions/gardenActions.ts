@@ -5,6 +5,7 @@ import { GardenState } from "../types/garden";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
+import { ensureUserRowExists } from "../lib/userSync";
 
 function toInputJson(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
@@ -16,6 +17,7 @@ export async function saveGarden(
 ): Promise<{ id: string }> {
   const now = new Date();
   const projectId = state.id || randomUUID();
+  await ensureUserRowExists(userId);
 
   await prisma.garden_projects.upsert({
     where:  { id: projectId },
