@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack/server';
-import { syncUserToNeon } from '@/lib/userSync';
+import { syncUserToNeon } from '../../../../lib/userSync';
 
 
 export async function GET() {
