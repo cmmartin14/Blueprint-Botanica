@@ -102,8 +102,11 @@ test.describe('Canvas toolbar buttons', () => {
   await expect(plantWindow.getByRole('textbox', { name: 'ex. 6.0-' })).toHaveValue('6.5-7.0');
   await expect(plantWindow.getByRole('textbox', { name: 'Add bed notes...' })).toHaveValue('Test notes for bed');
 
+  await plantWindow.getByRole('button', { name: 'Mock' }).click();
+  const closeSearch = page.getByRole('button', { name: 'Close search' });
+  await closeSearch.click();
   // Enter "rose" into search field
-  const searchInput = plantWindow.getByRole('textbox', { name: 'Search plants to add...' });
+  const searchInput = plantWindow.getByRole('textbox', { name: 'Search mock plants...' });
   await searchInput.fill("rose");
   
   // Select first element
