@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GET } from "../app/api/auth/user/route"; 
 import { stackServerApp } from "@/stack/server";
 
+
+vi.mock('server-only', () => ({}))
+
 vi.mock("@/stack/server", () => ({
   stackServerApp: {
     getUser: vi.fn(),

@@ -2,18 +2,13 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './src/tests',  // points to your test files
+  testDir: './src/tests',
   testMatch: '**/*.spec.ts',
   timeout: 30 * 1000,
   retries: process.env.CI ? 2 : 0,
   reporter: [['list']],
   use: {
     headless: true,
-  },
-  webServer: {
-    command: 'npm run build && npm run start',
-    url: 'http://localhost:3000',
-    timeout: 120000,
-    reuseExistingServer: !process.env.CI,
+    baseURL: 'http://localhost:3000', 
   },
 });

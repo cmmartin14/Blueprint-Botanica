@@ -78,7 +78,9 @@ export default function PlantSearch() {
   const [currentPlantId, setCurrentPlantId] = useState<number | null>(null);
   const [useMock, setUseMock] = useState(false);
   const [filters, setFilters] = useState(emptyFilters);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const wikiImageCacheRef = useRef<Map<string, string | null>>(new Map());
 
   const hasActiveFilters = Object.values(filters).some((f) => f !== "");
 
@@ -113,6 +115,20 @@ export default function PlantSearch() {
       const plants = json.data || [];
       setResults(plants);
       setFilteredResults(plants); // show everything immediately
+
+      // Enrich mock data with Wikipedia thumbnails in the background.
+      const enrichedPlants = await Promise.all(
+        plants.map(async (plant) => {
+          const image = await fetchWikipediaImageUrl(plant.common_name || "", plant.scientific_name);
+          return image ? { ...plant, image_url: image } : plant;
+        })
+      );
+      setResults(enrichedPlants);
+      if (!query && !hasActiveFilters) {
+        setFilteredResults(enrichedPlants);
+      } else {
+        applyFilters(enrichedPlants);
+      }
     } catch (err) {
       console.error("Error loading mock plants:", err);
     } finally {
@@ -262,6 +278,46 @@ export default function PlantSearch() {
     } catch { return null; }
   };
 
+  const fetchWikipediaImageUrl = async (
+    commonName: string,
+    scientificName: string | string[]
+  ): Promise<string | null> => {
+    const sci = Array.isArray(scientificName) ? scientificName[0] : scientificName;
+    const terms = [sci, commonName].filter(Boolean).map((term) => term.trim());
+
+    for (const term of terms) {
+      const cacheKey = term.toLowerCase();
+      if (wikiImageCacheRef.current.has(cacheKey)) {
+        const cached = wikiImageCacheRef.current.get(cacheKey);
+        if (cached) return cached;
+        continue;
+      }
+
+      try {
+        const resp = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(
+            term
+          )}&prop=pageimages&piprop=thumbnail&pithumbsize=300&format=json&origin=*`
+        );
+        const data = await resp.json();
+        const pages = data?.query?.pages;
+        if (!pages) {
+          wikiImageCacheRef.current.set(cacheKey, null);
+          continue;
+        }
+
+        const page = pages[Object.keys(pages)[0]];
+        const imageUrl: string | null = page?.thumbnail?.source ?? null;
+        wikiImageCacheRef.current.set(cacheKey, imageUrl);
+        if (imageUrl) return imageUrl;
+      } catch {
+        wikiImageCacheRef.current.set(cacheKey, null);
+      }
+    }
+
+    return null;
+  };
+
   const validatePlantPage = (page: any, extract: string, sci: string): boolean => {
     if ((page.templates || []).some((t: any) => ["speciesbox","taxobox","automatic taxobox","plantbox"].some((k) => t.title.toLowerCase().includes(k)))) return true;
     if ((page.categories || []).some((c: any) => ["plants","flora","species","botanical"].some((k) => c.title.toLowerCase().includes(k)))) return true;
@@ -299,6 +355,12 @@ export default function PlantSearch() {
       if (!plantData.description) {
         const wiki = await fetchWikipediaDescription(plantData.common_name || "", plantData.scientific_name);
         if (wiki) { plantData.description = wiki; plantData.descriptionSource = "Wikipedia"; }
+      }
+      if (!plantData.image_url && !plantData.default_image?.medium_url && !plantData.default_image?.thumbnail && !plantData.default_image?.original_url) {
+        const wikiImage = await fetchWikipediaImageUrl(plantData.common_name || "", plantData.scientific_name);
+        if (wikiImage) {
+          plantData.image_url = wikiImage;
+        }
       }
 
       if (!useMock && plantData["care-guides"]) {
@@ -377,57 +439,65 @@ export default function PlantSearch() {
         </div>
       </div>
 
-      {/* Filters — always visible when not in detail view */}
       {!selectedPlant && (
         <div className="flex-none mt-2 rounded-[20px] border border-[#dce9d8] bg-white/75 p-3 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Filters</span>
-            {activeFilterCount > 0 && (
-              <button
-                onClick={() => setFilters(emptyFilters)}
-                className="text-xs text-red-500 hover:text-red-700 font-medium"
-              >
-                Clear {activeFilterCount}
-              </button>
-            )}
+            <button
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              className="text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-gray-700"
+            >
+              Filters {filtersOpen ? "-" : "+"}
+            </button>
+            <div className="flex items-center gap-3">
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={() => setFilters(emptyFilters)}
+                  className="text-xs text-red-500 hover:text-red-700 font-medium"
+                >
+                  Clear {activeFilterCount}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: "Watering", key: "watering", options: ["Frequent", "Average", "Minimum", "None"] },
-              { label: "Care Level", key: "careLevel", options: ["Low", "Medium", "High"] },
-              { label: "Cycle", key: "cycle", options: ["Perennial", "Annual", "Biennial", "Biannual"] },
-              { label: "Fruits", key: "fruits", options: null },
-              { label: "Flowers", key: "flowers", options: null },
-            ].map(({ label, key, options }) => (
-              <div key={key}>
-                <label className="text-xs font-medium text-gray-700 block mb-1">{label}</label>
+          {filtersOpen && (
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Watering", key: "watering", options: ["Frequent", "Average", "Minimum", "None"] },
+                { label: "Care Level", key: "careLevel", options: ["Low", "Medium", "High"] },
+                { label: "Cycle", key: "cycle", options: ["Perennial", "Annual", "Biennial", "Biannual"] },
+                { label: "Fruits", key: "fruits", options: null },
+                { label: "Flowers", key: "flowers", options: null },
+              ].map(({ label, key, options }) => (
+                <div key={key}>
+                  <label className="text-xs font-medium text-gray-700 block mb-1">{label}</label>
+                  <select
+                    value={filters[key as keyof typeof filters]}
+                    onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
+                    className="w-full rounded-xl border border-[#dce9d8] bg-white px-2 py-1 text-xs text-black"
+                  >
+                    <option value="">All</option>
+                    {options
+                      ? options.map((o) => <option key={o} value={o}>{o}</option>)
+                      : [<option key="true" value="true">Yes</option>, <option key="false" value="false">No</option>]}
+                  </select>
+                </div>
+              ))}
+              {/* Zone gets its own wider slot */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Zone</label>
                 <select
-                  value={filters[key as keyof typeof filters]}
-                  onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
+                  value={filters.hardinessZone}
+                  onChange={(e) => setFilters({ ...filters, hardinessZone: e.target.value })}
                   className="w-full rounded-xl border border-[#dce9d8] bg-white px-2 py-1 text-xs text-black"
                 >
                   <option value="">All</option>
-                  {options
-                    ? options.map((o) => <option key={o} value={o}>{o}</option>)
-                    : [<option key="true" value="true">Yes</option>, <option key="false" value="false">No</option>]}
+                  {[1,2,3,4,5,6,7,8,9,10,11,12,13].map((z) => (
+                    <option key={z} value={z}>Zone {z}</option>
+                  ))}
                 </select>
               </div>
-            ))}
-            {/* Zone gets its own wider slot */}
-            <div>
-              <label className="text-xs font-medium text-gray-700 block mb-1">Zone</label>
-              <select
-                value={filters.hardinessZone}
-                onChange={(e) => setFilters({ ...filters, hardinessZone: e.target.value })}
-                className="w-full rounded-xl border border-[#dce9d8] bg-white px-2 py-1 text-xs text-black"
-              >
-                <option value="">All</option>
-                {[1,2,3,4,5,6,7,8,9,10,11,12,13].map((z) => (
-                  <option key={z} value={z}>Zone {z}</option>
-                ))}
-              </select>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -501,6 +571,13 @@ export default function PlantSearch() {
                 <p className="text-gray-600 mb-2">
                   Scientific: {Array.isArray(selectedPlant.scientific_name) ? selectedPlant.scientific_name.join(", ") : selectedPlant.scientific_name}
                 </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-800 mb-4">
+                  {detailFields.map(({ label, key }) => {
+                    const value = (selectedPlant as any)[key];
+                    if (value == null) return null;
+                    return <div key={key}><strong>{label}:</strong> {formatValue(value)}</div>;
+                  })}
+                </div>
                 {selectedPlant.description && (
                   <div className="mb-4">
                     <p className="text-sm text-gray-700">{selectedPlant.description}</p>
@@ -524,13 +601,6 @@ export default function PlantSearch() {
                     ))}
                   </div>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-800">
-                  {detailFields.map(({ label, key }) => {
-                    const value = (selectedPlant as any)[key];
-                    if (value == null) return null;
-                    return <div key={key}><strong>{label}:</strong> {formatValue(value)}</div>;
-                  })}
-                </div>
               </>
             )}
           </div>

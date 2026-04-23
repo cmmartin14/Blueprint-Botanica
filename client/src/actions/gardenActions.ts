@@ -4,6 +4,12 @@ import { prisma } from "../db/prisma";
 import { GardenState } from "../types/garden";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
+import { Prisma } from "@prisma/client";
+import { ensureUserRowExists } from "../lib/userSync";
+
+function toInputJson(value: unknown): Prisma.InputJsonValue {
+  return value as Prisma.InputJsonValue;
+}
 
 export async function saveGarden(
   userId: string,
@@ -11,23 +17,24 @@ export async function saveGarden(
 ): Promise<{ id: string }> {
   const now = new Date();
   const projectId = state.id || randomUUID();
+  await ensureUserRowExists(userId);
 
   await prisma.garden_projects.upsert({
     where:  { id: projectId },
     update: {
       name:      state.name,
-      shapes:    state.shapes,
-      beds:      state.beds,
-      bedPlants: state.bedPlants,
+      shapes:    toInputJson(state.shapes),
+      beds:      toInputJson(state.beds),
+      bedPlants: toInputJson(state.bedPlants),
       updatedAt: now,
     },
     create: {
       id:        projectId,
       name:      state.name,
       userId,
-      shapes:    state.shapes,
-      beds:      state.beds,
-      bedPlants: state.bedPlants,
+      shapes:    toInputJson(state.shapes),
+      beds:      toInputJson(state.beds),
+      bedPlants: toInputJson(state.bedPlants),
       updatedAt: now,
     },
   });
@@ -50,9 +57,14 @@ export async function loadGarden(
     id:       project.id,
     name:     project.name,
     editMode: false,
-    shapes:   project.shapes as GardenState["shapes"],
-    beds:     project.beds   as GardenState["beds"],
-    bedPlants: project.bedPlants as GardenState["bedPlants"],
+    zone: null,
+    shapes:   project.shapes as unknown as GardenState["shapes"],
+    beds:     project.beds as unknown as GardenState["beds"],
+    bedPlants: project.bedPlants as unknown as GardenState["bedPlants"],
+    speciesColors: {},
+    hardinessZone: null,
+    gridMode: "dots",
+    shapeMode: "white",
   };
 }
 

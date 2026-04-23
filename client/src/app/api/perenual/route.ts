@@ -1,10 +1,41 @@
 import { NextResponse } from "next/server";
+import { Redis } from "@upstash/redis";
 import { plantsMock } from "../../../mocks/plants";
 
 const isTest = process.env.VITEST === "true";
-const plantCache = new Map<number, any>();
-const careGuideCache = new Map<number, any>();
-const searchCache = new Map<string, any>();
+const plantCache = new Map<number, unknown>();
+const careGuideCache = new Map<number, unknown>();
+const searchCache = new Map<string, unknown>();
+
+const CACHE_TTL_SECONDS = 60 * 60 * 6; // 6 hours
+
+const redis =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+    : null;
+
+async function getCached<T>(key: string): Promise<T | null> {
+  if (!redis) return null;
+  try {
+    const value = await redis.get<T>(key);
+    return value ?? null;
+  } catch (error) {
+    console.warn("Upstash read failed, using fallback cache:", error);
+    return null;
+  }
+}
+
+async function setCached(key: string, value: unknown, ttlSeconds = CACHE_TTL_SECONDS): Promise<void> {
+  if (!redis) return;
+  try {
+    await redis.set(key, value, { ex: ttlSeconds });
+  } catch (error) {
+    console.warn("Upstash write failed, using fallback cache:", error);
+  }
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -51,6 +82,11 @@ export async function GET(request: Request) {
     // Care guides
     if (speciesId && careGuides === "true") {
       const numericId = Number(speciesId);
+      const redisKey = `perenual:care-guides:${numericId}`;
+      const redisCached = await getCached<unknown>(redisKey);
+      if (redisCached) {
+        return NextResponse.json(redisCached);
+      }
       if (careGuideCache.has(numericId)) {
         return NextResponse.json(careGuideCache.get(numericId));
       }
@@ -61,12 +97,18 @@ export async function GET(request: Request) {
       }
       const data = await resp.json();
       careGuideCache.set(numericId, data);
+      await setCached(redisKey, data);
       return NextResponse.json(data);
     }
 
     // Plant detail by ID
     if (id) {
       const numericId = Number(id);
+      const redisKey = `perenual:plant:${numericId}`;
+      const redisCached = await getCached<unknown>(redisKey);
+      if (redisCached) {
+        return NextResponse.json(redisCached);
+      }
       if (plantCache.has(numericId)) {
         return NextResponse.json(plantCache.get(numericId));
       }
@@ -77,13 +119,20 @@ export async function GET(request: Request) {
       }
       const data = await resp.json();
       plantCache.set(numericId, data);
+      await setCached(redisKey, data);
       return NextResponse.json(data);
     }
 
     // Search by query
     if (query) {
-      if (searchCache.has(query)) {
-        return NextResponse.json(searchCache.get(query));
+      const normalizedQuery = query.trim().toLowerCase();
+      const redisKey = `perenual:search:${normalizedQuery}`;
+      const redisCached = await getCached<unknown>(redisKey);
+      if (redisCached) {
+        return NextResponse.json(redisCached);
+      }
+      if (searchCache.has(normalizedQuery)) {
+        return NextResponse.json(searchCache.get(normalizedQuery));
       }
       const apiUrl = `https://perenual.com/api/v2/species-list?key=${key}&q=${encodeURIComponent(query)}`;
       const resp = await fetch(apiUrl);
@@ -112,7 +161,8 @@ export async function GET(request: Request) {
         );
       }
       const data = await resp.json();
-      searchCache.set(query, data);
+      searchCache.set(normalizedQuery, data);
+      await setCached(redisKey, data);
       return NextResponse.json(data);
     }
 

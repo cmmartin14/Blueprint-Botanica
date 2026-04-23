@@ -392,7 +392,6 @@ const Canvas = () => {
         label: savedName || `Garden Bed ${index + 1}`,
         speciesCount: speciesKeys.size,
         plantCount: plants.length,
-        kind: bedEntry.kind,
       };
     });
   }, [beds, shapes, bedPlants]);
@@ -524,8 +523,8 @@ const Canvas = () => {
       endPos: { x: centerX + 40, y: centerY + 40 },
       color: "#ffffff",
       strokeWidth: 2,
-      isSeletected: false,
-    } as Shape;
+      isSelected: false,
+    };
 
     commit([...shapesRef.current, newShape], bedsRef.current);
   }, [commit, pan.x, pan.y, scale]);
@@ -673,8 +672,8 @@ const Canvas = () => {
         endPos: p,
         color: "#ffffff",
         strokeWidth: 2,
-        isSeletected: false,
-      } as Shape;
+        isSelected: false,
+      };
 
       commit([...shapesRef.current, newLine], bedsRef.current);
 
@@ -912,7 +911,7 @@ const Canvas = () => {
       useGardenStore.setState((state) => {
         const bedsRecord = { ...state.beds };
         const bed = bedsRecord[bedId];
-        if (!bed) return state;
+        if (!bed || !bed.vertices) return state;
 
         const nextVerts = bed.vertices.map((v: Position, i: number) => (i === index ? p : v));
         bedsRecord[bedId] = { ...bed, vertices: nextVerts, isClosed: true };

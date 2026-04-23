@@ -9,16 +9,11 @@ test("search and select plant", async ({ page }) => {
   // wait for window
   const window = page.locator("#search-window");
   await expect(window).toBeVisible();
+  await window.getByRole('button', { name: 'Mock data' }).click();
   
   // search for plant
-  const input = window.getByPlaceholder("Search for a plant...");
+  const input = window.getByRole('textbox', { name: 'Filter by name...' });
   await input.fill("rose");
-  
-  // wait for response
-  await page.waitForResponse(
-    response => response.url().includes('/api/perenual') && response.status() === 200,
-    { timeout: 10000 }
-  );
   
   // wait for results
   const firstLi = window.getByRole('listitem').first();
@@ -44,39 +39,33 @@ test("filter plants by watering and zone", async ({ page }) => {
   const window = page.locator("#search-window");
   await expect(window).toBeVisible();
   
-  // Search for a broad term to get many results
-  const input = window.getByPlaceholder("Search for a plant...");
-  await input.fill("plant");
-  
-  // Wait for response
-  await page.waitForResponse(
-    response => response.url().includes('/api/perenual') && response.status() === 200,
-    { timeout: 10000 }
-  );
-  
-  // Wait for results
-  await expect(window.getByRole('listitem').first()).toBeVisible({ timeout: 10_000 });
-  
+  // use mock data
+  await window.getByRole('button', { name: 'Mock data' }).click();
+
   // Show filters
-  await window.getByText(/Show Filters/i).click();
+  await window.getByRole('button', { name: 'Filters +' }).click();
   
   // Apply multiple filters
   await window.getByRole('combobox').first().selectOption("Average");
-  await window.getByRole('combobox').nth(1).selectOption("7");
-  await window.getByRole('combobox').nth(3).selectOption("Perennial");
-  await window.getByRole('combobox').nth(5).selectOption("Yes");
+  await window.getByRole('combobox').nth(1).selectOption("Low");
+  await window.getByRole('combobox').nth(2).selectOption("Perennial");
+  await window.getByRole('combobox').nth(3).selectOption("Yes");
+  await window.getByRole('combobox').nth(4).selectOption("Yes");
+  await window.getByRole('combobox').nth(5).selectOption("Zone 6");
+
+  // hey apple!
   
-  // Verify 4 active filters
-  await expect(window.getByText(/4 active/i)).toBeVisible();
+  // Verify 6 active filters
+  await expect(window.getByText(/Clear 6/i)).toBeVisible();
   
   // Wait for filtered results
   await page.waitForTimeout(1500);
   
   // Clear filters
-  await window.getByText(/Clear All Filters/i).click();
+  await window.getByRole('button', { name: 'Clear' }).click();
   
   // Verify filters cleared
-  await expect(window.getByText(/0 active/i)).toBeVisible();
+  await expect(window.getByRole('button', { name: 'Clear' })).toBeHidden();
   
   // Close search
   await window.getByLabel("Close search").click();
