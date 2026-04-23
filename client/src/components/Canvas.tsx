@@ -351,6 +351,7 @@ const Canvas = () => {
   const closeSearchSidebar = useSidebarStore((state) => state.closeSearch);
   const closeCalendarSidebar = useSidebarStore((state) => state.closeCalendar);
   const clearBedPlants = useGardenStore((state) => state.clearBedPlants);
+  const isSidebarVisible = isCalendarOpen || isSearchOpen || Boolean(bedPanelShapeId);
 
   const gardenBedEntries = useMemo<GardenBedListEntry[]>(() => {
     const bedLikeShapes = shapes
@@ -1403,9 +1404,15 @@ const Canvas = () => {
         }}
       />
 
-      {editMode && (
-        // MOVED from top-0 (with mt-5) to top-24 to clear floating navbar
-        <div className="absolute top-24 left-4 bg-white rounded-lg shadow-2xl p-3 border border-gray-200/50 z-40" data-testid="edit-window">
+        {editMode && (
+        // Move the edit toolbar to the right when the left sidebar is open.
+        <div
+          className="absolute top-24 bg-white rounded-lg shadow-2xl p-3 border border-gray-200/50 z-40 transition-all duration-300"
+          data-testid="edit-window"
+          style={{
+            left: isSidebarVisible ? "calc(33.333333% + 1rem)" : "1rem",
+          }}
+        >
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
               <button
