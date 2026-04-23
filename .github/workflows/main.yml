@@ -197,3 +197,4 @@ jobs:
         env:
           PERENUAL_KEY: ${{ secrets.PERENUAL_KEY }}
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
