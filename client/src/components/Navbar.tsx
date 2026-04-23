@@ -483,6 +483,15 @@ const Navbar = ({ onOpenSearch, onOpenCalendar }: NavbarProps) => {
                   <span className="font-bold text-sm text-slate-700 truncate group-hover:text-emerald-700">{g.name}</span>
                   <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{new Date(g.updatedAt).toLocaleDateString()}</span>
                 </button>
+                <Link
+                  href={`/garden/${g.id}/view`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="View on mobile"
+                  className="chatbot-pop-trigger rounded-lg p-2 text-slate-300 opacity-0 hover:bg-emerald-100 hover:text-emerald-600 group-hover:opacity-100 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)]"
+                >
+                  <FaMobileAlt size={15} />
+                </Link>
                 <button
                   onClick={() => handleDelete(g.id, g.name)}
                   className="chatbot-pop-trigger rounded-lg p-2 text-slate-300 opacity-0 hover:bg-rose-100 hover:text-rose-600 group-hover:opacity-100 [--chatbot-pop-hover-transform:translateY(-1px)_scale(1.04)_rotate(6deg)]"

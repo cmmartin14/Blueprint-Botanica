@@ -19,6 +19,14 @@ export async function saveGarden(
   const projectId = state.id || randomUUID();
   await ensureUserRowExists(userId);
 
+  // Ensure the user row exists in users_sync before writing the garden
+  // (Neon Auth sync can lag behind StackFrame auth on first save)
+  await prisma.users_sync.upsert({
+    where:  { id: userId },
+    update: {},
+    create: { id: userId },
+  });
+
   await prisma.garden_projects.upsert({
     where:  { id: projectId },
     update: {
@@ -76,6 +84,25 @@ export async function listGardens(
     select:  { id: true, name: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
   });
+}
+
+export async function loadGardenById(
+  projectId: string
+): Promise<GardenState | null> {
+  const project = await prisma.garden_projects.findFirst({
+    where: { id: projectId },
+  });
+
+  if (!project) return null;
+
+  return {
+    id:        project.id,
+    name:      project.name,
+    editMode:  false,
+    shapes:    project.shapes    as GardenState["shapes"],
+    beds:      project.beds      as GardenState["beds"],
+    bedPlants: project.bedPlants as GardenState["bedPlants"],
+  };
 }
 
 export async function deleteGarden(

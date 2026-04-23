@@ -23,7 +23,7 @@
     "@google/generative-ai": "^0.24.1",
     "@mui/icons-material": "^7.3.4",
     "@mui/material": "^7.3.4",
-    "@prisma/adapter-pg": "^7.4.1",
+    "@prisma/adapter-pg": "^7.8.0",
     "@stackframe/stack": "^2.8.56",
     "@tailwindcss/typography": "^0.5.19",
     "@upstash/redis": "^1.37.0",
