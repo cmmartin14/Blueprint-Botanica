@@ -2,7 +2,7 @@
 "use client";
 
 import React from "react";
-import { FaInfoCircle } from "react-icons/fa";
+import { FaInfoCircle, FaTrashAlt } from "react-icons/fa";
 import { Shape, Position } from "../types/shapes";
 
 type BedPath = {
@@ -66,6 +66,35 @@ const HtmlContextInfoButton: React.FC<HtmlContextInfoButtonProps> = ({
     </button>
   );
 };
+const HtmlDeleteButton: React.FC<{ x: number; y: number; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void }> = ({ x, y, onClick }) => (
+  <button
+    type="button"
+    data-interactive="true"
+    onMouseDown={(e) => e.stopPropagation()}
+    onClick={onClick}
+    title="Delete bed"
+    style={{
+      position: "absolute",
+      left: `${x}px`,
+      top: `${y}px`,
+      width: "32px",
+      height: "32px",
+      borderRadius: "9999px",
+      border: "1px solid #fca5a5",
+      backgroundColor: "rgba(255,255,255,0.96)",
+      color: "#dc2626",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+      pointerEvents: "auto",
+      zIndex: 12,
+    }}
+  >
+    <FaTrashAlt size={14} />
+  </button>
+);
 
 type SvgContextInfoButtonProps = {
   x: number;
@@ -115,7 +144,33 @@ const SvgContextInfoButton: React.FC<SvgContextInfoButtonProps> = ({
     </foreignObject>
   );
 };
-
+const SvgDeleteButton: React.FC<{ x: number; y: number; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void }> = ({ x, y, onClick }) => (
+  <foreignObject x={x} y={y} width="32" height="32" style={{ overflow: "visible" }} pointerEvents="auto">
+    <button
+      type="button"
+      data-interactive="true"
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={onClick}
+      title="Delete bed"
+      style={{
+        width: "32px",
+        height: "32px",
+        borderRadius: "9999px",
+        border: "1px solid #fca5a5",
+        backgroundColor: "rgba(255,255,255,0.96)",
+        color: "#dc2626",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+        pointerEvents: "auto",
+      }}
+    >
+      <FaTrashAlt size={14} />
+    </button>
+  </foreignObject>
+);
 interface ShapeRendererProps {
   shapes: Shape[];
   beds?: any[];
@@ -124,7 +179,7 @@ interface ShapeRendererProps {
   gridToUnit?: number;
 
   canEdit: boolean;
-
+  speciesColors?: Record<string, string>;
   bedPlants?: Record<
     string,
     {
@@ -174,6 +229,7 @@ interface ShapeRendererProps {
   shapeMode?: "white" | "brown";
   onShapeUpdate?: (shapeId: string, updates: Partial<Shape>) => void;
   onShapeSelect?: (shapeId: string) => void;
+  onDeleteBed?: (bedId: string) => void;
 }
 
 const GRID_SIZE = 20;
@@ -371,8 +427,10 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
   onShapeUpdate,
   onShapeSelect,
+  onDeleteBed,
   bedPlants = {},
   shapeMode = "white",
+  speciesColors = {},
   onOpenBedPanel,
 }) => {
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -429,7 +487,9 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
 
     const uniqueSpeciesKeys = Array.from(new Set(plants.map(normalizeSpeciesKey)));
     const visibleSpeciesKeys = uniqueSpeciesKeys.slice(0, MAX_VISIBLE_SPECIES_IN_FILL);
-    const visibleColors = visibleSpeciesKeys.map(getSpeciesColor);
+    const visibleColors = visibleSpeciesKeys.map(
+      (key) => speciesColors[key] ?? getSpeciesColor(key)
+    );
     const solidColor = visibleColors[0] ?? null;
     const isMixed = uniqueSpeciesKeys.length > 1;
     const patternId = isMixed ? getStripePatternId(shapeId, visibleSpeciesKeys) : null;
@@ -918,17 +978,28 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           )}
 
           {showCircleInfoButton && (
-            <HtmlContextInfoButton
-              x={centerX + radius - 10}
-              y={centerY - radius - 10}
-              title="Open bed details"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenBedPanel?.(shape.id);
-              }}
-            />
+            <>
+              <HtmlContextInfoButton
+                x={centerX + radius - 10}
+                y={centerY - radius - 10}
+                title="Open bed details"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenBedPanel?.(shape.id);
+                }}
+              />
+              {canEdit && (
+                <HtmlDeleteButton
+                  x={centerX + radius - 10}
+                  y={centerY - radius + 30}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteBed?.(shape.id);
+                  }}
+                />
+              )}
+            </>
           )}
-
           {/* Circle resize handle: only when selected AND edit mode is active */}
           {showShapeHandles && (
             <div
@@ -1562,15 +1633,27 @@ const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               )}
 
               {showBedInfoButton && (
-                <SvgContextInfoButton
-                  x={box.maxX + 10}
-                  y={box.minY - 10}
-                  title="Open bed details"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenBedPanel?.(bed.id);
-                  }}
-                />
+                <>
+                  <SvgContextInfoButton
+                    x={box.maxX + 10}
+                    y={box.minY - 10}
+                    title="Open bed details"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenBedPanel?.(bed.id);
+                    }}
+                  />
+                  {canEdit && (
+                    <SvgDeleteButton
+                      x={box.maxX + 10}
+                      y={box.minY + 30}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteBed?.(bed.id);
+                      }}
+                    />
+                  )}
+                </>
               )}
 
               {/* Bed resize handles + vertices: only when edit mode is active */}
