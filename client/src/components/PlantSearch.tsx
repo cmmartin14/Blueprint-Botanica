@@ -80,6 +80,7 @@ export default function PlantSearch() {
   const [filters, setFilters] = useState(emptyFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const wikiImageCacheRef = useRef<Map<string, string | null>>(new Map());
 
   const hasActiveFilters = Object.values(filters).some((f) => f !== "");
 
@@ -114,6 +115,20 @@ export default function PlantSearch() {
       const plants = json.data || [];
       setResults(plants);
       setFilteredResults(plants); // show everything immediately
+
+      // Enrich mock data with Wikipedia thumbnails in the background.
+      const enrichedPlants = await Promise.all(
+        plants.map(async (plant) => {
+          const image = await fetchWikipediaImageUrl(plant.common_name || "", plant.scientific_name);
+          return image ? { ...plant, image_url: image } : plant;
+        })
+      );
+      setResults(enrichedPlants);
+      if (!query && !hasActiveFilters) {
+        setFilteredResults(enrichedPlants);
+      } else {
+        applyFilters(enrichedPlants);
+      }
     } catch (err) {
       console.error("Error loading mock plants:", err);
     } finally {
@@ -263,6 +278,46 @@ export default function PlantSearch() {
     } catch { return null; }
   };
 
+  const fetchWikipediaImageUrl = async (
+    commonName: string,
+    scientificName: string | string[]
+  ): Promise<string | null> => {
+    const sci = Array.isArray(scientificName) ? scientificName[0] : scientificName;
+    const terms = [sci, commonName].filter(Boolean).map((term) => term.trim());
+
+    for (const term of terms) {
+      const cacheKey = term.toLowerCase();
+      if (wikiImageCacheRef.current.has(cacheKey)) {
+        const cached = wikiImageCacheRef.current.get(cacheKey);
+        if (cached) return cached;
+        continue;
+      }
+
+      try {
+        const resp = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(
+            term
+          )}&prop=pageimages&piprop=thumbnail&pithumbsize=300&format=json&origin=*`
+        );
+        const data = await resp.json();
+        const pages = data?.query?.pages;
+        if (!pages) {
+          wikiImageCacheRef.current.set(cacheKey, null);
+          continue;
+        }
+
+        const page = pages[Object.keys(pages)[0]];
+        const imageUrl: string | null = page?.thumbnail?.source ?? null;
+        wikiImageCacheRef.current.set(cacheKey, imageUrl);
+        if (imageUrl) return imageUrl;
+      } catch {
+        wikiImageCacheRef.current.set(cacheKey, null);
+      }
+    }
+
+    return null;
+  };
+
   const validatePlantPage = (page: any, extract: string, sci: string): boolean => {
     if ((page.templates || []).some((t: any) => ["speciesbox","taxobox","automatic taxobox","plantbox"].some((k) => t.title.toLowerCase().includes(k)))) return true;
     if ((page.categories || []).some((c: any) => ["plants","flora","species","botanical"].some((k) => c.title.toLowerCase().includes(k)))) return true;
@@ -300,6 +355,12 @@ export default function PlantSearch() {
       if (!plantData.description) {
         const wiki = await fetchWikipediaDescription(plantData.common_name || "", plantData.scientific_name);
         if (wiki) { plantData.description = wiki; plantData.descriptionSource = "Wikipedia"; }
+      }
+      if (!plantData.image_url && !plantData.default_image?.medium_url && !plantData.default_image?.thumbnail && !plantData.default_image?.original_url) {
+        const wikiImage = await fetchWikipediaImageUrl(plantData.common_name || "", plantData.scientific_name);
+        if (wikiImage) {
+          plantData.image_url = wikiImage;
+        }
       }
 
       if (!useMock && plantData["care-guides"]) {
