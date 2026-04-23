@@ -1375,11 +1375,10 @@ const Canvas = () => {
                 setSidebarBedPanelShapeId(null);
               }
             }}
-<<<<<<< Updated upstream
+
             speciesColors={speciesColors}
-=======
             onDeleteBed={deleteBed}
->>>>>>> Stashed changes
+
           />
         </div>
       </div>
