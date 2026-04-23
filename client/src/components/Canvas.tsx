@@ -1224,6 +1224,19 @@ const Canvas = () => {
     openSearchSidebar();
   }, [openSearchSidebar, setSidebarBedPanelShapeId]);
 
+  const deleteBed = useCallback(
+    (id: string) => {
+      commit(
+        shapesRef.current.filter((s) => s.id !== id),
+        bedsRef.current.filter((b) => b.id !== id)
+      );
+      setActiveBedId(null);
+      setActiveVertex(null);
+      setSelectedShapeId(null);
+      if (!isBedPanelLocked) setSidebarBedPanelShapeId(null);
+    },
+    [commit, isBedPanelLocked, setSidebarBedPanelShapeId]
+  );
   return (
     // REMOVED 'top-16' HERE SO THE CANVAS SPANS THE ENTIRE SCREEN
     <div className="fixed inset-0 overflow-hidden bg-gray-50">
@@ -1362,7 +1375,11 @@ const Canvas = () => {
                 setSidebarBedPanelShapeId(null);
               }
             }}
+<<<<<<< Updated upstream
             speciesColors={speciesColors}
+=======
+            onDeleteBed={deleteBed}
+>>>>>>> Stashed changes
           />
         </div>
       </div>
