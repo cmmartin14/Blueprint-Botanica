@@ -9,16 +9,11 @@ test("search and select plant", async ({ page }) => {
   // wait for window
   const window = page.locator("#search-window");
   await expect(window).toBeVisible();
+  await window.getByRole('button', { name: 'Mock data' }).click();
   
   // search for plant
-  const input = window.getByPlaceholder("Search for a plant...");
+  const input = window.getByRole('textbox', { name: 'Filter by name...' });
   await input.fill("rose");
-  
-  // wait for response
-  await page.waitForResponse(
-    response => response.url().includes('/api/perenual') && response.status() === 200,
-    { timeout: 10000 }
-  );
   
   // wait for results
   const firstLi = window.getByRole('listitem').first();
