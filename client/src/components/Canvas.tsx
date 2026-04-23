@@ -350,6 +350,7 @@ const Canvas = () => {
   const openSearchSidebar = useSidebarStore((state) => state.openSearch);
   const closeSearchSidebar = useSidebarStore((state) => state.closeSearch);
   const closeCalendarSidebar = useSidebarStore((state) => state.closeCalendar);
+  const clearBedPlants = useGardenStore((state) => state.clearBedPlants);
 
   const gardenBedEntries = useMemo<GardenBedListEntry[]>(() => {
     const bedLikeShapes = shapes
@@ -1230,12 +1231,13 @@ const Canvas = () => {
         shapesRef.current.filter((s) => s.id !== id),
         bedsRef.current.filter((b) => b.id !== id)
       );
+      clearBedPlants(id);
       setActiveBedId(null);
       setActiveVertex(null);
       setSelectedShapeId(null);
       if (!isBedPanelLocked) setSidebarBedPanelShapeId(null);
     },
-    [commit, isBedPanelLocked, setSidebarBedPanelShapeId]
+    [commit, clearBedPlants, isBedPanelLocked, setSidebarBedPanelShapeId]
   );
   return (
     // REMOVED 'top-16' HERE SO THE CANVAS SPANS THE ENTIRE SCREEN

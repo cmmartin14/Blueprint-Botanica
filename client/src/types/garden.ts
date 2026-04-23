@@ -68,6 +68,7 @@ type GardenActions = {
   createBed: (name: string, shapeId?: string) => void;
   updateBed: (id: string, patch: Partial<Bed>) => void;
   deleteBed: (id: string) => void;
+  clearBedPlants: (shapeId: string) => void;
   addShapeToBed: (bedId: string, shapeId: string) => void;
   removeShapeFromBed: (bedId: string, shapeId: string) => void;
 
@@ -161,7 +162,11 @@ export const useGardenStore = create<GardenState & GardenActions>((set) => ({
       const { [id]: _, ...beds } = state.beds;
       return { beds: beds as Record<string, Bed> };
     }),
-
+    clearBedPlants: (shapeId) =>
+  set((state) => {
+    const { [shapeId]: _, ...bedPlants } = state.bedPlants;
+    return { bedPlants };
+  }),
   addShapeToBed: (bedId, shapeId) =>
     set((state) => {
       const bed = state.beds[bedId];
