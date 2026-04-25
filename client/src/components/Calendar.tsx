@@ -55,11 +55,13 @@ const toYmd = (d: Date) => {
   return `${y}-${m}-${dd}`;
 };
 
-const getProjectedFrostDates = (zone?: string | null): FrostDateEstimate | null => {
+const getProjectedFrostDates = (
+  zone?: string | null,
+  year = new Date().getFullYear()
+): FrostDateEstimate | null => {
   if (!zone) return null;
 
   const zoneNumber = parseInt(zone.toString().replace(/[^\d]/g, ""), 10);
-  const year = new Date().getFullYear();
 
   const frostByZone: Record<number, { first: string; last: string }> = {
     1: { first: "08-01", last: "06-30" },
@@ -378,8 +380,8 @@ export default function CalendarWindow({
 
   const selectedYmd = selectedDate ? toYmd(selectedDate) : null;
   const projectedFrostDates = useMemo(
-    () => getProjectedFrostDates(gardenZone),
-    [gardenZone]
+    () => getProjectedFrostDates(gardenZone, monthCursor.getFullYear()),
+    [gardenZone, monthCursor]
   );
 
   const selectedForecast = useMemo(() => {
@@ -603,22 +605,20 @@ export default function CalendarWindow({
                         <span className="mt-1 block h-1.5 w-1.5 rounded-full bg-green-500" />
                       )}
                     </div>
-                    {marker && (
+                    {marker?.lastFrost && (
+                      <div className="absolute left-1 right-1 bottom-1 rounded-full bg-sky-100 px-1 py-0.5 text-[9px] font-bold text-sky-700">
+                        Last frost
+                      </div>
+                    )}
+
+                    {marker?.firstFrost && (
+                      <div className="absolute left-1 right-1 bottom-1 rounded-full bg-blue-100 px-1 py-0.5 text-[9px] font-bold text-blue-700">
+                        First frost
+                      </div>
+                    )}
+
+                    {marker && marker.notes > 0 && !marker.firstFrost && !marker.lastFrost && (
                       <div className="absolute bottom-1.5 flex gap-0.5">
-                        {marker.lastFrost && (
-                          <span
-                            className="block h-1.5 w-1.5 rounded-full bg-sky-400"
-                            title="Projected last spring frost"
-                          />
-                        )}
-
-                        {marker.firstFrost && (
-                          <span
-                            className="block h-1.5 w-1.5 rounded-full bg-blue-700"
-                            title="Projected first fall frost"
-                          />
-                        )}
-
                         {Array.from({ length: Math.min(marker.notes, 3) }).map((_, idx) => (
                           <span key={idx} className="block h-1.5 w-1.5 rounded-full bg-amber-400" />
                         ))}
