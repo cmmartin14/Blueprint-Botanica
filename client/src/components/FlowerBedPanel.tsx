@@ -1,7 +1,6 @@
 // FlowerBedPanel.tsx
 "use client";
 import { useState, useEffect, useRef, type KeyboardEvent } from "react";
-import { FaLock, FaLockOpen } from "react-icons/fa";
 import { LuX } from "react-icons/lu";
 import { PlantEntry, useGardenStore } from "../types/garden";
 import { useHarvestDates } from "./hooks/useHarvestDates";
@@ -23,11 +22,9 @@ interface SearchResult {
 interface FlowerBedPanelProps {
   shapeId: string;
   bedLabel?: string;
-  isLocked: boolean;
   topOffset?: number;
   zone?: string | null;
   sidebarMode?: boolean;
-  onToggleLock: () => void;
   onClose: () => void;
 }
 
@@ -69,11 +66,9 @@ const emptyAttributes: GardenBedAttributes = {
 export default function FlowerBedPanel({
   shapeId,
   bedLabel,
-  isLocked,
   topOffset = 96,
   zone,
   sidebarMode = false,
-  onToggleLock,
   onClose,
 }: FlowerBedPanelProps) {
   const bedPlants = useGardenStore((s) => s.bedPlants[shapeId]) ?? [];
@@ -356,15 +351,6 @@ export default function FlowerBedPanel({
         )}
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onToggleLock}
-            className="chatbot-pop-trigger rounded-full p-2 text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
-            title={isLocked ? "Unlock window" : "Lock window"}
-            aria-label={isLocked ? "Unlock bed panel" : "Lock bed panel"}
-          >
-            {isLocked ? <FaLock size={18} /> : <FaLockOpen size={18} />}
-          </button>
 
           <button
             type="button"

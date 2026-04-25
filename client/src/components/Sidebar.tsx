@@ -1,3 +1,4 @@
+// Sidebar.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,12 +20,10 @@ type Props = {
   showSearch: boolean;
   showBedInfo: boolean;
   selectedShapeId: string | null;
-  isBedPanelLocked: boolean;
   zone?: string | null;
   onCloseSearch: () => void;
   onCloseCalendar: () => void;
   onCloseBedInfo: () => void;
-  onToggleBedLock: () => void;
 };
 
 export default function Sidebar({
@@ -33,12 +32,10 @@ export default function Sidebar({
   showSearch,
   showBedInfo,
   selectedShapeId,
-  isBedPanelLocked,
   zone,
   onCloseSearch,
   onCloseCalendar,
   onCloseBedInfo,
-  onToggleBedLock,
 }: Props) {
   const bedShapeId = showBedInfo ? selectedShapeId : null;
   const isOpen = showCalendar || showSearch || Boolean(bedShapeId);
@@ -100,10 +97,8 @@ export default function Sidebar({
                   <div className="min-h-0 flex-1 border-b border-[#dce9d8]">
                     <FlowerBedPanel
                       shapeId={bedShapeId}
-                      isLocked={isBedPanelLocked}
                       zone={zone}
                       sidebarMode={true}
-                      onToggleLock={onToggleBedLock}
                       onClose={onCloseBedInfo}
                     />
                   </div>
@@ -121,10 +116,8 @@ export default function Sidebar({
                 <div className="min-h-0 flex-1">
                   <FlowerBedPanel
                     shapeId={bedShapeId}
-                    isLocked={isBedPanelLocked}
                     zone={zone}
                     sidebarMode={true}
-                    onToggleLock={onToggleBedLock}
                     onClose={onCloseBedInfo}
                   />
                 </div>
