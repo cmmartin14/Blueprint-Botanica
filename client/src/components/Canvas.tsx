@@ -290,6 +290,7 @@ const Canvas = () => {
   const [showGardenBedCreator, setShowGardenBedCreator] = useState(false);
   const [pendingBedShapeId, setPendingBedShapeId] = useState<string | null>(null);
   const [isBedPanelLocked, setIsBedPanelLocked] = useState(false);
+  const [bedInfoShapeId, setBedInfoShapeId] = useState<string | null>(null);
 
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(true);
@@ -730,10 +731,6 @@ const Canvas = () => {
         setSelectedShapeId(null);
         setActiveBedId(null);
         setActiveVertex(null);
-
-        if (!isBedPanelLocked) {
-          setSidebarBedPanelShapeId(null);
-        }
       }
 
       if (editMode && clickedInteractive) return;
@@ -1235,7 +1232,7 @@ const Canvas = () => {
       setActiveBedId(null);
       setActiveVertex(null);
       setSelectedShapeId(null);
-      if (!isBedPanelLocked) setSidebarBedPanelShapeId(null);
+      setSidebarBedPanelShapeId(null);
     },
     [commit, clearBedPlants, isBedPanelLocked, setSidebarBedPanelShapeId]
   );
@@ -1322,23 +1319,13 @@ const Canvas = () => {
               setActiveBedId(id);
               setActiveVertex(null);
               setSelectedShapeId(null);
-
-              if (isBedPanelLocked) {
-                setSidebarBedPanelShapeId(id);
-              } else {
-                setSidebarBedPanelShapeId(bedPanelShapeId === id ? null : id);
-              }
+              setSidebarBedPanelShapeId(id);
             }}
             onSelectVertex={(bedId, index) => {
               setActiveBedId(bedId);
               setActiveVertex({ bedId, index });
               setSelectedShapeId(null);
-
-              if (isBedPanelLocked) {
-                setSidebarBedPanelShapeId(bedId);
-              } else {
-                setSidebarBedPanelShapeId(bedPanelShapeId === bedId ? null : bedId);
-              }
+              setSidebarBedPanelShapeId(bedId);
             }}
             onMoveBedBy={moveBedBy}
             onMoveVertexTo={moveVertexTo}
@@ -1371,11 +1358,9 @@ const Canvas = () => {
                 selectedShape?.type === "rectangle" ||
                 selectedShape?.type === "freehand";
 
-              if (isBedPanelLocked && isBedLikeShape) {
-                openBedInfoSidebar(shapeId);
-              } else if (!isBedPanelLocked) {
-                setSidebarBedPanelShapeId(null);
-              }
+                if (isBedLikeShape) {
+                  openBedInfoSidebar(shapeId);
+                }
             }}
 
             speciesColors={speciesColors}
