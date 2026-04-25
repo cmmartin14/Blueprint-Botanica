@@ -9,6 +9,7 @@ import {
   type PointerEvent,
 } from "react";
 import { useCalendarStore } from "../stores/calendarStore";
+import { useGardenStore } from "../types/garden";
 import {
   ICON_WINDOW_POPUP_DURATION_MS,
   CHATBOT_POPUP_EASE,
@@ -37,6 +38,12 @@ type WeatherData = {
   daily: WeatherDay[];
 };
 
+type FrostDateEstimate = {
+  firstFrost: string;
+  lastFrost: string;
+  label: string;
+};
+
 const DEFAULT_WINDOW_POSITION = { x: 24, y: 96 };
 const WINDOW_MARGIN = 8;
 const WINDOW_MIN_TOP = 72;
@@ -46,6 +53,38 @@ const toYmd = (d: Date) => {
   const m = `${d.getMonth() + 1}`.padStart(2, "0");
   const dd = `${d.getDate()}`.padStart(2, "0");
   return `${y}-${m}-${dd}`;
+};
+
+const getProjectedFrostDates = (zone?: string | null): FrostDateEstimate | null => {
+  if (!zone) return null;
+
+  const zoneNumber = parseInt(zone.toString().replace(/[^\d]/g, ""), 10);
+  const year = new Date().getFullYear();
+
+  const frostByZone: Record<number, { first: string; last: string }> = {
+    1: { first: "08-01", last: "06-30" },
+    2: { first: "08-20", last: "06-10" },
+    3: { first: "09-15", last: "05-15" },
+    4: { first: "09-25", last: "05-05" },
+    5: { first: "10-05", last: "04-25" },
+    6: { first: "10-15", last: "04-15" },
+    7: { first: "10-25", last: "04-05" },
+    8: { first: "11-10", last: "03-20" },
+    9: { first: "12-01", last: "02-20" },
+    10: { first: "12-20", last: "01-20" },
+    11: { first: "01-15", last: "01-15" },
+    12: { first: "01-15", last: "01-15" },
+    13: { first: "01-15", last: "01-15" },
+  };
+
+  const estimate = frostByZone[zoneNumber];
+  if (!estimate) return null;
+
+  return {
+    firstFrost: `${year}-${estimate.first}`,
+    lastFrost: `${year}-${estimate.last}`,
+    label: `Estimated from USDA Zone ${zoneNumber}`,
+  };
 };
 
 const toDateTimeLocal = (d: Date) => {
@@ -79,6 +118,7 @@ export default function CalendarWindow({
 
   const [city, setCity] = useState("");
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const gardenZone = useGardenStore((state) => state.hardinessZone);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -337,6 +377,10 @@ export default function CalendarWindow({
   }
 
   const selectedYmd = selectedDate ? toYmd(selectedDate) : null;
+  const projectedFrostDates = useMemo(
+    () => getProjectedFrostDates(gardenZone),
+    [gardenZone]
+  );
 
   const selectedForecast = useMemo(() => {
     if (!weather || !selectedYmd) return null;
@@ -351,7 +395,7 @@ export default function CalendarWindow({
   }, [weather]);
 
   const markersByDate = useMemo(() => {
-    const markerMap = new Map<string, { notes: number }>();
+    const markerMap = new Map<string, { notes: number; firstFrost?: boolean; lastFrost?: boolean }>();
 
     for (const note of notes) {
       if (!note.date) continue;
@@ -360,8 +404,18 @@ export default function CalendarWindow({
       markerMap.set(note.date, cur);
     }
 
+    if (projectedFrostDates) {
+      const first = markerMap.get(projectedFrostDates.firstFrost) ?? { notes: 0 };
+      first.firstFrost = true;
+      markerMap.set(projectedFrostDates.firstFrost, first);
+    
+      const last = markerMap.get(projectedFrostDates.lastFrost) ?? { notes: 0 };
+      last.lastFrost = true;
+      markerMap.set(projectedFrostDates.lastFrost, last);
+    }
+
     return markerMap;
-  }, [notes]);
+  }, [notes, projectedFrostDates]);
 
   const selectedNotes = useMemo(() => {
     if (!selectedYmd) {
@@ -549,8 +603,22 @@ export default function CalendarWindow({
                         <span className="mt-1 block h-1.5 w-1.5 rounded-full bg-green-500" />
                       )}
                     </div>
-                    {marker && marker.notes > 0 && (
+                    {marker && (
                       <div className="absolute bottom-1.5 flex gap-0.5">
+                        {marker.lastFrost && (
+                          <span
+                            className="block h-1.5 w-1.5 rounded-full bg-sky-400"
+                            title="Projected last spring frost"
+                          />
+                        )}
+
+                        {marker.firstFrost && (
+                          <span
+                            className="block h-1.5 w-1.5 rounded-full bg-blue-700"
+                            title="Projected first fall frost"
+                          />
+                        )}
+
                         {Array.from({ length: Math.min(marker.notes, 3) }).map((_, idx) => (
                           <span key={idx} className="block h-1.5 w-1.5 rounded-full bg-amber-400" />
                         ))}
@@ -560,6 +628,34 @@ export default function CalendarWindow({
                 );
               })}
             </div>
+          </section>
+
+          <section className="rounded-[28px] border border-[#dce9d8] bg-white/70 p-5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
+            <h3 className="text-base font-bold text-green-900">
+              Projected Frost Dates
+            </h3>
+
+            {projectedFrostDates ? (
+              <div className="mt-4 space-y-3 text-sm">
+                <div className="rounded-[18px] border border-sky-100 bg-sky-50 px-4 py-3">
+                  <div className="font-semibold text-green-900">Last Spring Frost</div>
+                  <div className="text-sky-700">{projectedFrostDates.lastFrost}</div>
+                </div>
+
+                <div className="rounded-[18px] border border-blue-100 bg-blue-50 px-4 py-3">
+                  <div className="font-semibold text-green-900">First Fall Frost</div>
+                  <div className="text-blue-700">{projectedFrostDates.firstFrost}</div>
+                </div>
+
+                <p className="text-xs text-green-700/70">
+                  {projectedFrostDates.label}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-green-700/70">
+                Set your garden hardiness zone to show projected frost dates.
+              </p>
+            )}
           </section>
 
           {/* Weather Card */}

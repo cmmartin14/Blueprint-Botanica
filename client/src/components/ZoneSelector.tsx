@@ -1,5 +1,6 @@
 // ZoneSelector.tsx
 "use client";
+import { useGardenStore } from "../types/garden";
 import { useState, useEffect } from "react";
 
 interface ZoneInfo {
@@ -21,6 +22,7 @@ const ZoneSelector = ({ onZoneSelected }: ZoneSelectorProps) => {
   const [manualZone, setManualZone] = useState<string | "">("");
   const [zones, setZones] = useState<ZoneInfo[]>([]);
   const [zonesLoading, setZonesLoading] = useState(true);
+  const setHardinessZone = useGardenStore((state) => state.setHardinessZone);
 
   useEffect(() => {
     const fetchZones = async () => {
@@ -41,6 +43,7 @@ const ZoneSelector = ({ onZoneSelected }: ZoneSelectorProps) => {
 
   const handleZoneUpdate = (newZone: string | null) => {
     setZone(newZone);
+    setHardinessZone(newZone);
     onZoneSelected?.(newZone);
   };
 
@@ -101,8 +104,9 @@ const ZoneSelector = ({ onZoneSelected }: ZoneSelectorProps) => {
           <select
             value={manualZone}
             onChange={(e) => {
+              const nextZone = e.target.value || null;
               setManualZone(e.target.value);
-              handleZoneUpdate(e.target.value);
+              handleZoneUpdate(nextZone);
             }}
             className="bg-white text-black border border-gray-500 rounded px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
