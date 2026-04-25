@@ -407,7 +407,7 @@ export default function PlantSearch() {
   const activeFilterCount = Object.values(filters).filter((f) => f !== "").length;
 
   return (
-    <div className="flex h-full flex-col p-2 overflow-hidden">
+    <div className="flex min-h-full flex-col p-2">
 
       {/* Search + toggle */}
       <div className="flex-none border-b border-[#dce9d8] pb-2 space-y-2">
@@ -502,7 +502,7 @@ export default function PlantSearch() {
       )}
 
       {/* Results */}
-      <div className="mt-2 flex-1 overflow-y-auto rounded-[24px] border border-[#dce9d8] bg-white/92 p-3 shadow-sm">
+      <div className="mt-2 min-h-[180px] rounded-[24px] border border-[#dce9d8] bg-white/92 p-3 shadow-sm">
         {!selectedPlant && (
           <>
             {loading && <div className="text-sm text-gray-500 mb-2">Loading...</div>}
