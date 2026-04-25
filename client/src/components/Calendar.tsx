@@ -304,6 +304,14 @@ export default function CalendarWindow({
     );
   }
 
+  function isFrostProneDate(date: Date, frostDates: FrostDateEstimate | null) {
+    if (!frostDates) return false;
+  
+    const ymd = toYmd(date);
+  
+    return ymd <= frostDates.lastFrost || ymd >= frostDates.firstFrost;
+  }
+
   const grid = useMemo(() => {
     const year = monthCursor.getFullYear();
     const month = monthCursor.getMonth();
@@ -586,11 +594,16 @@ export default function CalendarWindow({
                 const inMonth = cell.inMonth;
                 const isSelected = selectedDate ? isSameDay(cell.date, selectedDate) : false;
                 const marker = markersByDate.get(toYmd(cell.date));
+                const isFrostProne = cell.inMonth && isFrostProneDate(cell.date, projectedFrostDates);
                 const classes = [
                   "relative flex aspect-square w-full flex-col items-center justify-center rounded-[20px] border-2 transition-all duration-200 ease-out",
-                  inMonth ? "bg-white/40 text-green-900" : "border-transparent bg-transparent text-green-900/30",
+                  inMonth
+                    ? isFrostProne
+                      ? "bg-sky-100/70 text-green-900"
+                      : "bg-white/40 text-green-900"
+                    : "border-transparent bg-transparent text-green-900/30",
                   isSelected
-                    ? "z-10 scale-105 border-[#8cc69f] bg-white shadow-sm"
+                    ? "z-10 scale-105 border-sky-500 bg-sky-50 shadow-sm"
                     : "border-transparent hover:border-[#dce9d8] hover:bg-white hover:shadow-sm",
                 ].join(" ");
                 return (
