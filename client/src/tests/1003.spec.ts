@@ -77,9 +77,6 @@ test.describe('Canvas toolbar buttons', () => {
 
   //Click bed to edit
   await bed.click();
-  const bedInfoButton = page.getByRole('button', { name: 'Open bed details' });
-  await expect(bedInfoButton).toBeVisible({ timeout: 5000 });
-  await bedInfoButton.click();
 
   // Wait for bed plant window to appear
   const plantWindow = page.locator('[data-testid="bed-plant-window"]'); 
@@ -103,8 +100,6 @@ test.describe('Canvas toolbar buttons', () => {
   await expect(plantWindow.getByRole('textbox', { name: 'Add bed notes...' })).toHaveValue('Test notes for bed');
 
   await plantWindow.getByRole('button', { name: 'Mock' }).click();
-  const closeSearch = page.getByRole('button', { name: 'Close search' });
-  await closeSearch.click();
   // Enter "rose" into search field
   const searchInput = plantWindow.getByRole('textbox', { name: 'Search mock plants...' });
   await searchInput.fill("rose");
