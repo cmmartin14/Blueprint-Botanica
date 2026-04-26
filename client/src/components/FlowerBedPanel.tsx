@@ -25,6 +25,8 @@ interface FlowerBedPanelProps {
   topOffset?: number;
   zone?: string | null;
   sidebarMode?: boolean;
+  isLocked?: boolean;
+  onToggleLock?: () => void;
   onClose: () => void;
 }
 
@@ -69,6 +71,8 @@ export default function FlowerBedPanel({
   topOffset = 96,
   zone,
   sidebarMode = false,
+  isLocked = false,
+  onToggleLock,
   onClose,
 }: FlowerBedPanelProps) {
   const bedPlants = useGardenStore((s) => s.bedPlants[shapeId]) ?? [];
@@ -351,6 +355,16 @@ export default function FlowerBedPanel({
         )}
 
         <div className="flex items-center gap-2">
+          {sidebarMode && onToggleLock && (
+            <button
+              type="button"
+              onClick={onToggleLock}
+              className="rounded-full px-3 py-1 text-xs font-semibold text-green-700 hover:bg-white hover:shadow-sm hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-[#8cc69f]"
+              aria-label={isLocked ? "Unlock bed panel" : "Lock bed panel"}
+            >
+              {isLocked ? "Locked" : "Lock"}
+            </button>
+          )}
 
           <button
             type="button"

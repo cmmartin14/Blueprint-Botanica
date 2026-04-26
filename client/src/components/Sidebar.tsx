@@ -20,10 +20,12 @@ type Props = {
   showSearch: boolean;
   showBedInfo: boolean;
   selectedShapeId: string | null;
+  isBedPanelLocked: boolean;
   zone?: string | null;
   onCloseSearch: () => void;
   onCloseCalendar: () => void;
   onCloseBedInfo: () => void;
+  onToggleBedLock: () => void;
 };
 
 export default function Sidebar({
@@ -32,10 +34,12 @@ export default function Sidebar({
   showSearch,
   showBedInfo,
   selectedShapeId,
+  isBedPanelLocked,
   zone,
   onCloseSearch,
   onCloseCalendar,
   onCloseBedInfo,
+  onToggleBedLock,
 }: Props) {
   const bedShapeId = showBedInfo ? selectedShapeId : null;
   const isOpen = showCalendar || showSearch || Boolean(bedShapeId);
@@ -99,6 +103,8 @@ export default function Sidebar({
                       shapeId={bedShapeId}
                       zone={zone}
                       sidebarMode={true}
+                      isLocked={isBedPanelLocked}
+                      onToggleLock={onToggleBedLock}
                       onClose={onCloseBedInfo}
                     />
                   </div>
@@ -118,6 +124,8 @@ export default function Sidebar({
                     shapeId={bedShapeId}
                     zone={zone}
                     sidebarMode={true}
+                    isLocked={isBedPanelLocked}
+                    onToggleLock={onToggleBedLock}
                     onClose={onCloseBedInfo}
                   />
                 </div>
