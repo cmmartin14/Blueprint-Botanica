@@ -347,7 +347,20 @@ export default function CalendarWindow({
     setError(null);
     try {
       const res = await fetch(`/api/weather?q=${encodeURIComponent(q)}`);
-      if (!res.ok) throw new Error(`Weather lookup failed (${res.status})`);
+      if (!res.ok) {
+        let detail = "";
+        try {
+          const payload = await res.json();
+          if (typeof payload?.error === "string") {
+            detail = payload.error;
+          }
+        } catch {
+          detail = "";
+        }
+        throw new Error(
+          detail || `Weather lookup failed (${res.status})`
+        );
+      }
       const data: WeatherData = await res.json();
       setWeather(data);
     } catch (e: any) {
@@ -369,7 +382,20 @@ export default function CalendarWindow({
         try {
           const { latitude, longitude } = pos.coords;
           const res = await fetch(`/api/weather?lat=${latitude}&lon=${longitude}`);
-          if (!res.ok) throw new Error(`Weather lookup failed (${res.status})`);
+          if (!res.ok) {
+            let detail = "";
+            try {
+              const payload = await res.json();
+              if (typeof payload?.error === "string") {
+                detail = payload.error;
+              }
+            } catch {
+              detail = "";
+            }
+            throw new Error(
+              detail || `Weather lookup failed (${res.status})`
+            );
+          }
           const data: WeatherData = await res.json();
           setWeather(data);
         } catch (e: any) {

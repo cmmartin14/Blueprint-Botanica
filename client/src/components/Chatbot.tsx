@@ -70,6 +70,7 @@ interface ChatApiResponse {
   message?: string;
   error?: string;
   actions?: any[];
+  retryAfterSeconds?: number;
 }
 
 type ChatView = "chat" | "history";
@@ -578,7 +579,13 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
       const data = (await response.json()) as ChatApiResponse;
 
       if (!response.ok) {
-        throw new Error(data.error || "Chat request failed.");
+        const error = new Error(data.error || "Chat request failed.");
+        (error as Error & { status?: number; retryAfterSeconds?: number }).status =
+          response.status;
+        (
+          error as Error & { status?: number; retryAfterSeconds?: number }
+        ).retryAfterSeconds = data.retryAfterSeconds;
+        throw error;
       }
 
       appendMessageToChat(currentChatId, {
@@ -603,11 +610,25 @@ const Chatbot = ({ isOpen, onClose }: ChatbotProps) => {
         });
       }
     } catch (error) {
-        console.error("Chat error:", error);
+        const knownError = error as Error & {
+          status?: number;
+          retryAfterSeconds?: number;
+        };
+        const isRateLimit = knownError.status === 429;
+        if (!isRateLimit) {
+          console.error("Chat error:", error);
+        }
+
+        const fallbackMessage =
+          isRateLimit && knownError.retryAfterSeconds
+            ? `I'm at the current Gemini request limit. Please wait about ${knownError.retryAfterSeconds} seconds, then try again.`
+            : isRateLimit
+              ? "I'm at the current Gemini request limit. Please wait a moment, then try again."
+              : "I hit a snag reaching the garden tools just now. Try again in a moment.";
         appendMessageToChat(currentChatId, {
           id: createId(),
           role: "assistant",
-          content: "I hit a snag reaching the garden tools just now. Try again in a moment.",
+          content: knownError.message || fallbackMessage,
         });
       } finally {
         setLoadingChatId((currentLoadingChatId) =>

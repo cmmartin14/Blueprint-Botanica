@@ -298,6 +298,63 @@ const buildLatestUserPrompt = (
   return parts;
 };
 
+const extractResponseText = (response: any): string => {
+  const textFromMethod =
+    typeof response?.text === "function" ? String(response.text() ?? "").trim() : "";
+
+  const textFromCandidates = Array.isArray(response?.candidates)
+    ? response.candidates
+        .map((candidate: any) => {
+          const parts = candidate?.content?.parts;
+          if (!Array.isArray(parts)) return "";
+          return parts
+            .map((part: any) =>
+              typeof part?.text === "string" ? part.text : ""
+            )
+            .filter(Boolean)
+            .join("\n");
+        })
+        .filter(Boolean)
+        .join("\n\n")
+        .trim()
+    : "";
+
+  if (textFromCandidates.length > textFromMethod.length) {
+    return textFromCandidates;
+  }
+
+  return textFromMethod;
+};
+
+const looksTruncated = (text: string) => {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  if (wordCount <= 4) return true;
+  return !/[.!?)"'\]]$/.test(trimmed);
+};
+
+const getFinishReason = (response: any): string | undefined =>
+  typeof response?.candidates?.[0]?.finishReason === "string"
+    ? response.candidates[0].finishReason
+    : undefined;
+
+const parseRetryAfterSeconds = (message: string): number | null => {
+  const retryDelayMatch = message.match(/"retryDelay":"(\d+)s"/);
+  if (retryDelayMatch) {
+    const seconds = Number(retryDelayMatch[1]);
+    return Number.isFinite(seconds) ? seconds : null;
+  }
+
+  const sentenceMatch = message.match(/Please retry in\s+([\d.]+)s?/i);
+  if (sentenceMatch) {
+    const seconds = Math.ceil(Number(sentenceMatch[1]));
+    return Number.isFinite(seconds) ? seconds : null;
+  }
+
+  return null;
+};
+
 const parseNumberArg = (
   args: Record<string, unknown>,
   key: string
@@ -809,7 +866,7 @@ export async function POST(request: Request) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview",
+      model: process.env.GEMINI_MODEL?.trim() || "gemini-3-flash-preview",
       ...(responseMode === "thinking"
         ? {
             tools: [
@@ -1056,7 +1113,7 @@ Keep responses concise, practical, and specific.`,
           }
         : {}),
       generationConfig: {
-        maxOutputTokens: responseMode === "fast" ? 220 : 600,
+        maxOutputTokens: responseMode === "fast" ? 400 : 1400,
       },
     });
 
@@ -1088,7 +1145,48 @@ Keep responses concise, practical, and specific.`,
       response = await result.response;
     }
 
-    const text = response.text();
+    let text = extractResponseText(response);
+    let finishReason = getFinishReason(response);
+
+    // Best-effort continuation for clipped outputs; never fail the whole request if this step errors.
+    const maxContinuationRounds = 2;
+    let continuationRounds = 0;
+    while (
+      continuationRounds < maxContinuationRounds &&
+      (finishReason === "MAX_TOKENS" ||
+        (continuationRounds === 0 && looksTruncated(text)))
+    ) {
+      continuationRounds += 1;
+      try {
+        const continuationResult = await chat.sendMessage(
+          "Continue your previous response from exactly where you left off. Return plain text only and do not call tools."
+        );
+        const continuationResponse = await continuationResult.response;
+        const continuationText = extractResponseText(continuationResponse);
+        if (!continuationText) break;
+
+        text = `${text}${text ? "\n\n" : ""}${continuationText}`.trim();
+        finishReason = getFinishReason(continuationResponse);
+      } catch {
+        break;
+      }
+    }
+
+    // If the stitched output still looks clipped, ask for a full restatement once.
+    if (looksTruncated(text)) {
+      try {
+        const restateResult = await chat.sendMessage(
+          "Your last answer appears cut off. Please restate the full answer in one complete response, without calling tools."
+        );
+        const restateResponse = await restateResult.response;
+        const restateText = extractResponseText(restateResponse);
+        if (restateText) {
+          text = restateText.trim();
+        }
+      } catch {
+        // Keep best-effort text from previous rounds.
+      }
+    }
 
     return NextResponse.json({
       message:
@@ -1098,8 +1196,28 @@ Keep responses concise, practical, and specific.`,
     });
   } catch (error: any) {
     console.error("Gemini API Error:", error);
+    const message = String(error?.message || "Failed to process chat request");
+    const statusCode = Number(error?.status || error?.statusCode || 0);
+
+    if (statusCode === 429 || /\b429\b/.test(message) || /quota/i.test(message)) {
+      const retryAfterSeconds = parseRetryAfterSeconds(message);
+      const friendlyMessage = retryAfterSeconds
+        ? `Gemini API quota reached. Please wait about ${retryAfterSeconds}s and try again.`
+        : "Gemini API quota reached. Please wait a moment and try again.";
+      return NextResponse.json(
+        {
+          error: friendlyMessage,
+          retryAfterSeconds: retryAfterSeconds ?? undefined,
+        },
+        {
+          status: 429,
+          ...(retryAfterSeconds ? { headers: { "Retry-After": String(retryAfterSeconds) } } : {}),
+        }
+      );
+    }
+
     return NextResponse.json(
-      { error: error.message || "Failed to process chat request" },
+      { error: message },
       { status: 500 }
     );
   }

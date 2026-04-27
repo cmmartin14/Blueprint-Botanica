@@ -88,12 +88,15 @@ describe("GET /api/weather", () => {
   it("returns 502 if geocoding fails", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
+      json: async () => ({ message: "invalid api key" }),
     });
 
     const req = new NextRequest("https://example.com/api/weather?q=Paris");
     const res = await GET(req);
     expect(res.status).toBe(502);
-    expect(await res.json()).toEqual({ error: "Geocoding failed" });
+    expect(await res.json()).toEqual({
+      error: "Geocoding failed: invalid api key",
+    });
   });
 
   it("returns 500 if fetch throws", async () => {
