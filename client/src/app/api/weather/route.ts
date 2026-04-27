@@ -1,40 +1,97 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const normalizeApiKey = (value: string | undefined) => {
+  if (!value) return "";
+  return value.trim().replace(/^['"]|['"]$/g, "");
+};
+
+const toFiniteNumber = (value: string | null): number | null => {
+  if (value == null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const buildUpstreamError = async (response: Response, fallback: string) => {
+  try {
+    const payload = await response.json();
+    const message =
+      typeof payload?.message === "string"
+        ? payload.message
+        : typeof payload?.error === "string"
+          ? payload.error
+          : fallback;
+    return `${fallback}: ${message}`;
+  } catch {
+    return fallback;
+  }
+};
+
+const toClientStatus = (upstreamStatus: number): number => {
+  if (upstreamStatus === 404) return 404;
+  if (upstreamStatus >= 400 && upstreamStatus < 500) return upstreamStatus;
+  return 502;
+};
+
 export async function GET(req: NextRequest) {
   try {
-    const API_KEY = process.env.OPENWEATHER_API_KEY;
+    const API_KEY = normalizeApiKey(process.env.OPENWEATHER_API_KEY);
     if (!API_KEY) return NextResponse.json({ error: "Missing OPENWEATHER_API_KEY" }, { status: 500 });
 
     const { searchParams } = new URL(req.url);
-    const q = searchParams.get("q");
-    const lat = searchParams.get("lat");
-    const lon = searchParams.get("lon");
+    const q = searchParams.get("q")?.trim() ?? "";
+    const latitudeParam = toFiniteNumber(searchParams.get("lat"));
+    const longitudeParam = toFiniteNumber(searchParams.get("lon"));
 
     let latitude: number | null = null;
     let longitude: number | null = null;
     let metaCity = ""; let metaCountry = "";
-
-    if (lat && lon) {
-      latitude = Number(lat); longitude = Number(lon);
+    if (latitudeParam != null && longitudeParam != null) {
+      latitude = latitudeParam;
+      longitude = longitudeParam;
     } else if (q) {
-      // Direct geocoding -> lat/lon
-      const geo = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=1&appid=${API_KEY}`);
-      if (!geo.ok) return NextResponse.json({ error: "Geocoding failed" }, { status: 502 });
-      const [g] = await geo.json();
-      if (!g) return NextResponse.json({ error: "Location not found" }, { status: 404 });
-      latitude = g.lat; longitude = g.lon; metaCity = g.name; metaCountry = g.country ?? "";
+      // Direct geocoding -> lat/lon (same flow as the previously working route).
+      const geo = await fetch(
+        `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=1&appid=${API_KEY}`,
+        { cache: "no-store" }
+      );
+      if (!geo.ok) {
+        const message = await buildUpstreamError(geo, "Geocoding failed");
+        return NextResponse.json({ error: message }, { status: toClientStatus(geo.status) });
+      }
+      const geoPayload = await geo.json();
+      const firstResult = Array.isArray(geoPayload) ? geoPayload[0] : undefined;
+      if (!firstResult) {
+        return NextResponse.json({ error: "Location not found" }, { status: 404 });
+      }
+      latitude = toFiniteNumber(String(firstResult?.lat));
+      longitude = toFiniteNumber(String(firstResult?.lon));
+      metaCity = typeof firstResult?.name === "string" ? firstResult.name : "";
+      metaCountry =
+        typeof firstResult?.country === "string" ? firstResult.country : "";
+      if (latitude == null || longitude == null) {
+        return NextResponse.json({ error: "Location not found" }, { status: 404 });
+      }
     } else {
       return NextResponse.json({ error: "Provide q or lat/lon" }, { status: 400 });
     }
 
     // Current weather
-    const currentRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${API_KEY}`, { cache: "no-store" });
-    if (!currentRes.ok) return NextResponse.json({ error: "Current weather failed" }, { status: 502 });
+    const currentRes = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${API_KEY}`,
+      { cache: "no-store" }
+    );
+    if (!currentRes.ok) {
+      const message = await buildUpstreamError(currentRes, "Current weather failed");
+      return NextResponse.json({ error: message }, { status: toClientStatus(currentRes.status) });
+    }
     const current = await currentRes.json();
 
     // 5-day / 3-hour forecast
     const forecastRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&units=metric&appid=${API_KEY}`, { cache: "no-store" });
-    if (!forecastRes.ok) return NextResponse.json({ error: "Forecast failed" }, { status: 502 });
+    if (!forecastRes.ok) {
+      const message = await buildUpstreamError(forecastRes, "Forecast failed");
+      return NextResponse.json({ error: message }, { status: toClientStatus(forecastRes.status) });
+    }
     const forecast = await forecastRes.json();
 
     const tz: number = forecast.city?.timezone ?? 0; // seconds
