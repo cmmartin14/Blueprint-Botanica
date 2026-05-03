@@ -43,6 +43,12 @@
     "testing-library": "^0.0.2",
     "zustand": "^5.0.9"
   },
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "1.30.2",
+    "lightningcss-linux-x64-musl": "1.30.2",
+    "@rollup/rollup-linux-x64-gnu": "4.60.2",
+    "@rollup/rollup-linux-x64-musl": "4.60.2"
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.56.1",
