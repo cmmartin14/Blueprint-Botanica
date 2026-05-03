@@ -96,12 +96,17 @@ export async function loadGardenById(
   if (!project) return null;
 
   return {
-    id:        project.id,
-    name:      project.name,
-    editMode:  false,
-    shapes:    project.shapes    as GardenState["shapes"],
-    beds:      project.beds      as GardenState["beds"],
-    bedPlants: project.bedPlants as GardenState["bedPlants"],
+    id:            project.id,
+    name:          project.name,
+    editMode:      false,
+    zone:          null,
+    shapes:        project.shapes    as unknown as GardenState["shapes"],
+    beds:          project.beds      as unknown as GardenState["beds"],
+    bedPlants:     project.bedPlants as unknown as GardenState["bedPlants"],
+    speciesColors: {},
+    hardinessZone: null,
+    gridMode:      "dots",
+    shapeMode:     "white",
   };
 }
 
