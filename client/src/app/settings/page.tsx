@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { deleteUserAccount } from '@/actions/userActions';
 
 interface User {
   id: string;
@@ -15,6 +16,7 @@ export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -41,6 +43,31 @@ export default function SettingsPage() {
   const handleSignOut = () => {
     // Redirect to Stack Auth's sign out endpoint
     window.location.href = '/handler/sign-out';
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete your account? This action is permanent and will delete all your garden projects.'
+    );
+
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      await deleteUserAccount();
+      // If we reach here, the action finished without throwing (though redirect usually throws)
+      router.push('/');
+    } catch (error: any) {
+      // In Next.js, redirect() throws an error that is caught here.
+      // If the error is a redirect, we shouldn't show an alert.
+      if (error?.message === 'NEXT_REDIRECT' || error?.digest?.includes('NEXT_REDIRECT')) {
+        return;
+      }
+      
+      console.error('Error deleting account:', error);
+      alert('Failed to delete account. Please try again.');
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -91,13 +118,26 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <button
-        onClick={handleSignOut}
-        disabled={signingOut}
-        className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {signingOut ? 'Signing out...' : 'Sign out'}
-      </button>
+      <div className="flex flex-col gap-4 items-start">
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut || deleting}
+          className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {signingOut ? 'Signing out...' : 'Sign out'}
+        </button>
+
+        <div className="mt-12 pt-8 border-t border-red-100 w-full">
+          <h2 className="text-lg font-medium text-red-600 mb-4">Danger Zone</h2>
+          <button
+            onClick={handleDeleteAccount}
+            disabled={deleting || signingOut}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {deleting ? 'Deleting account...' : 'Delete Account'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
